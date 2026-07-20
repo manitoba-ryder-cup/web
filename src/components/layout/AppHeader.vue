@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ContentContainer from './ContentContainer.vue'
@@ -11,11 +11,12 @@ const auth = useAuthStore()
 const router = useRouter()
 const drawerOpen = ref(false)
 
-const links = computed(() => {
-  const base = [{ to: '/', label: 'Home' }, { to: '/tournaments', label: 'Tournaments' }]
-  if (auth.isAuthenticated) base.push({ to: '/dashboard', label: 'Dashboard' })
-  return base
-})
+// Mirrors the old app's public IA (News is the landing, History is the tournament list).
+// Players/Leaderboard return as their features get built; auth only toggles Login/Logout.
+const links = [
+  { to: '/', label: 'News' },
+  { to: '/tournaments', label: 'History' },
+]
 
 async function onLogout() {
   drawerOpen.value = false

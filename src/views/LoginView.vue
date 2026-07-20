@@ -23,7 +23,7 @@ async function onSubmit() {
   loading.value = true
   try {
     await auth.login(email.value, password.value)
-    router.push((route.query.redirect as string) || { name: 'dashboard' })
+    router.push((route.query.redirect as string) || { name: 'news' })
   } catch {
     error.value = 'Login failed'
   } finally {

@@ -13,6 +13,15 @@ vi.mock('@/api/auth', () => ({
 
 import router from '@/router'
 
+// No app route sets requiresAuth yet (all reads are public), so register a synthetic
+// protected route to exercise the guard itself — it's infrastructure for future admin pages.
+router.addRoute({
+  path: '/__protected',
+  name: 'protected',
+  meta: { requiresAuth: true },
+  component: { template: '<div/>' },
+})
+
 describe('router guard', () => {
   beforeEach(async () => {
     // Fresh pinia per test so the auth store starts unauthenticated (default state);
@@ -22,8 +31,8 @@ describe('router guard', () => {
   })
 
   it('redirects an unauthenticated user away from a requiresAuth route to login', async () => {
-    await router.push('/dashboard')
+    await router.push('/__protected')
     expect(router.currentRoute.value.name).toBe('login')
-    expect(router.currentRoute.value.query.redirect).toBe('/dashboard')
+    expect(router.currentRoute.value.query.redirect).toBe('/__protected')
   })
 })
