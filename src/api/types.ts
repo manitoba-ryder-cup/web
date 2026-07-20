@@ -10,6 +10,16 @@ export interface User { id: string; email: string; first_name: string; last_name
 export interface Tournament { id: string; name: string; start_date: string; end_date: string; location: string }
 export interface MatchFormat { id: string; name: string }
 export interface PlayerSummary { id: string; first_name: string; last_name: string; email: string | null }
+export interface Player {
+  id: string
+  user_id: string | null
+  email: string | null
+  first_name: string
+  last_name: string
+  photo_path: string
+}
+export interface PlayerRecord { wins: number; losses: number; ties: number }
+export interface PlayerProfile extends Player { record: PlayerRecord }
 export interface TournamentTeam { id: string; color: string; captain: PlayerSummary | null; points: number }
 export interface WinnerResponse { finished: boolean; winner_team_id: string | null }
 export class ApiError extends Error {
