@@ -10,6 +10,7 @@ async function onLogout() { await auth.logout(); router.push({ name: 'home' }) }
     <RouterLink to="/" class="font-display text-lg font-bold text-mrc-red">Manitoba Ryder Cup</RouterLink>
     <nav class="flex items-center gap-4 text-sm">
       <RouterLink to="/" class="hover:underline">Home</RouterLink>
+      <RouterLink to="/tournaments" class="hover:underline">Tournaments</RouterLink>
       <RouterLink v-if="auth.isAuthenticated" to="/dashboard" class="hover:underline">Dashboard</RouterLink>
       <button v-if="auth.isAuthenticated" class="text-slate-600 hover:text-slate-900" @click="onLogout">
         Log out ({{ auth.user?.first_name }})

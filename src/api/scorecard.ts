@@ -1,5 +1,5 @@
 import { ApiClient } from './client'
-import type { MatchFormat, Tournament } from './types'
+import type { MatchFormat, Tournament, TournamentTeam, WinnerResponse } from './types'
 import { useAuthStore } from '@/stores/auth'
 
 let client: ApiClient | null = null
@@ -16,4 +16,7 @@ export const scorecardApi = {
   listMatchFormats: () => sc().get<MatchFormat[]>('/v1/match-formats'),
   // Tenant-scoped; requires the logged-in user's token.
   listTournaments: () => sc().get<Tournament[]>('/v1/tournaments'),
+  getTournament: (id: string) => sc().get<Tournament>(`/v1/tournaments/${id}`),
+  getTournamentTeams: (id: string) => sc().get<TournamentTeam[]>(`/v1/tournaments/${id}/teams`),
+  getTournamentWinner: (id: string) => sc().get<WinnerResponse>(`/v1/tournaments/${id}/winner`),
 }

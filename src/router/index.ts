@@ -7,6 +7,8 @@ const router = createRouter({
     { path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
     { path: '/dashboard', name: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { requiresAuth: true } },
+    { path: '/tournaments', name: 'tournaments', component: () => import('@/views/TournamentsView.vue') },
+    { path: '/tournaments/:id', name: 'tournament', component: () => import('@/views/TournamentView.vue'), props: true },
   ],
 })
 
