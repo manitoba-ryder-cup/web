@@ -2,6 +2,14 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import ImageHeader from '@/components/typography/ImageHeader.vue'
+import ContentContainer from '@/components/layout/ContentContainer.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import BaseLabel from '@/components/base/BaseLabel.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseAlert from '@/components/base/BaseAlert.vue'
+
 const email = ref('dev@manitobarydercup.com')
 const password = ref('DevPassword123!')
 const error = ref('')
@@ -9,24 +17,38 @@ const loading = ref(false)
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+
 async function onSubmit() {
-  error.value = ''; loading.value = true
+  error.value = ''
+  loading.value = true
   try {
     await auth.login(email.value, password.value)
     router.push((route.query.redirect as string) || { name: 'dashboard' })
-  } catch (e) { error.value = 'Login failed' } finally { loading.value = false }
+  } catch {
+    error.value = 'Login failed'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 <template>
-  <section class="mx-auto max-w-sm">
-    <h2 class="mb-4 text-xl font-semibold">Log in</h2>
-    <form class="space-y-3" @submit.prevent="onSubmit">
-      <input v-model="email" type="email" placeholder="Email" class="w-full rounded border px-3 py-2" />
-      <input v-model="password" type="password" placeholder="Password" class="w-full rounded border px-3 py-2" />
-      <p v-if="error" class="text-red-600">{{ error }}</p>
-      <button :disabled="loading" class="w-full rounded bg-mrc-blue px-3 py-2 text-white disabled:opacity-50">
-        {{ loading ? '…' : 'Log in' }}
-      </button>
-    </form>
-  </section>
+  <ImageHeader image="/img/empty-course.webp">Login</ImageHeader>
+  <ContentContainer>
+    <div class="py-10">
+      <BaseCard class="mx-auto max-w-sm">
+        <form class="space-y-4" @submit.prevent="onSubmit">
+          <div>
+            <BaseLabel required>Email</BaseLabel>
+            <BaseInput v-model="email" type="email" />
+          </div>
+          <div>
+            <BaseLabel required>Password</BaseLabel>
+            <BaseInput v-model="password" type="password" />
+          </div>
+          <BaseAlert v-if="error" variant="error">{{ error }}</BaseAlert>
+          <BaseButton type="submit" :loading="loading" class="w-full">Log in</BaseButton>
+        </form>
+      </BaseCard>
+    </div>
+  </ContentContainer>
 </template>
