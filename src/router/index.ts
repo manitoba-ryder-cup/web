@@ -7,6 +7,8 @@ const router = createRouter({
     { path: '/', name: 'news', component: () => import('@/views/NewsView.vue') },
     { path: '/tournaments', name: 'tournaments', component: () => import('@/views/TournamentsView.vue') },
     { path: '/tournaments/:id', name: 'tournament', component: () => import('@/views/TournamentView.vue'), props: true },
+    { path: '/players', name: 'players', component: () => import('@/views/PlayersView.vue') },
+    { path: '/players/:id', name: 'player', component: () => import('@/views/PlayerView.vue'), props: true },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
   ],
 })

@@ -15,6 +15,7 @@ const drawerOpen = ref(false)
 // Players/Leaderboard return as their features get built; auth only toggles Login/Logout.
 const links = [
   { to: '/', label: 'News' },
+  { to: '/players', label: 'Players' },
   { to: '/tournaments', label: 'History' },
 ]
 
