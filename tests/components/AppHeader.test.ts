@@ -1,0 +1,47 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { createRouter, createWebHistory } from 'vue-router'
+import AppHeader from '@/components/layout/AppHeader.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/', name: 'home', component: { template: '<div/>' } },
+    { path: '/tournaments', name: 'tournaments', component: { template: '<div/>' } },
+    { path: '/dashboard', name: 'dashboard', component: { template: '<div/>' } },
+    { path: '/login', name: 'login', component: { template: '<div/>' } },
+  ],
+})
+
+describe('AppHeader', () => {
+  beforeEach(() => { setActivePinia(createPinia()) })
+
+  it('shows Login (not Dashboard) when logged out', async () => {
+    router.push('/'); await router.isReady()
+    const w = mount(AppHeader, { global: { plugins: [router] } })
+    expect(w.text()).toContain('Login')
+    expect(w.text()).not.toContain('Dashboard')
+  })
+
+  it('opens the drawer when the hamburger is clicked', async () => {
+    router.push('/'); await router.isReady()
+    const w = mount(AppHeader, { global: { plugins: [router] } })
+    // drawer starts translated off-screen
+    expect(w.find('aside').classes()).toContain('translate-x-full')
+    await w.get('button[aria-label="Open menu"]').trigger('click')
+    expect(w.find('aside').classes()).toContain('translate-x-0')
+  })
+
+  it('shows Dashboard + Logout when authenticated', async () => {
+    const auth = useAuthStore()
+    auth.user = { id: '1', email: 'a@b.c', first_name: 'A', last_name: 'B' } as never
+    // isAuthenticated derives from accessToken !== null (see src/stores/auth.ts)
+    auth.accessToken = 'tok'
+    router.push('/'); await router.isReady()
+    const w = mount(AppHeader, { global: { plugins: [router] } })
+    expect(w.text()).toContain('Dashboard')
+    expect(w.text()).toContain('Logout')
+  })
+})
