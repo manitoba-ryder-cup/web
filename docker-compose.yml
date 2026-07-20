@@ -1,15 +1,75 @@
-version: '3.7'
+# Local development stack for the Manitoba Ryder Cup frontend: brings up the two
+# backing services (heimdall auth + scorecard API) and a shared Postgres, built from
+# the sibling source repos. The frontend runs on the host (npm dev server) and proxies
+# /api/auth -> heimdall and /api/scorecard -> scorecard, so everything is one origin.
+#
+#   ./dev/generate-keys.sh          # once
+#   docker compose up -d --build
+#   ./dev/seed.sh                   # create the dev user + register scorecard scopes
+#
+# Supporting files (postgres init, keys, seed) live under ./dev.
+name: mrc-dev
 
 services:
-  mb-ryder-cup:
-    image: node:15.8-alpine3.10
-    restart: always
-    container_name: mb-ryder-cup
-    command: ['npm', 'run', 'serve']
-    env_file: .env/local.env
+  postgres:
+    image: postgres:16-alpine
+    container_name: mrc-dev-postgres
+    environment:
+      POSTGRES_USER: superuser
+      POSTGRES_PASSWORD: superuser
+      POSTGRES_DB: postgres
     ports:
-      - '8081:8080'
-    working_dir: /app
+      - "5442:5432" # non-default host port to avoid clashing with the test stacks
     volumes:
-      - ./:/app
-      - ~/dev/uploads/scorecard/player-photos:/app/public/uploads/player-photos
+      - ./dev/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superuser"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  heimdall:
+    build:
+      context: ../../travisbale/heimdall
+      dockerfile: Dockerfile
+    container_name: mrc-dev-heimdall
+    environment:
+      DATABASE_URL: postgres://heimdall:heimdall@postgres:5432/heimdall?sslmode=disable
+      HTTP_ADDRESS: :8080
+      GRPC_ADDRESS: :9090
+      JWT_PRIVATE_KEY_PATH: /keys/private-key.pem
+      JWT_PUBLIC_KEY_PATH: /keys/public-key.pem
+      JWT_ISSUER: heimdall-dev
+      JWT_EXPIRATION: 24h
+      PUBLIC_URL: http://localhost:8080
+      ENVIRONMENT: development
+      # Dev-only 32-byte hex key for encrypting OIDC/MFA secrets at rest.
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    volumes:
+      - ./dev/keys:/keys:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  scorecard:
+    build:
+      context: ../scorecard
+      dockerfile: Dockerfile
+    container_name: mrc-dev-scorecard
+    environment:
+      # Non-superuser role so RLS is enforced; migrations run on startup.
+      DATABASE_URL: postgres://scorecard:scorecard_password@postgres:5432/scorecard?sslmode=disable
+      HTTP_ADDRESS: :5000
+      # Validates heimdall-signed tokens with the shared keypair's public half.
+      JWT_PUBLIC_KEY_PATH: /keys/public-key.pem
+      ENVIRONMENT: development
+      LOG_FORMAT: text
+    volumes:
+      - ./dev/keys:/keys:ro
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
