@@ -2,7 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import type { Tournament } from '@/api/types'
-import { formatDateRange } from '@/lib/date'
+import ImageHeader from '@/components/typography/ImageHeader.vue'
+import ContentContainer from '@/components/layout/ContentContainer.vue'
+import TournamentCard from '@/components/tournament/TournamentCard.vue'
+import BaseAlert from '@/components/base/BaseAlert.vue'
 
 const tournaments = ref<Tournament[]>([])
 const error = ref('')
@@ -15,18 +18,17 @@ onMounted(async () => {
 })
 </script>
 <template>
-  <section>
-    <h2 class="mb-4 font-display text-xl font-semibold">Tournaments</h2>
-    <p v-if="loading" class="text-slate-500">Loading…</p>
-    <p v-if="error" class="text-red-600">{{ error }}</p>
-    <ul v-if="!loading && tournaments.length" class="divide-y rounded border bg-white">
-      <li v-for="t in tournaments" :key="t.id">
-        <RouterLink :to="{ name: 'tournament', params: { id: t.id } }" class="block px-4 py-3 hover:bg-slate-50">
-          <span class="font-medium">{{ t.name }}</span> — {{ t.location }}
-          <div class="text-sm text-slate-500">{{ formatDateRange(t.start_date, t.end_date) }}</div>
-        </RouterLink>
-      </li>
-    </ul>
-    <p v-if="!loading && !tournaments.length && !error" class="text-slate-500">No tournaments yet.</p>
-  </section>
+  <ImageHeader image="/img/oceanside.webp">History</ImageHeader>
+  <ContentContainer>
+    <div class="py-8">
+      <p v-if="loading" class="text-mrc-muted">Loading…</p>
+      <BaseAlert v-else-if="error" variant="error">{{ error }}</BaseAlert>
+      <div v-else-if="tournaments.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <TournamentCard v-for="t in tournaments" :key="t.id"
+                        :id="t.id" :name="t.name" :location="t.location"
+                        :start-date="t.start_date" :end-date="t.end_date" />
+      </div>
+      <p v-else class="text-mrc-muted">No tournaments yet.</p>
+    </div>
+  </ContentContainer>
 </template>
