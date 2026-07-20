@@ -1,5 +1,33 @@
-# Vue 3 + TypeScript + Vite
+# web-vue3
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Manitoba Ryder Cup frontend. Vue 3 (`<script setup>`) + Vite + TypeScript + Pinia +
+Tailwind CSS.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## Local dev
+
+Bring up the backing services (heimdall + scorecard + Postgres), then run the frontend
+on the host so it can hot-reload:
+
+```sh
+docker compose up -d               # postgres, heimdall, scorecard
+./dev/generate-keys.sh             # once: dev RSA keypair (heimdall signs, scorecard validates)
+./dev/seed.sh                      # once: register scorecard scopes + create the dev user
+npm run dev                        # starts on http://localhost:5173
+```
+
+Vite proxies `/api/auth` → heimdall and `/api/scorecard` → scorecard, so the app,
+auth, and API all appear to come from a single origin (no CORS, and cookies work).
+
+Dev login: `dev@manitobarydercup.com` / `DevPassword123!`
+
+See [dev/README.md](dev/README.md) for details on the backend stack (prerequisites,
+how the RSA keypair and scopes are wired up, resetting the database, etc).
+
+## Commands
+
+```sh
+npm run dev        # start the Vite dev server (:5173)
+npm run build      # type-check (vue-tsc -b) + production build
+npm run preview    # preview the production build locally
+npx vitest run      # run the test suite
+```
