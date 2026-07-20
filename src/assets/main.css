@@ -1,1 +1,92 @@
 @import 'tailwindcss';
+
+/*
+ * OpenSans is the body/UI copy face; Raleway is used for display headings
+ * (see the old web app's ImageHeader/SectionHeader components). Each weight
+ * ships as its own font file, so we declare one `font-weight` per @font-face
+ * rule under a shared family name -- that lets the standard `font-bold` /
+ * `font-semibold` / `font-light` utilities pick the correct file instead of
+ * the browser faking a bold/light weight.
+ */
+@font-face {
+  font-family: 'OpenSans';
+  src: url('/fonts/OpenSans/OpenSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OpenSans';
+  src: url('/fonts/OpenSans/OpenSans-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OpenSans';
+  src: url('/fonts/OpenSans/OpenSans-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OpenSans';
+  src: url('/fonts/OpenSans/OpenSans-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Raleway';
+  src: url('/fonts/Raleway/Raleway-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Raleway';
+  src: url('/fonts/Raleway/Raleway-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Raleway';
+  src: url('/fonts/Raleway/Raleway-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Raleway';
+  src: url('/fonts/Raleway/Raleway-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* Team Blue / Team Red -- the head-to-head team colors used throughout
+     match/leaderboard UI (see MatchOverview.vue's blueTeam/redTeam split) */
+  --color-mrc-blue: #1565c0;
+  --color-mrc-blue-dark: #0d47a1;
+  --color-mrc-red: #c62828;
+  --color-mrc-red-dark: #b71c1c;
+
+  /* Chrome/accent colors from the old site nav (bg-grey-900, bg-deep-purple-800)
+     plus the one bespoke shade the old palette added on top of Material Design */
+  --color-mrc-dark: #212121;
+  --color-mrc-purple: #6a1b9a;
+  --color-mrc-navy: #000a12;
+
+  /* Raleway for display/heading copy, OpenSans for body copy */
+  --font-display: 'Raleway', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'OpenSans', ui-sans-serif, system-ui, sans-serif;
+}
