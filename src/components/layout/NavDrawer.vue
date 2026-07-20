@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import XIcon from '@/components/icons/XIcon.vue'
 const props = defineProps<{ open: boolean }>()
@@ -15,6 +15,8 @@ watch(() => props.open, (isOpen) => {
   if (isOpen) window.addEventListener('keydown', onKey)
   else window.removeEventListener('keydown', onKey)
 })
+// Fallback so the listener never outlives the component if it unmounts while open
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 <template>
   <div>

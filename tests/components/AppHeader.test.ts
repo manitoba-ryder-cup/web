@@ -44,4 +44,34 @@ describe('AppHeader', () => {
     expect(w.text()).toContain('Dashboard')
     expect(w.text()).toContain('Logout')
   })
+
+  // The drawer's three close paths (backdrop, Esc, route change) are the trickiest
+  // part of NavDrawer, so each gets its own regression test.
+  async function openDrawer() {
+    router.push('/'); await router.isReady()
+    const w = mount(AppHeader, { attachTo: document.body, global: { plugins: [router] } })
+    await w.get('button[aria-label="Open menu"]').trigger('click')
+    expect(w.find('aside').classes()).toContain('translate-x-0')
+    return w
+  }
+
+  it('closes the drawer when the backdrop is clicked', async () => {
+    const w = await openDrawer()
+    await w.get('.fixed.inset-0').trigger('click')
+    expect(w.find('aside').classes()).toContain('translate-x-full')
+  })
+
+  it('closes the drawer on Escape', async () => {
+    const w = await openDrawer()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await w.vm.$nextTick()
+    expect(w.find('aside').classes()).toContain('translate-x-full')
+  })
+
+  it('closes the drawer on route change', async () => {
+    const w = await openDrawer()
+    await router.push('/tournaments')
+    await w.vm.$nextTick()
+    expect(w.find('aside').classes()).toContain('translate-x-full')
+  })
 })
