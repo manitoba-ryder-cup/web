@@ -47,4 +47,21 @@ describe('auth store', () => {
     expect(auth.user).toBeNull()
     expect(auth.isAuthenticated).toBe(false)
   })
+
+  it('refresh failure clears auth state and rethrows', async () => {
+    const auth = useAuthStore()
+    await auth.login('dev@x.com', 'pw')
+    ;(authApi.refresh as any).mockRejectedValueOnce(new Error('no cookie'))
+    await expect(auth.refresh()).rejects.toThrow('no cookie')
+    expect(auth.accessToken).toBeNull()
+    expect(auth.isAuthenticated).toBe(false)
+  })
+
+  it('login failure at me() leaves logged out', async () => {
+    ;(authApi.me as any).mockRejectedValueOnce(new Error('me failed'))
+    const auth = useAuthStore()
+    await expect(auth.login('dev@x.com', 'pw')).rejects.toThrow('me failed')
+    expect(auth.isAuthenticated).toBe(false)
+    expect(auth.accessToken).toBeNull()
+  })
 })
