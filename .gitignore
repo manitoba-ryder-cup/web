@@ -1,27 +1,8 @@
-.DS_Store
 node_modules
-/dist
-
-/tests/e2e/reports/
-selenium-debug.log
-chromedriver.log
-geckodriver.log
-
-
-# env files
-.env
-
-# Log files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Editor directories and files
-.idea
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-*.code-workspace
+dist
+*.local
+.DS_Store
+# local dev keypair (heimdall/scorecard)
+dev/keys
+# design/spec docs are kept local, not committed
+docs/superpowers
