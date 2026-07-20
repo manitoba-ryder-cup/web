@@ -18,6 +18,7 @@ vi.mock('@/api/scorecard', () => ({
   },
 }))
 
+import { scorecardApi } from '@/api/scorecard'
 import TournamentView from '@/views/TournamentView.vue'
 
 describe('TournamentView', () => {
@@ -38,8 +39,53 @@ describe('TournamentView', () => {
     expect(text).toContain('Amy Smith')
     expect(text).toContain('Bo Jones')
 
-    // Result: Red team (winner_team_id matches red-1) is announced as the winner.
-    expect(text).toMatch(/Red (wins|won)/i)
+    // Result: Red team (winner_team_id matches red-1) is announced as the winner (via WinnerBanner).
+    expect(text).toMatch(/Red\s*wins/i)
     expect(text).not.toMatch(/in progress/i)
+  })
+
+  it('shows the captain fallback when a team has no captain', async () => {
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValueOnce([
+      { id: 'red-1', color: 'Red', captain: null, points: 3 },
+      { id: 'blue-1', color: 'Blue', captain: { id: 'p2', first_name: 'Bo', last_name: 'Jones', email: null }, points: 5 },
+    ])
+    const wrapper = mount(TournamentView, { props: { id: 't1' } })
+    await flushPromises()
+    const text = wrapper.text()
+
+    expect(text).toContain('No captain assigned')
+    expect(text).toContain('Bo Jones')
+    expect(text).toContain('3')
+    expect(text).toContain('5')
+  })
+
+  it('shows a tie when winner_team_id is null', async () => {
+    vi.mocked(scorecardApi.getTournamentWinner).mockResolvedValueOnce({ finished: true, winner_team_id: null })
+    const wrapper = mount(TournamentView, { props: { id: 't1' } })
+    await flushPromises()
+    const text = wrapper.text()
+
+    expect(text).toMatch(/tied/i)
+    expect(text).not.toMatch(/wins/i)
+  })
+
+  it('maps an unrecognized winner id to a tie (never "Unknown")', async () => {
+    vi.mocked(scorecardApi.getTournamentWinner).mockResolvedValueOnce({ finished: true, winner_team_id: 'ghost-99' })
+    const wrapper = mount(TournamentView, { props: { id: 't1' } })
+    await flushPromises()
+    const text = wrapper.text()
+
+    expect(text).toMatch(/tied/i)
+    expect(text).not.toMatch(/unknown/i)
+  })
+
+  it('shows "In progress" when the tournament is not finished', async () => {
+    vi.mocked(scorecardApi.getTournamentWinner).mockResolvedValueOnce({ finished: false, winner_team_id: null })
+    const wrapper = mount(TournamentView, { props: { id: 't1' } })
+    await flushPromises()
+    const text = wrapper.text()
+
+    expect(text).toMatch(/in progress/i)
+    expect(text).not.toMatch(/wins/i)
   })
 })
