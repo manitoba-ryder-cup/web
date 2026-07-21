@@ -1,5 +1,5 @@
 import { ApiClient } from './client'
-import type { MatchFormat, Player, PlayerProfile, Tournament, TournamentTeam, WinnerResponse } from './types'
+import type { MatchFormat, PlayerProfile, PlayerTournamentHistory, Tournament, TournamentTeam, WinnerResponse } from './types'
 import { useAuthStore } from '@/stores/auth'
 
 let client: ApiClient | null = null
@@ -19,6 +19,8 @@ export const scorecardApi = {
   getTournament: (id: string) => sc().get<Tournament>(`/v1/tournaments/${id}`),
   getTournamentTeams: (id: string) => sc().get<TournamentTeam[]>(`/v1/tournaments/${id}/teams`),
   getTournamentWinner: (id: string) => sc().get<WinnerResponse>(`/v1/tournaments/${id}/winner`),
-  listPlayers: () => sc().get<Player[]>('/v1/players'),
+  listPlayers: () => sc().get<PlayerProfile[]>('/v1/players'),
   getPlayer: (id: string) => sc().get<PlayerProfile>(`/v1/players/${id}`),
+  getPlayerTournaments: (id: string) =>
+    sc().get<PlayerTournamentHistory[]>(`/v1/players/${id}/tournaments`),
 }

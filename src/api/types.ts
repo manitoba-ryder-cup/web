@@ -20,6 +20,16 @@ export interface Player {
 }
 export interface PlayerRecord { wins: number; losses: number; ties: number }
 export interface PlayerProfile extends Player { record: PlayerRecord }
+export interface PlayerTournamentHistory {
+  tournament_id: string
+  name: string
+  location: string
+  start_date: string
+  end_date: string
+  team_color: string // 'Red' | 'Blue'
+  result: 'won' | 'lost' | 'tied' | 'in_progress'
+  record: PlayerRecord
+}
 export interface TournamentTeam { id: string; color: string; captain: PlayerSummary | null; points: number }
 export interface WinnerResponse { finished: boolean; winner_team_id: string | null }
 export class ApiError extends Error {
