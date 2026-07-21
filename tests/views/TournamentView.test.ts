@@ -15,6 +15,18 @@ vi.mock('@/api/scorecard', () => ({
       { id: 'blue-1', color: 'Blue', captain: { id: 'p2', first_name: 'Bo', last_name: 'Jones', email: null }, points: 6 },
     ]),
     getTournamentWinner: vi.fn().mockResolvedValue({ finished: true, winner_team_id: 'red-1' }),
+    getTournamentResults: vi.fn().mockResolvedValue([
+      {
+        match_id: 'm1',
+        format_name: 'Singles',
+        finished: true,
+        winner_color: 'Red',
+        lead: 3,
+        holes_remaining: 2,
+        red_players: [{ player_id: 'r1', first_name: 'Cara', last_name: 'Lee' }],
+        blue_players: [{ player_id: 'b1', first_name: 'Dan', last_name: 'Roy' }],
+      },
+    ]),
   },
 }))
 
@@ -42,6 +54,11 @@ describe('TournamentView', () => {
     // Result: Red team (winner_team_id matches red-1) is announced as the winner (via WinnerBanner).
     expect(text).toMatch(/Red\s*wins/i)
     expect(text).not.toMatch(/in progress/i)
+
+    // Match results: the per-format section renders a row with a player name + margin.
+    expect(text).toContain('Singles')
+    expect(text).toContain('Cara Lee')
+    expect(text).toContain('3 & 2')
   })
 
   it('shows the captain fallback when a team has no captain', async () => {

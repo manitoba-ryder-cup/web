@@ -10,6 +10,7 @@ import SectionHeader from '@/components/typography/SectionHeader.vue'
 import TeamStandingPanel from '@/components/tournament/TeamStandingPanel.vue'
 import StandingsBar from '@/components/tournament/StandingsBar.vue'
 import WinnerBanner from '@/components/tournament/WinnerBanner.vue'
+import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue'
 import { formatDateRange } from '@/lib/date'
 
 const props = defineProps<{ id: string }>()
@@ -17,11 +18,13 @@ const { data, error, loading } = useAsync(() => Promise.all([
   scorecardApi.getTournament(props.id),
   scorecardApi.getTournamentTeams(props.id),
   scorecardApi.getTournamentWinner(props.id),
+  scorecardApi.getTournamentResults(props.id),
 ]))
 
 const tournament = computed(() => data.value?.[0] ?? null)
 const teams = computed(() => data.value?.[1] ?? [])
 const winner = computed(() => data.value?.[2] ?? null)
+const results = computed(() => data.value?.[3] ?? [])
 
 const redTeam = computed(() => teams.value.find((t) => t.color === 'Red') ?? null)
 const blueTeam = computed(() => teams.value.find((t) => t.color === 'Blue') ?? null)
@@ -56,6 +59,10 @@ function captainName(team: TournamentTeam | null): string {
         </BaseCard>
         <BaseCard>
           <WinnerBanner :winner-color="winnerColor" />
+        </BaseCard>
+        <BaseCard v-if="results.length" class="mt-6">
+          <SectionHeader>Results</SectionHeader>
+          <MatchResultsSection class="mt-4" :matches="results" />
         </BaseCard>
       </template>
     </AsyncState>
