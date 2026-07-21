@@ -24,10 +24,10 @@ describe('MatchResultsSection', () => {
     match({ match_id: 'm3', format_name: 'Singles', finished: false, winner_color: '' }),
   ]
 
-  it('groups matches by format in first-appearance order', () => {
+  it('makes a tab per format in first-appearance order', () => {
     const w = mount(MatchResultsSection, { props: { matches } })
-    const headers = w.findAll('h4').map((h) => h.text())
-    expect(headers).toEqual(['Fourball', 'Singles'])
+    const tabs = w.findAll('button').map((b) => b.text())
+    expect(tabs).toEqual(['Fourball', 'Singles'])
   })
 
   it('renders a row per match with player names', () => {
@@ -37,12 +37,15 @@ describe('MatchResultsSection', () => {
     expect(text).toContain('Bo Jones')
   })
 
-  it('shows the margin for a finished match and "In progress" for an unfinished one', () => {
+  it('shows margins on the active tab and "In progress" after switching tabs', async () => {
     const w = mount(MatchResultsSection, { props: { matches } })
-    const text = w.text()
-    expect(text).toContain('3 & 2')
-    expect(text).toContain('2 up')
-    expect(text).toContain('In progress')
+    // Fourball tab is active by default (m1 → "3 & 2", m2 → "2 up").
+    expect(w.text()).toContain('3 & 2')
+    expect(w.text()).toContain('2 up')
+    // The in-progress match is on the Singles tab.
+    const singles = w.findAll('button').find((b) => b.text() === 'Singles')!
+    await singles.trigger('click')
+    expect(w.text()).toContain('In progress')
   })
 
   it('tints the winning side', () => {
