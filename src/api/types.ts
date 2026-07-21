@@ -26,21 +26,26 @@ export interface PlayerTournamentHistory {
   location: string
   start_date: string
   end_date: string
-  team_color: string // 'Red' | 'Blue'
+  captain_first_name: string // the player's team that event, identified by captain
+  captain_last_name: string
   result: 'won' | 'lost' | 'tied' | 'in_progress'
   record: PlayerRecord
 }
 export interface TournamentTeam { id: string; color: string; captain: PlayerSummary | null; points: number }
 export interface MatchPlayer { player_id: string; first_name: string; last_name: string }
+// One team's lineup in a match, by id. Colour is resolved from the tournament's teams.
+export interface MatchSide { team_id: string; players: MatchPlayer[] }
 export interface MatchResult {
   match_id: string
   format_name: string
   finished: boolean
-  winner_color: string // 'Red' | 'Blue' | ''
+  winner_team_id: string | null // null = halved or unfinished
   lead: number
   holes_remaining: number
-  red_players: MatchPlayer[]
-  blue_players: MatchPlayer[]
+  sides: MatchSide[] // the two competing teams; order/colour is the client's concern
+  // Per played hole (in order): winning team's id, or null for a halved hole.
+  // Length = holes played; holes beyond the length are unplayed.
+  hole_results: (string | null)[]
 }
 export interface WinnerResponse { finished: boolean; winner_team_id: string | null }
 export class ApiError extends Error {

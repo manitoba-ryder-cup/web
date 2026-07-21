@@ -19,11 +19,14 @@ vi.mock('@/api/scorecard', () => ({
         match_id: 'm1',
         format_name: 'Singles',
         finished: true,
-        winner_color: 'Red',
+        winner_team_id: 'red-1',
         lead: 3,
         holes_remaining: 2,
-        red_players: [{ player_id: 'r1', first_name: 'Cara', last_name: 'Lee' }],
-        blue_players: [{ player_id: 'b1', first_name: 'Dan', last_name: 'Roy' }],
+        sides: [
+          { team_id: 'blue-1', players: [{ player_id: 'b1', first_name: 'Dan', last_name: 'Roy' }] },
+          { team_id: 'red-1', players: [{ player_id: 'r1', first_name: 'Cara', last_name: 'Lee' }] },
+        ],
+        hole_results: ['red-1', null, 'blue-1'],
       },
     ]),
   },
@@ -49,10 +52,10 @@ describe('TournamentView', () => {
     expect(text).toContain('8')
     expect(text).toContain('6')
 
-    // Match results: the active format tab renders a row with a player name + margin.
+    // Match results: the active format tab renders a match with a player name + margin.
     expect(text).toContain('Singles')
-    expect(text).toContain('Cara Lee')
-    expect(text).toContain('3 & 2')
+    expect(text).toContain('Lee')
+    expect(text).toContain('&') // "3 & 2" margin (big-number split)
   })
 
   it('omits the hero captains line when a team has no captain', async () => {

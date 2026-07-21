@@ -12,12 +12,14 @@ vi.mock('@/api/scorecard', () => ({
       {
         tournament_id: 't1', name: 'Cup 2024', location: 'Clear Lake',
         start_date: '2024-08-10', end_date: '2024-08-11',
-        team_color: 'Red', result: 'won', record: { wins: 3, losses: 1, ties: 0 },
+        captain_first_name: 'Cam', captain_last_name: 'Macaulay',
+        result: 'won', record: { wins: 3, losses: 1, ties: 0 },
       },
       {
         tournament_id: 't2', name: 'Cup 2023', location: 'Hecla',
         start_date: '2023-08-12', end_date: '2023-08-13',
-        team_color: 'Blue', result: 'lost', record: { wins: 1, losses: 3, ties: 0 },
+        captain_first_name: 'Nick', captain_last_name: 'Milnes',
+        result: 'lost', record: { wins: 1, losses: 3, ties: 0 },
       },
     ]),
   },
@@ -51,12 +53,13 @@ describe('PlayerView', () => {
     // Cups summary derived from history (2 played, 1 won).
     expect(w.text()).toContain('2 played · 1 won')
     // History rows: year, team color, and result badge text.
+    // The team is identified by captain ("Team {surname}"), never by colour.
     expect(w.text()).toContain('2024')
-    expect(w.text()).toContain('Red')
+    expect(w.text()).toContain('Team Macaulay')
     expect(w.text()).toContain('Won')
     expect(w.text()).toContain('Clear Lake')
     expect(w.text()).toContain('2023')
-    expect(w.text()).toContain('Blue')
+    expect(w.text()).toContain('Team Milnes')
     expect(w.text()).toContain('Lost')
   })
 

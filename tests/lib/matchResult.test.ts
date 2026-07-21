@@ -7,11 +7,11 @@ function match(overrides: Partial<MatchResult> = {}): MatchResult {
     match_id: 'm1',
     format_name: 'Singles',
     finished: true,
-    winner_color: 'Red',
+    winner_team_id: 't-1',
     lead: 3,
     holes_remaining: 2,
-    red_players: [],
-    blue_players: [],
+    sides: [],
+    hole_results: [],
     ...overrides,
   }
 }
@@ -23,11 +23,11 @@ describe('resultText', () => {
   it('renders "2 up" when won at the last hole (no holes remaining)', () => {
     expect(resultText(match({ lead: 2, holes_remaining: 0 }))).toBe('2 up')
   })
-  it('renders "Halved" when finished with no winner', () => {
-    expect(resultText(match({ finished: true, winner_color: '' }))).toBe('Halved')
+  it('renders "Tied" when finished with no winner', () => {
+    expect(resultText(match({ finished: true, winner_team_id: null }))).toBe('Tied')
   })
   it('renders "In progress" when not finished', () => {
-    expect(resultText(match({ finished: false, winner_color: '' }))).toBe('In progress')
+    expect(resultText(match({ finished: false, winner_team_id: null }))).toBe('In progress')
   })
 })
 

@@ -18,19 +18,20 @@ const tournament = computed(() => data.value?.[0] ?? null)
 const teams = computed(() => data.value?.[1] ?? [])
 const results = computed(() => data.value?.[2] ?? [])
 
-const redTeam = computed(() => teams.value.find((t) => t.color === 'Red') ?? null)
-const blueTeam = computed(() => teams.value.find((t) => t.color === 'Blue') ?? null)
+// One stable left/right order for the whole page (hero, ScoreBar, cards), by team id —
+// independent of colour, so nothing hardcodes "blue is left".
+const orderedTeams = computed(() => [...teams.value].sort((a, b) => a.id.localeCompare(b.id)))
 
 // Hero: "{year} Leaderboard", captains above ("Team X vs. Team Y"), location below.
-// A team is identified by its captain's surname, never by its color.
+// A team is identified by its captain's surname, never by its colour.
 const heroTitle = computed(() => {
   const year = tournament.value?.start_date?.slice(0, 4)
   return year ? `${year} Leaderboard` : 'Leaderboard'
 })
 const heroAbove = computed(() => {
-  const left = blueTeam.value?.captain?.last_name
-  const right = redTeam.value?.captain?.last_name
-  return left && right ? `Team ${left} vs. Team ${right}` : ''
+  const a = orderedTeams.value[0]?.captain?.last_name
+  const b = orderedTeams.value[1]?.captain?.last_name
+  return a && b ? `Team ${a} vs. Team ${b}` : ''
 })
 </script>
 <template>
@@ -39,13 +40,10 @@ const heroAbove = computed(() => {
       <template v-if="tournament">
         <!-- Sticky standings bar, flush under the hero (negative margins cancel the
              page body's padding so it spans the full content width). -->
-        <ScoreBar class="-mx-4 -mt-8"
-                  :match-count="results.length"
-                  :blue-points="blueTeam?.points ?? 0"
-                  :red-points="redTeam?.points ?? 0" />
+        <ScoreBar class="-mx-4 -mt-8" :match-count="results.length" :teams="orderedTeams" />
         <!-- Full-bleed within the content column: negative margins cancel the body's
              side padding so the tab bar has no padding around it. -->
-        <MatchResultsSection v-if="results.length" class="-mx-4" :matches="results" />
+        <MatchResultsSection v-if="results.length" class="-mx-4" :matches="results" :teams="orderedTeams" />
         <p v-else class="pt-6 text-center text-mrc-muted">There are currently no matches scheduled.</p>
       </template>
     </AsyncState>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { MatchResult } from '@/api/types'
+import type { MatchResult, TournamentTeam } from '@/api/types'
 import BaseTabs from '@/components/base/BaseTabs.vue'
-import MatchResultRow from './MatchResultRow.vue'
+import MatchOverview from './MatchOverview.vue'
 
-const props = defineProps<{ matches: MatchResult[] }>()
+const props = defineProps<{ matches: MatchResult[]; teams: TournamentTeam[] }>()
 
 // Group by format, preserving first-seen order (results arrive ordered by tee time).
 const grouped = computed(() => {
@@ -19,8 +19,9 @@ const grouped = computed(() => {
 </script>
 <template>
   <BaseTabs :tabs="grouped.order" v-slot="{ tab }">
-    <div class="divide-y divide-mrc-line">
-      <MatchResultRow v-for="m in grouped.byFormat[tab]" :key="m.match_id" :match="m" />
+    <!-- Tab bar is full-bleed (the parent applies -mx-4); pad the content back in. -->
+    <div class="px-2">
+      <MatchOverview v-for="m in grouped.byFormat[tab]" :key="m.match_id" :match="m" :teams="teams" />
     </div>
   </BaseTabs>
 </template>
