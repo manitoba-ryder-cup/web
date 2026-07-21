@@ -17,7 +17,8 @@ const sorted = computed(() =>
     <AsyncState :loading="loading" :error="error" :empty="!sorted.length" empty-text="No players yet.">
       <CardGrid>
         <PlayerCard v-for="p in sorted" :key="p.id" :id="p.id"
-                    :first-name="p.first_name" :last-name="p.last_name" :photo-path="p.photo_path" />
+                    :first-name="p.first_name" :last-name="p.last_name" :photo-path="p.photo_path"
+                    :record="p.record" />
       </CardGrid>
     </AsyncState>
   </PageLayout>
