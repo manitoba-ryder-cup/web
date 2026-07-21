@@ -31,6 +31,17 @@ export interface PlayerTournamentHistory {
   record: PlayerRecord
 }
 export interface TournamentTeam { id: string; color: string; captain: PlayerSummary | null; points: number }
+export interface MatchPlayer { player_id: string; first_name: string; last_name: string }
+export interface MatchResult {
+  match_id: string
+  format_name: string
+  finished: boolean
+  winner_color: string // 'Red' | 'Blue' | ''
+  lead: number
+  holes_remaining: number
+  red_players: MatchPlayer[]
+  blue_players: MatchPlayer[]
+}
 export interface WinnerResponse { finished: boolean; winner_team_id: string | null }
 export class ApiError extends Error {
   // Explicit field + assignment (not a constructor parameter property): this
