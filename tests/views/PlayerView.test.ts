@@ -30,6 +30,7 @@ const router = createRouter({
   routes: [
     { path: '/players', name: 'players', component: { template: '<div/>' } },
     { path: '/players/:id', name: 'player', component: { template: '<div/>' } },
+    { path: '/tournaments/:id', name: 'tournament', component: { template: '<div/>' } },
   ],
 })
 
@@ -57,5 +58,12 @@ describe('PlayerView', () => {
     expect(w.text()).toContain('2023')
     expect(w.text()).toContain('Blue')
     expect(w.text()).toContain('Lost')
+  })
+
+  it('links each history row to its tournament', async () => {
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    expect(w.find('a[href="/tournaments/t1"]').exists()).toBe(true)
+    expect(w.find('a[href="/tournaments/t2"]').exists()).toBe(true)
   })
 })
