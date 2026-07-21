@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import PageLayout from '@/components/layout/PageLayout.vue'
+import FullBleed from '@/components/layout/FullBleed.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue'
@@ -38,12 +39,13 @@ const heroAbove = computed(() => {
   <PageLayout :title="heroTitle" :above="heroAbove" :below="tournament?.location ?? ''" image="/img/crowd.webp">
     <AsyncState :loading="loading" :error="error">
       <template v-if="tournament">
-        <!-- Sticky standings bar, flush under the hero (negative margins cancel the
-             page body's padding so it spans the full content width). -->
-        <ScoreBar class="-mx-4 -mt-8" :match-count="results.length" :teams="orderedTeams" />
-        <!-- Full-bleed within the content column: negative margins cancel the body's
-             side padding so the tab bar has no padding around it. -->
-        <MatchResultsSection v-if="results.length" class="-mx-4" :matches="results" :teams="orderedTeams" />
+        <!-- Sticky standings bar, flush under the hero and spanning the content column. -->
+        <FullBleed flush-top>
+          <ScoreBar :match-count="results.length" :teams="orderedTeams" />
+        </FullBleed>
+        <FullBleed v-if="results.length">
+          <MatchResultsSection :matches="results" :teams="orderedTeams" />
+        </FullBleed>
         <p v-else class="pt-6 text-center text-mrc-muted">There are currently no matches scheduled.</p>
       </template>
     </AsyncState>

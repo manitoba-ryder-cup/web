@@ -1,32 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { MatchResult, TournamentTeam } from '@/api/types'
-import { teamColor } from '@/lib/teamColor'
+import { useMatchSides } from '@/composables/useMatchSides'
 import TeamNames from './TeamNames.vue'
 import MatchDetails from './MatchDetails.vue'
 
 // Detailed match card: each side's players, the big result, and 18 hole dots coloured
-// by who won each hole. Sides and holes are resolved by team id; colour comes from the
-// tournament's teams (id -> colour) via the registry — never hardcoded here.
+// by who won each hole. Sides/colour come from useMatchSides (by team id) — nothing here
+// hardcodes a colour.
 const props = defineProps<{ match: MatchResult; teams: TournamentTeam[] }>()
+const { left, right, colorFor } = useMatchSides(() => props.match, () => props.teams)
 
-const teamById = (id: string | null | undefined) => props.teams.find((t) => t.id === id) ?? null
-const orderIndex = (id: string) => {
-  const i = props.teams.findIndex((t) => t.id === id)
-  return i === -1 ? Number.MAX_SAFE_INTEGER : i
-}
-// Two sides in the tournament's stable team order (colour-independent left/right).
-const ordered = computed(() =>
-  [...props.match.sides].sort((a, b) => orderIndex(a.team_id) - orderIndex(b.team_id)))
-const left = computed(() => ordered.value[0] ?? null)
-const right = computed(() => ordered.value[1] ?? null)
-const leftBorder = computed(() => `border-l-[5px] ${teamColor(teamById(left.value?.team_id)?.color).border}`)
-const rightBorder = computed(() => `border-r-[5px] ${teamColor(teamById(right.value?.team_id)?.color).border}`)
+const leftBorder = computed(() => `border-l-[5px] ${colorFor(left.value?.team_id).border}`)
+const rightBorder = computed(() => `border-r-[5px] ${colorFor(right.value?.team_id).border}`)
 
 const winnerTextClass = computed(() => {
   // No winner (tied or still in progress) reads softer than a coloured win.
   if (!props.match.finished || !props.match.winner_team_id) return 'text-mrc-muted'
-  return teamColor(teamById(props.match.winner_team_id)?.color).text
+  return colorFor(props.match.winner_team_id).text
 })
 
 function holeClass(hole: number): string {
@@ -34,7 +25,7 @@ function holeClass(hole: number): string {
   if (hole <= r.length) {
     const winner = r[hole - 1]
     if (winner === null) return 'bg-mrc-line' // halved
-    return `${teamColor(teamById(winner)?.color).solid} text-white`
+    return `${colorFor(winner).solid} text-white`
   }
   // Unplayed: dimmed once the match is over, normal while it's still live.
   return props.match.finished ? 'text-mrc-faint' : 'text-mrc-ink'

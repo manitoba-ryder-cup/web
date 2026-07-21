@@ -5,7 +5,7 @@ const props = defineProps<{ entry: PlayerTournamentHistory }>()
 const year = props.entry.start_date.slice(0, 4)
 // The player's team that event, identified by its captain ("Team Macaulay").
 const teamName = props.entry.captain_last_name ? `Team ${props.entry.captain_last_name}` : ''
-const resultText = { won: 'Won', lost: 'Lost', tied: 'Tied', in_progress: 'In progress' }[props.entry.result]
+const resultLabel = { won: 'Won', lost: 'Lost', tied: 'Tied', in_progress: 'In progress' }[props.entry.result]
 const resultClass =
   props.entry.result === 'won'
     ? 'bg-mrc-success-tint text-mrc-success-ink'
@@ -22,7 +22,7 @@ const resultClass =
     </div>
     <div class="flex shrink-0 items-center gap-3 pl-3">
       <span class="text-sm text-mrc-muted">{{ entry.record.wins }}–{{ entry.record.losses }}–{{ entry.record.ties }}</span>
-      <span class="rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide" :class="resultClass">{{ resultText }}</span>
+      <span class="rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide" :class="resultClass">{{ resultLabel }}</span>
       <span class="text-mrc-faint" aria-hidden="true">›</span>
     </div>
   </RouterLink>
