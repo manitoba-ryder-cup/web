@@ -26,7 +26,7 @@ const cupsWon = computed(() => history.value.filter((h) => h.result === 'won').l
       <template v-if="player">
         <div class="mt-4 flex items-center gap-4">
           <PlayerAvatar :photo-path="player.photo_path" :alt="`${player.first_name} ${player.last_name}`" size="lg" />
-          <h1 class="font-display text-3xl font-bold">{{ player.first_name }} {{ player.last_name }}</h1>
+          <h2>{{ player.first_name }} {{ player.last_name }}</h2>
         </div>
         <BaseCard class="mt-6">
           <SectionHeader>Match Record</SectionHeader>

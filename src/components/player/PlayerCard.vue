@@ -9,7 +9,7 @@ defineProps<{ id: string; firstName: string; lastName: string; photoPath: string
     <div class="flex items-center gap-4">
       <PlayerAvatar :photo-path="photoPath" :alt="`${firstName} ${lastName}`" />
       <div>
-        <h3 class="font-display text-xl font-semibold">{{ firstName }} {{ lastName }}</h3>
+        <h4 class="font-semibold">{{ firstName }} {{ lastName }}</h4>
         <p class="text-sm text-mrc-muted">{{ record.wins }}–{{ record.losses }}–{{ record.ties }}</p>
       </div>
     </div>

@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
-import type { TournamentTeam } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import SectionHeader from '@/components/typography/SectionHeader.vue'
-import TeamStandingPanel from '@/components/tournament/TeamStandingPanel.vue'
-import StandingsBar from '@/components/tournament/StandingsBar.vue'
+import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import WinnerBanner from '@/components/tournament/WinnerBanner.vue'
 import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue'
-import { formatDateRange } from '@/lib/date'
 
 const props = defineProps<{ id: string }>()
 const { data, error, loading } = useAsync(() => Promise.all([
@@ -36,27 +33,28 @@ const winnerColor = computed<'Red' | 'Blue' | 'Tied' | null>(() => {
   return c === 'Red' || c === 'Blue' ? c : 'Tied'
 })
 
-function captainName(team: TournamentTeam | null): string {
-  if (!team?.captain) return 'No captain assigned'
-  return `${team.captain.first_name} ${team.captain.last_name}`
-}
+// Hero: "{year} Leaderboard", captains above ("Team X vs. Team Y"), location below.
+// A team is identified by its captain's surname, never by its color.
+const heroTitle = computed(() => {
+  const year = tournament.value?.start_date?.slice(0, 4)
+  return year ? `${year} Leaderboard` : 'Leaderboard'
+})
+const heroAbove = computed(() => {
+  const left = blueTeam.value?.captain?.last_name
+  const right = redTeam.value?.captain?.last_name
+  return left && right ? `Team ${left} vs. Team ${right}` : ''
+})
 </script>
 <template>
-  <PageLayout :title="tournament?.name ?? 'Leaderboard'" image="/img/crowd.webp">
+  <PageLayout :title="heroTitle" :above="heroAbove" :below="tournament?.location ?? ''" image="/img/crowd.webp">
     <AsyncState :loading="loading" :error="error">
       <template v-if="tournament">
-        <header class="mb-6 text-center">
-          <p class="text-mrc-muted">{{ tournament.location }}</p>
-          <p class="text-sm text-mrc-faint">{{ formatDateRange(tournament.start_date, tournament.end_date) }}</p>
-        </header>
-        <BaseCard class="mb-6">
-          <SectionHeader>Standings</SectionHeader>
-          <div class="mt-4 grid grid-cols-2 gap-4">
-            <TeamStandingPanel color="Blue" :captain="captainName(blueTeam)" :points="blueTeam?.points ?? 0" />
-            <TeamStandingPanel color="Red" :captain="captainName(redTeam)" :points="redTeam?.points ?? 0" />
-          </div>
-          <StandingsBar class="mt-4" :blue-points="blueTeam?.points ?? 0" :red-points="redTeam?.points ?? 0" />
-        </BaseCard>
+        <!-- Sticky standings bar, flush under the hero (negative margins cancel the
+             page body's padding so it spans the full content width). -->
+        <ScoreBar class="-mx-4 -mt-8 mb-6"
+                  :match-count="results.length"
+                  :blue-points="blueTeam?.points ?? 0"
+                  :red-points="redTeam?.points ?? 0" />
         <BaseCard>
           <WinnerBanner :winner-color="winnerColor" />
         </BaseCard>

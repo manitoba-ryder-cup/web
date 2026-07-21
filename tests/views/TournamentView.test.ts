@@ -41,15 +41,14 @@ describe('TournamentView', () => {
     await flushPromises()
     const text = wrapper.text()
 
-    // Header
-    expect(text).toContain('Summer Cup')
+    // Hero: "{year} Leaderboard", captains above (identified by surname, not color), location below.
+    expect(text).toContain('2026 Leaderboard')
+    expect(text).toContain('Team Jones vs. Team Smith')
     expect(text).toContain('Winnipeg')
 
-    // Standings: both teams' points are shown.
+    // ScoreBar: each team's total points show on the ends.
     expect(text).toContain('8')
     expect(text).toContain('6')
-    expect(text).toContain('Amy Smith')
-    expect(text).toContain('Bo Jones')
 
     // Result: Red team (winner_team_id matches red-1) is announced as the winner (via WinnerBanner).
     expect(text).toMatch(/Red\s*wins/i)
@@ -61,7 +60,7 @@ describe('TournamentView', () => {
     expect(text).toContain('3 & 2')
   })
 
-  it('shows the captain fallback when a team has no captain', async () => {
+  it('omits the hero captains line when a team has no captain', async () => {
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValueOnce([
       { id: 'red-1', color: 'Red', captain: null, points: 3 },
       { id: 'blue-1', color: 'Blue', captain: { id: 'p2', first_name: 'Bo', last_name: 'Jones', email: null }, points: 5 },
@@ -70,10 +69,11 @@ describe('TournamentView', () => {
     await flushPromises()
     const text = wrapper.text()
 
-    expect(text).toContain('No captain assigned')
-    expect(text).toContain('Bo Jones')
-    expect(text).toContain('3')
+    // No "Team X vs. Team Y" when a captain is missing; the rest still renders.
+    expect(text).not.toContain('vs.')
+    expect(text).toContain('2026 Leaderboard')
     expect(text).toContain('5')
+    expect(text).toContain('3')
   })
 
   it('shows a tie when winner_team_id is null', async () => {

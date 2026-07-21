@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import ContentContainer from './ContentContainer.vue'
 import NavLink from './NavLink.vue'
 import NavDrawer from './NavDrawer.vue'
 import MenuIcon from '@/components/icons/MenuIcon.vue'
@@ -27,11 +26,11 @@ async function onLogout() {
 </script>
 <template>
   <header class="bg-mrc-ink text-white">
-    <ContentContainer>
-      <div class="flex h-14 items-center justify-between">
+    <div class="mx-auto w-full max-w-3xl md:max-w-4xl lg:max-w-5xl">
+      <div class="flex h-16 items-center justify-between">
         <RouterLink to="/" class="flex items-center gap-2 text-xl font-semibold text-white">
-          <img src="/img/logo.webp" alt="MRC logo" class="h-10 w-10 object-contain" />
-          <span class="hidden sm:inline">Manitoba Ryder Cup</span>
+          <img src="/img/logo.webp" alt="MRC logo" class="h-12 w-12 object-contain" />
+          <span>Manitoba Ryder Cup</span>
         </RouterLink>
 
         <nav class="hidden items-center gap-5 text-sm md:flex">
@@ -40,11 +39,11 @@ async function onLogout() {
           <NavLink v-else to="/login" variant="inline">Login</NavLink>
         </nav>
 
-        <button type="button" class="text-white md:hidden" aria-label="Open menu" @click="drawerOpen = true">
+        <button type="button" class="text-white md:hidden mr-3" aria-label="Open menu" @click="drawerOpen = true">
           <MenuIcon />
         </button>
       </div>
-    </ContentContainer>
+    </div>
 
     <NavDrawer :open="drawerOpen" @close="drawerOpen = false">
       <NavLink v-for="l in links" :key="l.to" :to="l.to" variant="drawer">{{ l.label }}</NavLink>

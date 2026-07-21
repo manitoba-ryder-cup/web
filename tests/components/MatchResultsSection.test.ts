@@ -26,7 +26,7 @@ describe('MatchResultsSection', () => {
 
   it('groups matches by format in first-appearance order', () => {
     const w = mount(MatchResultsSection, { props: { matches } })
-    const headers = w.findAll('h3').map((h) => h.text())
+    const headers = w.findAll('h4').map((h) => h.text())
     expect(headers).toEqual(['Fourball', 'Singles'])
   })
 
