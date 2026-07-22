@@ -17,8 +17,6 @@ const props = defineProps<{
   rightTeam: TournamentTeam
   leftLabel: string
   rightLabel: string
-  leftName?: string
-  rightName?: string
   courseName?: string
   formatName?: string
   resultLabel?: string
@@ -101,27 +99,16 @@ function open(hole: number) {
 <template>
   <div class="mx-auto max-w-2xl overflow-hidden rounded-sm border border-mrc-line">
     <table class="w-full table-fixed text-center text-base tabular-nums">
-      <!-- Masthead, built like a printed card's letterhead: where and what kind pinned to
-           the two edges as a header rule, the pairing centred beneath it on the same axis
-           the Match column runs down — a match is symmetric, so neither side takes the
-           favoured position. The pairing still dominates by size and weight, not placement.
-           This is the only place the players are named in full; the score columns have room
-           for initials alone. A <caption> keeps it part of the table rather than a heading
-           that happens to sit above one. Charcoal here, mrc-muted for the structural bands
-           (header row, Hole and Par columns), panel-alt for the totals.
-           font-body, not the h1 default: a display face sitting directly on top of a data
-           table reads as a separate object. The card should be typographically one thing.
-           Names stay white — the saturated dots in the column heads below are already the
-           colour legend, and repeating it here in tints only weakens both. -->
-      <caption v-if="leftName || rightName || courseName" class="bg-mrc-charcoal px-3 py-2.5">
-        <div v-if="courseName || formatName"
-             class="flex items-baseline justify-between gap-3 text-xs font-semibold uppercase tracking-widest text-white/70">
+      <!-- Masthead, built like a printed card's letterhead: where and what kind, pinned to
+           the two edges as a header rule. The pairing is the caller's heading, above the
+           card. A <caption> keeps this part of the table rather than a strip that happens
+           to sit above one. Charcoal here, mrc-muted for the structural bands (header row,
+           Hole and Par columns), panel-alt for the totals. -->
+      <caption v-if="courseName || formatName" class="bg-mrc-charcoal px-3 py-2.5">
+        <div class="flex items-baseline justify-between gap-3 text-xs font-semibold uppercase tracking-widest text-white/70">
           <span class="min-w-0 truncate text-left">{{ courseName }}</span>
           <span class="shrink-0 text-right">{{ formatName }}</span>
         </div>
-        <h1 v-if="leftName || rightName" class="mt-1.5 truncate font-body text-base font-semibold leading-tight text-white md:text-lg">
-          {{ leftName }}<span class="px-1.5 font-normal text-white/70">vs</span>{{ rightName }}
-        </h1>
       </caption>
       <thead>
         <tr class="divide-x divide-mrc-line bg-mrc-muted text-white">

@@ -3,10 +3,11 @@ import { computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useMatchSides } from '@/composables/useMatchSides'
-import { playerInitials, playerSurnames, resultText } from '@/lib/matchResult'
+import { playerInitials, resultText } from '@/lib/matchResult'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
+import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import MatchScorecard from '@/components/tournament/MatchScorecard.vue'
 
 const props = defineProps<{ tournamentId: string; matchId: string }>()
@@ -32,12 +33,8 @@ const holeInfo = computed(() => new Map((data.value?.[3] ?? []).map((h) => [h.nu
 const { left, right } = useMatchSides(() => match.value, () => teams.value)
 const leftTeam = computed(() => teams.value.find((t) => t.id === left.value?.team_id) ?? null)
 const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.team_id) ?? null)
-// Initials head the score columns (a w-14 cell fits nothing longer); the masthead
-// directly above carries the surnames, which is what makes those initials readable.
 const leftLabel = computed(() => (left.value ? playerInitials(left.value.players) : ''))
 const rightLabel = computed(() => (right.value ? playerInitials(right.value.players) : ''))
-const leftNames = computed(() => (left.value ? playerSurnames(left.value.players) : ''))
-const rightNames = computed(() => (right.value ? playerSurnames(right.value.players) : ''))
 
 </script>
 <template>
@@ -51,11 +48,16 @@ const rightNames = computed(() => (right.value ? playerSurnames(right.value.play
     </template>
     <AsyncState :loading="loading" :error="error">
       <template v-if="match && leftTeam && rightTeam">
-        <!-- No summary row: the running state is already in the Match column and the Tot
-             row, so the card's masthead only has to say who is playing and where. -->
+        <!-- The leaderboard row you tapped, reused as this page's heading: it names both
+             sides AND states the result at a fixed position. The Match column and the Tot
+             row carry the result too, but neither sits anywhere predictable — the Match
+             column's last filled cell moves as the round goes on, and Tot means scrolling.
+             Width-matched to the card below. -->
+        <div class="mx-auto mb-4 max-w-2xl">
+          <MatchSummary :match="match" :teams="teams" />
+        </div>
         <MatchScorecard :holes="holes" :left-team="leftTeam" :right-team="rightTeam"
                         :left-label="leftLabel" :right-label="rightLabel" :hole-info="holeInfo"
-                        :left-name="leftNames" :right-name="rightNames"
                         :course-name="match.course_name" :format-name="match.format_name"
                         :result-label="match.finished ? resultText(match) : undefined"
                         :tournament-id="tournamentId" :match-id="matchId" />
