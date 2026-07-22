@@ -16,13 +16,21 @@ const teamById = computed(() => new Map(props.teams.map((t) => [t.id, t])))
 function teamMeta(teamId: string | null | undefined) {
   return teamColor(teamId ? teamById.value.get(teamId)?.color : null)
 }
+// Tee times are stored as UTC instants but belong to the event's local time — MBRC is
+// always in Manitoba (Central) — so they're formatted here in that zone, not UTC.
+const EVENT_TZ = 'America/Winnipeg'
 function fmtTime(iso: string | null): string {
   if (!iso) return ''
-  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }).format(new Date(iso))
+  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: EVENT_TZ }).format(new Date(iso))
 }
 function dayLabel(iso: string | null): string {
   if (!iso) return 'TBD'
-  return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(iso))
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: EVENT_TZ }).format(new Date(iso))
+}
+// Group key by the event-local date (not the UTC date, which can differ at day edges).
+function dayKeyOf(iso: string | null): string {
+  if (!iso) return ''
+  return new Intl.DateTimeFormat('en-CA', { timeZone: EVENT_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
 }
 
 // A team-colour dot per side (consistent top/bottom across rows) shows who's on what
@@ -71,8 +79,7 @@ interface Session { key: string; day: string; format: string; rows: Row[] }
 const sessions = computed<Session[]>(() => {
   const byKey = new Map<string, Session>()
   for (const m of props.matches) {
-    const dayKey = m.tee_time ? m.tee_time.slice(0, 10) : ''
-    const key = `${dayKey}|${m.format_name}`
+    const key = `${dayKeyOf(m.tee_time)}|${m.format_name}`
     let s = byKey.get(key)
     if (!s) {
       s = { key, day: dayLabel(m.tee_time), format: m.format_name, rows: [] }
