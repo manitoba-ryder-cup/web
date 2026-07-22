@@ -18,10 +18,15 @@ export function useBackLink() {
 // Declare the back link for the current page. Tracks its source reactively (so route
 // param changes update it) and clears it when the page unmounts.
 export function provideBackLink(source: MaybeRefOrGetter<BackLink | null>) {
+  let current: BackLink | null = null
   watchEffect(() => {
-    back.value = toValue(source)
+    current = toValue(source)
+    back.value = current
   })
+  // Clear on unmount only if a newer page hasn't already replaced our link. Client-side
+  // navigation mounts the incoming view (which sets its link) before unmounting the
+  // outgoing one, so an unguarded clear here would wipe the incoming page's link.
   onUnmounted(() => {
-    back.value = null
+    if (back.value === current) back.value = null
   })
 }
