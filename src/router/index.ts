@@ -18,7 +18,8 @@ declare module 'vue-router' {
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'news', component: () => import('@/views/NewsView.vue') },
+    { path: '/', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
+    { path: '/news', name: 'news', component: () => import('@/views/NewsView.vue') },
     { path: '/tournaments', name: 'tournaments', component: () => import('@/views/TournamentsView.vue') },
     { path: '/tournaments/:id', name: 'tournament', component: () => import('@/views/TournamentView.vue'), props: true },
     {

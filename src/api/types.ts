@@ -20,6 +20,22 @@ export interface Player {
 }
 export interface PlayerRecord { wins: number; losses: number; ties: number }
 export interface PlayerProfile extends Player { record: PlayerRecord }
+// A player's entry in a specific tournament: their team (the draft), tier, and that
+// year's biography (per-tournament, so it isn't overwritten between events).
+export interface TournamentPlayer {
+  tournament_id: string
+  player_id: string
+  tier: string
+  biography: string
+  hdcp: number
+  first_name: string
+  last_name: string
+  email: string | null
+  photo_path: string
+  team_id: string | null
+  record: PlayerRecord // all-time W-L-T
+  cups_won: number // tournaments the player's team has won
+}
 export interface PlayerTournamentHistory {
   tournament_id: string
   name: string
@@ -47,6 +63,7 @@ export interface MatchResult {
   // Length = holes played; holes beyond the length are unplayed.
   hole_results: (string | null)[]
   tee_time: string | null // RFC3339 (UTC), null if unscheduled
+  course_name: string
 }
 
 // One team's (best-ball) gross score on a hole.

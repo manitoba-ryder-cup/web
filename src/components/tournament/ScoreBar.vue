@@ -1,30 +1,57 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { TournamentTeam } from '@/api/types'
+import type { MatchResult, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
 
 // The signature standings bar. Two bars per match (each = ½ a point) so halved matches
-// paint cleanly. The first team grows from the LEFT in its colour, the second from the
-// RIGHT in its colour; undecided stays grey. Order and colour come from the caller —
-// no colour is named here. Each team's total sits on its end.
-const props = defineProps<{ matchCount: number; teams: TournamentTeam[] }>()
+// paint cleanly. From each end a team fills its DECIDED points in solid colour, then its
+// PROJECTED points (in-progress matches it currently leads) in a lighter shade; genuine
+// toss-ups (all-square, in-progress) stay grey. Order and colour come from the caller.
+// `flat` drops the self-stick wrapper so the bar can be embedded in a caller's own sticky
+// header (e.g. the hole-entry page); on its own it sticks under the hero.
+const props = withDefaults(defineProps<{ results: MatchResult[]; teams: TournamentTeam[]; flat?: boolean }>(), {
+  flat: false,
+})
 
 const left = computed(() => props.teams[0] ?? null)
 const right = computed(() => props.teams[1] ?? null)
 const leftSolid = computed(() => teamColor(left.value?.color).solid)
 const rightSolid = computed(() => teamColor(right.value?.color).solid)
-const numBars = computed(() => props.matchCount * 2)
+const leftSoft = computed(() => teamColor(left.value?.color).soft)
+const rightSoft = computed(() => teamColor(right.value?.color).soft)
+const numBars = computed(() => props.results.length * 2)
+
+// Projected points = in-progress matches each side currently leads (net holes won),
+// derived from hole_results. Finished matches are already in the teams' points totals.
+const projected = computed(() => {
+  const lid = left.value?.id
+  const rid = right.value?.id
+  let l = 0
+  let r = 0
+  for (const m of props.results) {
+    if (m.finished) continue
+    const lw = m.hole_results.filter((h) => h === lid).length
+    const rw = m.hole_results.filter((h) => h === rid).length
+    if (lw > rw) l++
+    else if (rw > lw) r++
+  }
+  return { l, r }
+})
 
 function blockClass(i: number): string {
-  const l = (left.value?.points ?? 0) * 2
-  const r = (right.value?.points ?? 0) * 2
+  const lS = (left.value?.points ?? 0) * 2 // decided (solid) bars, from the left
+  const lT = projected.value.l * 2 // projected (soft) bars
+  const rS = (right.value?.points ?? 0) * 2 // decided, from the right
+  const rT = projected.value.r * 2
   const n = numBars.value
-  if (i <= l) return leftSolid.value
-  if (i > n - r) return rightSolid.value
+  if (i <= lS) return leftSolid.value
+  if (i <= lS + lT) return leftSoft.value
+  if (i > n - rS) return rightSolid.value
+  if (i > n - rS - rT) return rightSoft.value
   return 'bg-mrc-line'
 }
 function borderClass(i: number): string {
-  if (i === props.matchCount) return 'border-r-2 border-mrc-ink' // midline between the sides
+  if (i === props.results.length) return 'border-r-2 border-mrc-ink' // midline between the sides
   if (i % 2 === 0) return 'border-r border-white/40' // per-match separators
   return ''
 }
@@ -37,7 +64,7 @@ const leftScore = computed(() => fmt(left.value?.points))
 const rightScore = computed(() => fmt(right.value?.points))
 </script>
 <template>
-  <div class="sticky top-0 z-10 border-b border-mrc-line-strong bg-mrc-surface shadow">
+  <div :class="flat ? '' : 'sticky top-0 z-10 bg-mrc-surface shadow'">
     <div class="relative min-h-20">
       <div class="grid" :style="{ gridTemplateColumns: `repeat(${numBars}, minmax(0, 1fr))` }">
         <div v-for="i in numBars" :key="i" class="h-20" :class="[blockClass(i), borderClass(i)]" />

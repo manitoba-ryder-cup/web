@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { MatchResult, TournamentTeam } from '@/api/types'
 import { useMatchSides } from '@/composables/useMatchSides'
+import { placeholderPairing } from '@/lib/matchResult'
 import TeamNames from './TeamNames.vue'
 import MatchDetails from './MatchDetails.vue'
 
@@ -11,8 +12,17 @@ import MatchDetails from './MatchDetails.vue'
 const props = defineProps<{ match: MatchResult; teams: TournamentTeam[] }>()
 const { left, right, colorFor } = useMatchSides(() => props.match, () => props.teams)
 
-const leftBorder = computed(() => `border-l-[5px] ${colorFor(left.value?.team_id).border}`)
-const rightBorder = computed(() => `border-r-[5px] ${colorFor(right.value?.team_id).border}`)
+// A seeded-but-unassigned slot has no sides yet; fall back to a placeholder pairing so the
+// card still reads as "pairing vs pairing" instead of collapsing to just the result.
+const leftPlayers = computed(() => (left.value?.players.length ? left.value.players : placeholderPairing(props.match.format_name)))
+const rightPlayers = computed(() => (right.value?.players.length ? right.value.players : placeholderPairing(props.match.format_name)))
+
+// Borders reflect the two teams (blue left, red right) — known from the draft even before
+// this match's lineup is assigned, so an unassigned card still shows the team colours.
+const blueTeam = computed(() => props.teams.find((t) => t.color === 'Blue'))
+const redTeam = computed(() => props.teams.find((t) => t.color === 'Red'))
+const leftBorder = computed(() => `border-l-[5px] ${colorFor(left.value?.team_id ?? blueTeam.value?.id).border}`)
+const rightBorder = computed(() => `border-r-[5px] ${colorFor(right.value?.team_id ?? redTeam.value?.id).border}`)
 
 const winnerTextClass = computed(() => {
   // No winner (tied or still in progress) reads softer than a coloured win.
@@ -34,11 +44,11 @@ function holeClass(hole: number): string {
 <template>
   <div class="mb-6 overflow-hidden rounded-md border border-mrc-line bg-mrc-surface shadow">
     <div class="flex border-b border-mrc-line">
-      <TeamNames v-if="left" :players="left.players" align="left" :border-class="leftBorder" />
+      <TeamNames :players="leftPlayers" align="left" :border-class="leftBorder" />
       <div class="flex w-1/5 items-center justify-center text-center">
         <MatchDetails :match="match" :text-class="winnerTextClass" />
       </div>
-      <TeamNames v-if="right" :players="right.players" align="right" :border-class="rightBorder" />
+      <TeamNames :players="rightPlayers" align="right" :border-class="rightBorder" />
     </div>
     <div class="flex justify-center p-4">
       <div v-for="hole in 18" :key="hole"

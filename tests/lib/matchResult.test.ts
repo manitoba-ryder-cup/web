@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resultText, playerNames } from '@/lib/matchResult'
+import { resultText, playerNames, placeholderPairing } from '@/lib/matchResult'
 import type { MatchResult } from '@/api/types'
 
 function match(overrides: Partial<MatchResult> = {}): MatchResult {
@@ -26,8 +26,27 @@ describe('resultText', () => {
   it('renders "Tied" when finished with no winner', () => {
     expect(resultText(match({ finished: true, winner_team_id: null }))).toBe('Tied')
   })
-  it('renders "In progress" when not finished', () => {
-    expect(resultText(match({ finished: false, winner_team_id: null }))).toBe('In progress')
+  it('renders "AS" when in progress and all square (no lead / no completed holes)', () => {
+    expect(resultText(match({ finished: false, winner_team_id: null, lead: 0 }))).toBe('AS')
+  })
+  it('renders "In progress" when not finished but a side is ahead', () => {
+    expect(resultText(match({ finished: false, winner_team_id: null, lead: 2 }))).toBe('In progress')
+  })
+})
+
+describe('placeholderPairing', () => {
+  it('gives one placeholder for Singles (1 v 1)', () => {
+    expect(placeholderPairing('Singles').map((p) => `${p.first_name} ${p.last_name}`)).toEqual(['Player One'])
+  })
+  it('gives two placeholders for a team format', () => {
+    expect(placeholderPairing('Fourball').map((p) => `${p.first_name} ${p.last_name}`)).toEqual([
+      'Player One',
+      'Player Two',
+    ])
+  })
+  it('gives each placeholder a stable, unique key', () => {
+    const ids = placeholderPairing('Alt Shot').map((p) => p.player_id)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })
 

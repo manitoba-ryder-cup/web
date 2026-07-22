@@ -8,6 +8,7 @@ import { useMatchSides } from '@/composables/useMatchSides'
 import { playerSurnames } from '@/lib/matchResult'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import ScoreWheel from '@/components/tournament/ScoreWheel.vue'
 import FlagIcon from '@/components/icons/FlagIcon.vue'
@@ -25,7 +26,8 @@ const { data, error, loading } = useAsync(() =>
   ]),
 )
 const teams = computed(() => [...(data.value?.[0] ?? [])].sort((a, b) => a.id.localeCompare(b.id)))
-const match = computed(() => (data.value?.[1] ?? []).find((m) => m.match_id === props.matchId) ?? null)
+const results = computed(() => data.value?.[1] ?? [])
+const match = computed(() => results.value.find((m) => m.match_id === props.matchId) ?? null)
 const holeInfo = computed(() => new Map((data.value?.[2] ?? []).map((h) => [h.number, h])).get(holeNumber.value) ?? null)
 
 const { left, right } = useMatchSides(() => match.value, () => teams.value)
@@ -103,8 +105,11 @@ async function saveAndNext() {
     <AsyncState :loading="loading" :error="error">
       <template v-if="match && holeInfo">
         <!-- Sticky context: the match summary, with the hole details on one line below it. -->
-        <div class="sticky top-0 z-10 -mx-4 border-b border-mrc-line-strong bg-mrc-surface px-2 pb-3 shadow">
-          <MatchSummary :match="match" :teams="teams" />
+        <div class="sticky top-0 z-10 -mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 pb-3 shadow">
+          <!-- Overall event standing stays in view while you enter this hole's scores. -->
+          <ScoreBar flat class="-mx-2" :results="results" :teams="teams" />
+          <p class="mt-3 text-center text-xs font-semibold uppercase tracking-wide text-mrc-muted">{{ match.format_name }}</p>
+          <MatchSummary class="mt-1" :match="match" :teams="teams" />
           <div class="mt-3 flex items-center justify-center gap-10 text-mrc-muted">
             <span class="flex items-center gap-2 text-xl font-semibold">
               <FlagIcon />{{ hole }}

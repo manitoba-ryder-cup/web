@@ -19,7 +19,7 @@ const pad = computed(() => (props.total ? 'py-2' : 'py-1.5'))
 <template>
   <tr class="divide-x divide-mrc-line bg-mrc-panel-alt font-semibold uppercase tracking-wide"
       :class="total ? 'border-t-2 border-mrc-ink text-mrc-ink' : 'border-t border-mrc-line text-mrc-muted'">
-    <td class="bg-mrc-charcoal text-white" :class="pad">{{ label }}</td>
+    <td class="bg-mrc-muted text-white" :class="pad">{{ label }}</td>
     <td class="text-mrc-ink" :class="pad">{{ yards ?? '' }}</td>
     <td class="text-mrc-ink" :class="pad">{{ left ?? '' }}</td>
     <td class="text-mrc-ink" :class="pad">{{ right ?? '' }}</td>

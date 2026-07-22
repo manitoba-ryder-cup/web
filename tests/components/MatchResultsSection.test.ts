@@ -64,4 +64,45 @@ describe('MatchResultsSection', () => {
     // m1's red team won → the result text carries the red team's colour class.
     expect(mountIt().html()).toContain('text-mrc-red-team')
   })
+
+  it('shows placeholder names for a match with no players assigned', () => {
+    // A seeded-but-unassigned slot has no sides; the card should still read as a pairing.
+    const unassigned = match({
+      match_id: 'm9',
+      format_name: 'Fourball',
+      finished: false,
+      winner_team_id: null,
+      sides: [],
+      hole_results: [],
+    })
+    const w = mount(MatchResultsSection, {
+      props: { matches: [unassigned], teams, tournamentId: 't1' },
+      global: { plugins: [router] },
+    })
+    expect(w.text()).toContain('Player')
+    expect(w.text()).toContain('One')
+    expect(w.text()).toContain('Two') // Fourball → two a side
+  })
+
+  it('shows AS (not "In progress") and blue/red borders for an all-square unassigned match', () => {
+    const unassigned = match({
+      match_id: 'm9',
+      format_name: 'Fourball',
+      finished: false,
+      winner_team_id: null,
+      lead: 0,
+      holes_remaining: 18,
+      sides: [],
+      hole_results: [],
+    })
+    const w = mount(MatchResultsSection, {
+      props: { matches: [unassigned], teams, tournamentId: 't1' },
+      global: { plugins: [router] },
+    })
+    expect(w.text()).toContain('AS')
+    expect(w.text()).not.toContain('In progress')
+    // Teams are known even before the draft: blue on the left, red on the right.
+    expect(w.html()).toContain('border-mrc-blue-team')
+    expect(w.html()).toContain('border-mrc-red-team')
+  })
 })

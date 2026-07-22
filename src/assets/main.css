@@ -76,6 +76,8 @@
   /* Accent / chrome (Material deep-purple) */
   --color-mrc-accent:       #4527a0;
   --color-mrc-accent-dark:  #311b92;
+  --color-mrc-accent-soft:  #b39ddb; /* lighter fill — pops on a dark hero */
+  --color-mrc-accent-tint:  #ede7f6; /* faint fill */
 
   /* Team BLUE (always LEFT) */
   --color-mrc-blue-team:    #1565c0;

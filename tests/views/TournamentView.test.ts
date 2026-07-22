@@ -52,10 +52,12 @@ describe('TournamentView', () => {
     await flushPromises()
     const text = wrapper.text()
 
-    // Hero: "{year} Leaderboard", captains above (identified by surname, not color), location below.
-    expect(text).toContain('2026 Leaderboard')
-    expect(text).toContain('Team Jones vs. Team Smith')
-    expect(text).toContain('Winnipeg')
+    // Hero: "{year} · {location}" eyebrow + the captain matchup. On the leaderboard the
+    // captains are white (not team colours) — the ScoreBar right here owns the colour.
+    expect(text).toContain('2026 · Winnipeg')
+    expect(text).toContain('Jones')
+    expect(text).toContain('Smith')
+    expect(wrapper.html()).not.toContain('text-mrc-blue-soft')
 
     // ScoreBar: each team's total points show on the ends.
     expect(text).toContain('8')
@@ -76,9 +78,9 @@ describe('TournamentView', () => {
     await flushPromises()
     const text = wrapper.text()
 
-    // No "Team X vs. Team Y" when a captain is missing; the rest still renders.
-    expect(text).not.toContain('vs.')
-    expect(text).toContain('2026 Leaderboard')
+    // No matchup ("vs") when a captain is missing; the eyebrow + standings still render.
+    expect(text).not.toContain('vs')
+    expect(text).toContain('2026 · Winnipeg')
     expect(text).toContain('5')
     expect(text).toContain('3')
   })

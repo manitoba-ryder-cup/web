@@ -24,7 +24,7 @@ const back = computed(() => route.meta.back?.(route) ?? null)
 
 // Inline (desktop) nav mirrors the public IA; the drawer below carries the full v2 menu.
 const links = [
-  { to: '/', label: 'News' },
+  { to: '/news', label: 'News' },
   { to: '/players', label: 'Players' },
   { to: '/tournaments', label: 'History' },
 ]
@@ -80,7 +80,7 @@ async function onLogout() {
     </div>
 
     <NavDrawer :open="drawerOpen" @close="drawerOpen = false">
-      <NavLink to="/" variant="drawer"><NewspaperIcon class="mr-4" />News &amp; Media</NavLink>
+      <NavLink to="/news" variant="drawer"><NewspaperIcon class="mr-4" />News &amp; Media</NavLink>
       <NavLink :to="leaderboardTo" variant="drawer"><LeaderboardIcon class="mr-4" />Leaderboard</NavLink>
       <NavLink to="/players" variant="drawer"><GroupsIcon class="mr-4" />Players</NavLink>
       <NavLink to="/tournaments" variant="drawer"><TrophyIcon class="mr-4" />History</NavLink>

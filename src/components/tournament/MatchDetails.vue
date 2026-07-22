@@ -20,6 +20,7 @@ const outcome = computed(() => matchOutcome(props.match))
       <span class="text-6xl">{{ outcome.holesRemaining }}</span>
     </div>
     <div v-else-if="outcome.kind === 'tied'" class="text-4xl">TIED</div>
+    <div v-else-if="outcome.kind === 'all_square'" class="text-3xl">AS</div>
     <div v-else class="text-lg">In progress</div>
   </div>
 </template>
