@@ -27,7 +27,7 @@ const centerClass = computed(() => {
     <div class="w-2/5 truncate rounded-l border border-r-0 border-mrc-line p-2 shadow" :class="sideClass(left)">
       {{ left ? playerSurnames(left.players) : '' }}
     </div>
-    <div class="w-1/5 rounded border py-3 text-lg font-semibold uppercase tracking-wide shadow-md" :class="centerClass">
+    <div class="w-1/5 rounded border py-3 text-lg font-semibold uppercase tracking-tight shadow-md" :class="centerClass">
       {{ resultText(match) }}
     </div>
     <div class="w-2/5 truncate rounded-r border border-l-0 border-mrc-line p-2 shadow" :class="sideClass(right)">

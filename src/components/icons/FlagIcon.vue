@@ -1,5 +1,5 @@
 <template>
   <svg class="h-8 w-8 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+    <path d="M12.36,6L12.76,8H18V14H14.64L14.24,12H7V6H12.36M14,4H5V21H7V14H12.6L13,16H20V6H14.4" />
   </svg>
 </template>

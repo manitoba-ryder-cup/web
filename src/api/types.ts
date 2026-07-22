@@ -67,6 +67,13 @@ export interface Hole {
   hdcp: number
   yards: number
 }
+// One hole score to record. player_id is null for one-ball team formats (scramble, etc.).
+export interface ScoreSubmission {
+  hole_number: number
+  strokes: number
+  team_id: string
+  player_id: string | null
+}
 export interface WinnerResponse { finished: boolean; winner_team_id: string | null }
 export class ApiError extends Error {
   // Explicit field + assignment (not a constructor parameter property): this

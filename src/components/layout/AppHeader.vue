@@ -35,8 +35,8 @@ async function onLogout() {
       <div class="flex h-16 items-center justify-between">
         <!-- A detail page's back link replaces the logo/wordmark only; the nav + hamburger
              stay put, matching the v2 site (back arrow on the left, menu still on the right). -->
-        <RouterLink v-if="back" :to="back.to" class="flex items-center gap-1 pl-3 text-lg font-semibold text-white">
-          <ArrowLeftIcon /><span>{{ back.label }}</span>
+        <RouterLink v-if="back" :to="back.to" class="flex items-center gap-1 pl-2 text-xl font-semibold text-white">
+          <ArrowLeftIcon /><span class="ml-3">{{ back.label }}</span>
         </RouterLink>
         <RouterLink v-else to="/" class="flex items-center gap-2 text-xl font-semibold text-white">
           <img src="/img/logo.webp" alt="MRC logo" class="h-12 w-12 object-contain" />

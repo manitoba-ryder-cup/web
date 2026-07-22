@@ -1,5 +1,5 @@
 import { ApiClient } from './client'
-import type { Hole, HoleStatus, MatchFormat, MatchResult, PlayerProfile, PlayerTournamentHistory, Tournament, TournamentTeam, WinnerResponse } from './types'
+import type { Hole, HoleStatus, MatchFormat, MatchResult, PlayerProfile, PlayerTournamentHistory, ScoreSubmission, Tournament, TournamentTeam, WinnerResponse } from './types'
 import { useAuthStore } from '@/stores/auth'
 
 let client: ApiClient | null = null
@@ -22,6 +22,8 @@ export const scorecardApi = {
   getTournamentResults: (id: string) => sc().get<MatchResult[]>(`/v1/tournaments/${id}/results`),
   getMatchScores: (id: string) => sc().get<HoleStatus[]>(`/v1/matches/${id}/scores`),
   getMatchHoles: (id: string) => sc().get<Hole[]>(`/v1/matches/${id}/holes`),
+  // Records one hole score (scores:write). One call per player/team; returns 204.
+  submitScore: (matchId: string, body: ScoreSubmission) => sc().post<void>(`/v1/matches/${matchId}/scores`, body),
   listPlayers: () => sc().get<PlayerProfile[]>('/v1/players'),
   getPlayer: (id: string) => sc().get<PlayerProfile>(`/v1/players/${id}`),
   getPlayerTournaments: (id: string) =>
