@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createRouter, createWebHistory } from 'vue-router'
 import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue'
 import type { MatchResult, TournamentTeam } from '@/api/types'
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [{ path: '/tournaments/:tournamentId/matches/:matchId', name: 'match', component: { template: '<div/>' } }],
+})
 
 const teams: TournamentTeam[] = [
   { id: 't-blue', color: 'Blue', captain: null, points: 0 },
@@ -32,7 +38,8 @@ const matches: MatchResult[] = [
 ]
 
 describe('MatchResultsSection', () => {
-  const mountIt = () => mount(MatchResultsSection, { props: { matches, teams } })
+  const mountIt = () =>
+    mount(MatchResultsSection, { props: { matches, teams, tournamentId: 't1' }, global: { plugins: [router] } })
 
   it('makes a tab per format in first-appearance order', () => {
     expect(mountIt().findAll('button').map((b) => b.text())).toEqual(['Fourball', 'Singles'])

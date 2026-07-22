@@ -6,7 +6,7 @@ import { teamColor, type TeamColorClasses } from '@/lib/teamColor'
 // (by team position, colour-independent) and a colour lookup by team id. Shared by every
 // component that renders a match, so the ordering/colour logic lives in exactly one place.
 export function useMatchSides(
-  match: MaybeRefOrGetter<MatchResult>,
+  match: MaybeRefOrGetter<MatchResult | null | undefined>,
   teams: MaybeRefOrGetter<TournamentTeam[]>,
 ) {
   const teamById = (id: string | null | undefined) => toValue(teams).find((t) => t.id === id) ?? null
@@ -15,7 +15,7 @@ export function useMatchSides(
     return i === -1 ? Number.MAX_SAFE_INTEGER : i
   }
   const ordered = computed(() =>
-    [...toValue(match).sides].sort((a, b) => orderIndex(a.team_id) - orderIndex(b.team_id)))
+    [...(toValue(match)?.sides ?? [])].sort((a, b) => orderIndex(a.team_id) - orderIndex(b.team_id)))
   const left = computed<MatchSide | null>(() => ordered.value[0] ?? null)
   const right = computed<MatchSide | null>(() => ordered.value[1] ?? null)
   const colorFor = (teamId: string | null | undefined): TeamColorClasses => teamColor(teamById(teamId)?.color)

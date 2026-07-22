@@ -7,6 +7,7 @@ export interface TeamColorClasses {
   border: string // 5px accent border on the team strip
   tint: string // faint background (lead state)
   line: string // faint border (lead state)
+  cssVar: string // the raw colour for SVG fill/stroke (e.g. the match-flow chart)
 }
 
 const REGISTRY: Record<string, TeamColorClasses> = {
@@ -16,6 +17,7 @@ const REGISTRY: Record<string, TeamColorClasses> = {
     border: 'border-mrc-blue-team',
     tint: 'bg-mrc-blue-tint',
     line: 'border-mrc-blue-line',
+    cssVar: 'var(--color-mrc-blue-team)',
   },
   Red: {
     solid: 'bg-mrc-red-team',
@@ -23,6 +25,7 @@ const REGISTRY: Record<string, TeamColorClasses> = {
     border: 'border-mrc-red-team',
     tint: 'bg-mrc-red-tint',
     line: 'border-mrc-red-line',
+    cssVar: 'var(--color-mrc-red-team)',
   },
 }
 
@@ -32,6 +35,7 @@ const NEUTRAL: TeamColorClasses = {
   border: 'border-mrc-line',
   tint: 'bg-mrc-surface',
   line: 'border-mrc-line',
+  cssVar: 'var(--color-mrc-line)',
 }
 
 export function teamColor(color: string | null | undefined): TeamColorClasses {

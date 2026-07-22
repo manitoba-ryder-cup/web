@@ -2,13 +2,18 @@
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useBackLink } from '@/composables/useBackLink'
 import NavLink from './NavLink.vue'
 import NavDrawer from './NavDrawer.vue'
 import MenuIcon from '@/components/icons/MenuIcon.vue'
+import ArrowLeftIcon from '@/components/icons/ArrowLeftIcon.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 const drawerOpen = ref(false)
+// On a detail page a view declares a back target; the back link replaces the wordmark
+// (the nav + hamburger stay).
+const back = useBackLink()
 
 // Mirrors the old app's public IA (News is the landing, History is the tournament list).
 // Players/Leaderboard return as their features get built; auth only toggles Login/Logout.
@@ -28,7 +33,12 @@ async function onLogout() {
   <header class="bg-mrc-ink text-white">
     <div class="mx-auto w-full max-w-3xl md:max-w-4xl lg:max-w-5xl">
       <div class="flex h-16 items-center justify-between">
-        <RouterLink to="/" class="flex items-center gap-2 text-xl font-semibold text-white">
+        <!-- A detail page's back link replaces the logo/wordmark only; the nav + hamburger
+             stay put, matching the v2 site (back arrow on the left, menu still on the right). -->
+        <RouterLink v-if="back" :to="back.to" class="flex items-center gap-1 pl-3 text-lg font-semibold text-white">
+          <ArrowLeftIcon /><span>{{ back.label }}</span>
+        </RouterLink>
+        <RouterLink v-else to="/" class="flex items-center gap-2 text-xl font-semibold text-white">
           <img src="/img/logo.webp" alt="MRC logo" class="h-12 w-12 object-contain" />
           <span>Manitoba Ryder Cup</span>
         </RouterLink>

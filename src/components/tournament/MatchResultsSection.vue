@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import type { MatchResult, TournamentTeam } from '@/api/types'
 import BaseTabs from '@/components/base/BaseTabs.vue'
 import MatchOverview from './MatchOverview.vue'
 
-const props = defineProps<{ matches: MatchResult[]; teams: TournamentTeam[] }>()
+const props = defineProps<{ matches: MatchResult[]; teams: TournamentTeam[]; tournamentId: string }>()
 
 // Group by format, preserving first-seen order (results arrive ordered by tee time).
 const grouped = computed(() => {
@@ -21,7 +22,10 @@ const grouped = computed(() => {
   <BaseTabs :tabs="grouped.order" v-slot="{ tab }">
     <!-- Tab bar is full-bleed (the parent applies -mx-4); pad the content back in. -->
     <div class="px-2">
-      <MatchOverview v-for="m in grouped.byFormat[tab]" :key="m.match_id" :match="m" :teams="teams" />
+      <RouterLink v-for="m in grouped.byFormat[tab]" :key="m.match_id"
+                  :to="{ name: 'match', params: { tournamentId, matchId: m.match_id } }" class="block">
+        <MatchOverview :match="m" :teams="teams" />
+      </RouterLink>
     </div>
   </BaseTabs>
 </template>

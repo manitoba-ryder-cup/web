@@ -46,6 +46,26 @@ export interface MatchResult {
   // Per played hole (in order): winning team's id, or null for a halved hole.
   // Length = holes played; holes beyond the length are unplayed.
   hole_results: (string | null)[]
+  tee_time: string | null // RFC3339 (UTC), null if unscheduled
+}
+
+// One team's (best-ball) gross score on a hole.
+export interface HoleScore { team_id: string; strokes: number }
+// The match-play state after a scored hole (only scored holes are returned).
+export interface HoleStatus {
+  hole_number: number
+  team_scores: HoleScore[]
+  leader_team_id: string | null // who leads after this hole (null = all square)
+  lead: number // margin in holes (>= 0)
+  holes_remaining: number
+  decided: boolean // lead exceeds holes remaining — match closed out here
+}
+// One hole of a match's tee set (course setup): par + stroke index + yardage.
+export interface Hole {
+  number: number
+  par: number
+  hdcp: number
+  yards: number
 }
 export interface WinnerResponse { finished: boolean; winner_team_id: string | null }
 export class ApiError extends Error {

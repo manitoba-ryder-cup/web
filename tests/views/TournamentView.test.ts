@@ -32,14 +32,23 @@ vi.mock('@/api/scorecard', () => ({
   },
 }))
 
+import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import TournamentView from '@/views/TournamentView.vue'
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/tournaments/:id', name: 'tournament', component: { template: '<div/>' } },
+    { path: '/tournaments/:tournamentId/matches/:matchId', name: 'match', component: { template: '<div/>' } },
+  ],
+})
 
 describe('TournamentView', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('renders the hero, standings bar, and match-result tabs', async () => {
-    const wrapper = mount(TournamentView, { props: { id: 't1' } })
+    const wrapper = mount(TournamentView, { props: { id: 't1' }, global: { plugins: [router] } })
     await flushPromises()
     const text = wrapper.text()
 
@@ -63,7 +72,7 @@ describe('TournamentView', () => {
       { id: 'red-1', color: 'Red', captain: null, points: 3 },
       { id: 'blue-1', color: 'Blue', captain: { id: 'p2', first_name: 'Bo', last_name: 'Jones', email: null }, points: 5 },
     ])
-    const wrapper = mount(TournamentView, { props: { id: 't1' } })
+    const wrapper = mount(TournamentView, { props: { id: 't1' }, global: { plugins: [router] } })
     await flushPromises()
     const text = wrapper.text()
 

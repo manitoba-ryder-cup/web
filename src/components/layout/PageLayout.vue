@@ -6,6 +6,6 @@ defineProps<{ title?: string; image?: string; above?: string; below?: string }>(
 <template>
   <ImageHeader v-if="title" :image="image" :above="above" :below="below">{{ title }}</ImageHeader>
   <ContentContainer>
-    <div class="py-8"><slot /></div>
+    <div class="pb-8 pt-4"><slot /></div>
   </ContentContainer>
 </template>

@@ -40,3 +40,9 @@ export function playerNames(players: MatchPlayer[]): string {
 export function playerSurnames(players: MatchPlayer[]): string {
   return players.map((p) => p.last_name).join(' / ')
 }
+
+// Initials, joined by " / " for a pairing (e.g. "TB" or "TB / SP"); used where space
+// is tight, like the scorecard column headers.
+export function playerInitials(players: MatchPlayer[]): string {
+  return players.map((p) => `${p.first_name.charAt(0)}${p.last_name.charAt(0)}`.toUpperCase()).join(' / ')
+}

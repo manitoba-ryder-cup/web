@@ -44,7 +44,7 @@ const heroAbove = computed(() => {
           <ScoreBar :match-count="results.length" :teams="orderedTeams" />
         </FullBleed>
         <FullBleed v-if="results.length">
-          <MatchResultsSection :matches="results" :teams="orderedTeams" />
+          <MatchResultsSection :matches="results" :teams="orderedTeams" :tournament-id="id" />
         </FullBleed>
         <p v-else class="pt-6 text-center text-mrc-muted">There are currently no matches scheduled.</p>
       </template>
