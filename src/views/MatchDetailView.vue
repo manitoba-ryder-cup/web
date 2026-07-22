@@ -3,16 +3,12 @@ import { computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useMatchSides } from '@/composables/useMatchSides'
-import { provideBackLink } from '@/composables/useBackLink'
 import { playerInitials, resultText } from '@/lib/matchResult'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import MatchScorecard from '@/components/tournament/MatchScorecard.vue'
 
 const props = defineProps<{ tournamentId: string; matchId: string }>()
-
-// On mobile the header shows this as a contextual back bar (replacing the wordmark).
-provideBackLink(() => ({ to: { name: 'tournament', params: { id: props.tournamentId } }, label: 'Leaderboard' }))
 
 // The results list carries the match's sides/result; the scores endpoint the played holes;
 // the holes endpoint the tee set (par). Par is non-fatal — the card renders without it.

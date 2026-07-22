@@ -1,27 +1,51 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { ref, computed, watch } from 'vue'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useBackLink } from '@/composables/useBackLink'
+import { scorecardApi } from '@/api/scorecard'
 import NavLink from './NavLink.vue'
 import NavDrawer from './NavDrawer.vue'
 import MenuIcon from '@/components/icons/MenuIcon.vue'
 import ArrowLeftIcon from '@/components/icons/ArrowLeftIcon.vue'
+import NewspaperIcon from '@/components/icons/NewspaperIcon.vue'
+import LeaderboardIcon from '@/components/icons/LeaderboardIcon.vue'
+import GroupsIcon from '@/components/icons/GroupsIcon.vue'
+import TrophyIcon from '@/components/icons/TrophyIcon.vue'
+import LoginIcon from '@/components/icons/LoginIcon.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 const drawerOpen = ref(false)
-// On a detail page a view declares a back target; the back link replaces the wordmark
-// (the nav + hamburger stay).
-const back = useBackLink()
+// The back link is derived from the current route's meta (declared in the router), so it's
+// a pure function of the route and never lingers across navigations. It replaces the
+// wordmark; the nav + hamburger stay.
+const route = useRoute()
+const back = computed(() => route.meta.back?.(route) ?? null)
 
-// Mirrors the old app's public IA (News is the landing, History is the tournament list).
-// Players/Leaderboard return as their features get built; auth only toggles Login/Logout.
+// Inline (desktop) nav mirrors the public IA; the drawer below carries the full v2 menu.
 const links = [
   { to: '/', label: 'News' },
   { to: '/players', label: 'Players' },
   { to: '/tournaments', label: 'History' },
 ]
+
+// Leaderboard jumps to the most recent tournament, fetched once we're authenticated;
+// it falls back to the tournament list until (or unless) that resolves.
+const latestTournamentId = ref<string | null>(null)
+watch(
+  () => auth.isAuthenticated,
+  async (authed) => {
+    if (!authed || latestTournamentId.value) return
+    try {
+      const ts = await scorecardApi.listTournaments()
+      latestTournamentId.value = [...ts].sort((a, b) => b.start_date.localeCompare(a.start_date))[0]?.id ?? null
+    } catch {
+      // Nav degrades gracefully — Leaderboard keeps the list fallback.
+    }
+  },
+  { immediate: true },
+)
+const leaderboardTo = computed(() => (latestTournamentId.value ? `/tournaments/${latestTournamentId.value}` : '/tournaments'))
 
 async function onLogout() {
   drawerOpen.value = false
@@ -56,9 +80,16 @@ async function onLogout() {
     </div>
 
     <NavDrawer :open="drawerOpen" @close="drawerOpen = false">
-      <NavLink v-for="l in links" :key="l.to" :to="l.to" variant="drawer">{{ l.label }}</NavLink>
-      <button v-if="auth.isAuthenticated" class="flex w-full items-center px-4 py-2 text-left hover:bg-mrc-accent/10" @click="onLogout">Logout</button>
-      <NavLink v-else to="/login" variant="drawer">Login</NavLink>
+      <NavLink to="/" variant="drawer"><NewspaperIcon class="mr-4" />News &amp; Media</NavLink>
+      <NavLink :to="leaderboardTo" variant="drawer"><LeaderboardIcon class="mr-4" />Leaderboard</NavLink>
+      <NavLink to="/players" variant="drawer"><GroupsIcon class="mr-4" />Players</NavLink>
+      <NavLink to="/tournaments" variant="drawer"><TrophyIcon class="mr-4" />History</NavLink>
+
+      <div class="mb-1 mt-4 border-b border-white/15 px-4 py-2 text-xs uppercase tracking-wider text-mrc-faint">Account</div>
+      <button v-if="auth.isAuthenticated" type="button" class="flex w-full items-center px-4 py-2 text-left hover:bg-mrc-accent/10" @click="onLogout">
+        <LoginIcon class="mr-4" />Logout
+      </button>
+      <NavLink v-else to="/login" variant="drawer"><LoginIcon class="mr-4" />Login</NavLink>
     </NavDrawer>
   </header>
 </template>

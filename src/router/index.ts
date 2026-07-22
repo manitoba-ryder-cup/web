@@ -1,5 +1,19 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import {
+  createRouter,
+  createWebHistory,
+  type RouteLocationNormalizedLoaded,
+  type RouteLocationRaw,
+} from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+
+// Some detail routes declare a contextual back link. The app header renders it (replacing
+// the wordmark) purely from the current route's meta, so it never lingers across a
+// navigation — there's no per-component lifecycle to race.
+declare module 'vue-router' {
+  interface RouteMeta {
+    back?: (route: RouteLocationNormalizedLoaded) => { to: RouteLocationRaw; label: string }
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -7,8 +21,25 @@ const router = createRouter({
     { path: '/', name: 'news', component: () => import('@/views/NewsView.vue') },
     { path: '/tournaments', name: 'tournaments', component: () => import('@/views/TournamentsView.vue') },
     { path: '/tournaments/:id', name: 'tournament', component: () => import('@/views/TournamentView.vue'), props: true },
-    { path: '/tournaments/:tournamentId/matches/:matchId', name: 'match', component: () => import('@/views/MatchDetailView.vue'), props: true },
-    { path: '/tournaments/:tournamentId/matches/:matchId/holes/:hole', name: 'hole', component: () => import('@/views/HoleEntryView.vue'), props: true },
+    {
+      path: '/tournaments/:tournamentId/matches/:matchId',
+      name: 'match',
+      component: () => import('@/views/MatchDetailView.vue'),
+      props: true,
+      meta: { back: (r) => ({ to: { name: 'tournament', params: { id: r.params.tournamentId } }, label: 'Leaderboard' }) },
+    },
+    {
+      path: '/tournaments/:tournamentId/matches/:matchId/holes/:hole',
+      name: 'hole',
+      component: () => import('@/views/HoleEntryView.vue'),
+      props: true,
+      meta: {
+        back: (r) => ({
+          to: { name: 'match', params: { tournamentId: r.params.tournamentId, matchId: r.params.matchId } },
+          label: 'Scorecard',
+        }),
+      },
+    },
     { path: '/players', name: 'players', component: () => import('@/views/PlayersView.vue') },
     { path: '/players/:id', name: 'player', component: () => import('@/views/PlayerView.vue'), props: true },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },

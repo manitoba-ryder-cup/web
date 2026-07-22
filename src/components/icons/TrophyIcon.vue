@@ -1,5 +1,5 @@
 <template>
-  <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M7 4V2h10v2h3v3c0 2.21-1.79 4-4 4h-.28c-.62 1.4-1.93 2.44-3.72 2.9V17h3v2H9v-2h3v-3.1c-1.79-.46-3.1-1.5-3.72-2.9H8c-2.21 0-4-1.79-4-4V4h3zm10 5c1.1 0 2-.9 2-2V6h-2v3zM5 6v1c0 1.1.9 2 2 2V6H5z" />
+  <svg class="h-8 w-8 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M18 2c-.9 0-2 1-2 2H8c0-1-1.1-2-2-2H2v9c0 1 1 2 2 2h2.2c.4 2 1.7 3.7 4.8 4v2.08C8 19.54 8 22 8 22h8s0-2.46-3-2.92V17c3.1-.3 4.4-2 4.8-4H20c1 0 2-1 2-2V2h-4M6 11H4V4h2v7m14 0h-2V4h2v7z" />
   </svg>
 </template>

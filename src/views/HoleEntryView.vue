@@ -5,7 +5,6 @@ import { scorecardApi } from '@/api/scorecard'
 import { ApiError, type MatchSide } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useMatchSides } from '@/composables/useMatchSides'
-import { provideBackLink } from '@/composables/useBackLink'
 import { playerSurnames } from '@/lib/matchResult'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -16,11 +15,6 @@ import FlagIcon from '@/components/icons/FlagIcon.vue'
 const props = defineProps<{ tournamentId: string; matchId: string; hole: string }>()
 const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
-
-provideBackLink(() => ({
-  to: { name: 'match', params: { tournamentId: props.tournamentId, matchId: props.matchId } },
-  label: 'Scorecard',
-}))
 
 // Match/teams/holes are per-match, so this loads once; changing hole only re-derives.
 const { data, error, loading } = useAsync(() =>
