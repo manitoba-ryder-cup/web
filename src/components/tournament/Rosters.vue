@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { TournamentPlayer, TournamentTeam } from '@/api/types'
 import PlayerRow from './PlayerRow.vue'
 
@@ -7,7 +6,6 @@ import PlayerRow from './PlayerRow.vue'
 // are identified by their captain, not a colour.
 const props = defineProps<{ players: TournamentPlayer[]; teams: TournamentTeam[] }>()
 
-const orderedTeams = computed(() => [...props.teams].sort((a, b) => a.id.localeCompare(b.id)))
 // Group by tier (keeping same-tier players together), then by surname within a tier.
 function roster(teamId: string): TournamentPlayer[] {
   return props.players
@@ -17,7 +15,7 @@ function roster(teamId: string): TournamentPlayer[] {
 </script>
 <template>
   <div class="grid grid-cols-2 gap-x-4">
-    <div v-for="team in orderedTeams" :key="team.id">
+    <div v-for="team in teams" :key="team.id">
       <!-- Team header: the captain, who identifies the team. -->
       <div class="mb-1 truncate border-b border-mrc-muted pb-1 text-center font-display font-bold uppercase tracking-wide text-mrc-muted">
         Team {{ team.captain?.last_name }}

@@ -39,11 +39,11 @@ const { data, loading } = useAsync(
 )
 
 const tournament = computed(() => data.value?.tournament ?? null)
-const orderedTeams = computed(() => [...(data.value?.teams ?? [])].sort((a, b) => a.id.localeCompare(b.id)))
+const teams = computed(() => data.value?.teams ?? [])
 const results = computed(() => data.value?.results ?? [])
 const players = computed(() => data.value?.players ?? [])
-const left = computed(() => orderedTeams.value[0] ?? null)
-const right = computed(() => orderedTeams.value[1] ?? null)
+const left = computed(() => teams.value[0] ?? null)
+const right = computed(() => teams.value[1] ?? null)
 const leftMeta = computed(() => teamColor(left.value?.color))
 const rightMeta = computed(() => teamColor(right.value?.color))
 
@@ -149,7 +149,7 @@ function score(pts: number | undefined): string {
 
         <!-- Upcoming: the matchup (once captains are set) + countdown, not a 0–0 score. -->
         <template v-if="phase === 'upcoming'">
-          <CaptainMatchup v-if="showMatchup" :teams="orderedTeams" size="lg" class="mt-5" />
+          <CaptainMatchup v-if="showMatchup" :teams="teams" size="lg" class="mt-5" />
           <h1 v-else-if="tournament" class="mt-4 font-display text-4xl font-bold md:text-5xl">{{ tournament.name }}</h1>
           <div v-if="segments" class="mt-7">
             <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-white/60">Tees off in</p>
@@ -187,20 +187,20 @@ function score(pts: number | undefined): string {
         <!-- Pre-event: the drafted teams, or the field before the draft, then the schedule. -->
         <template v-if="phase === 'upcoming'">
           <SectionCard v-if="drafted" title="The Teams" padded>
-            <Rosters :players="players" :teams="orderedTeams" />
+            <Rosters :players="players" :teams="teams" />
           </SectionCard>
           <SectionCard v-else-if="players.length" title="The Field" padded>
             <PlayerField :players="players" />
           </SectionCard>
           <SectionCard v-if="hasSchedule" title="Order of Play">
-            <OrderOfPlay flat :matches="results" :teams="orderedTeams" :tournament-id="tournament?.id ?? ''" />
+            <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
           </SectionCard>
           <p v-if="tbdNote" class="py-2 text-center text-sm font-medium uppercase tracking-wide text-mrc-muted">{{ tbdNote }}</p>
         </template>
 
         <!-- Live / finished: the order of play. -->
         <SectionCard v-else-if="results.length" title="Order of Play">
-          <OrderOfPlay flat :matches="results" :teams="orderedTeams" :tournament-id="tournament?.id ?? ''" />
+          <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
         </SectionCard>
       </div>
     </ContentContainer>

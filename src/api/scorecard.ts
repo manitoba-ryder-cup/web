@@ -1,5 +1,6 @@
 import { ApiClient } from './client'
 import type { Hole, HoleStatus, MatchFormat, MatchResult, PlayerProfile, PlayerTournamentHistory, ScoreSubmission, Tournament, TournamentPlayer, TournamentTeam, WinnerResponse } from './types'
+import { orderTeams } from '@/lib/teamOrder'
 import { useAuthStore } from '@/stores/auth'
 
 let client: ApiClient | null = null
@@ -17,7 +18,9 @@ export const scorecardApi = {
   // Tenant-scoped; requires the logged-in user's token.
   listTournaments: () => sc().get<Tournament[]>('/v1/tournaments'),
   getTournament: (id: string) => sc().get<Tournament>(`/v1/tournaments/${id}`),
-  getTournamentTeams: (id: string) => sc().get<TournamentTeam[]>(`/v1/tournaments/${id}/teams`),
+  // Teams enter the app ordered Blue-left/Red-right — the one place team order is set,
+  // so no view or component re-sorts them.
+  getTournamentTeams: (id: string) => sc().get<TournamentTeam[]>(`/v1/tournaments/${id}/teams`).then(orderTeams),
   getTournamentWinner: (id: string) => sc().get<WinnerResponse>(`/v1/tournaments/${id}/winner`),
   getTournamentResults: (id: string) => sc().get<MatchResult[]>(`/v1/tournaments/${id}/results`),
   getTournamentPlayers: (id: string) => sc().get<TournamentPlayer[]>(`/v1/tournaments/${id}/players`),

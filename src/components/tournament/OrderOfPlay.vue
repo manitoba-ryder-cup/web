@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { MatchResult, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
+import { orderSides } from '@/lib/teamOrder'
 import { playerSurnames, resultText } from '@/lib/matchResult'
 
 // The event grouped into sessions (a day + a format, like a real order of play): the
@@ -43,7 +44,7 @@ interface Row {
   status: { text: string; cls: string; live: boolean } | null
 }
 function rowOf(m: MatchResult): Row {
-  const sorted = [...m.sides].sort((a, b) => a.team_id.localeCompare(b.team_id))
+  const sorted = orderSides(m.sides, props.teams)
   const played = m.hole_results.length
   // The team to emphasise: the winner (finished) or the current leader (in progress).
   let strongId: string | null = null

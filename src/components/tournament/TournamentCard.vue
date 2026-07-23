@@ -7,12 +7,11 @@ import LinkCard from '@/components/base/LinkCard.vue'
 import TrophyIcon from '@/components/icons/TrophyIcon.vue'
 
 // A tournament summary card: location + dates, then both teams' final scores in their
-// colours with a trophy on the winner. Teams are identified by captain, ordered by id.
+// colours with a trophy on the winner. Teams are identified by captain.
 const props = defineProps<{ tournament: Tournament; teams: TournamentTeam[] }>()
 
-const ordered = computed(() => [...props.teams].sort((a, b) => a.id.localeCompare(b.id)))
 const winnerId = computed(() => {
-  const [a, b] = ordered.value
+  const [a, b] = props.teams
   if (!a || !b || a.points === b.points) return null // no teams, or a draw (Cup retained)
   return a.points > b.points ? a.id : b.id
 })
@@ -22,7 +21,7 @@ const winnerId = computed(() => {
     <h3 class="text-center font-display text-2xl font-semibold text-mrc-ink">{{ tournament.location }}</h3>
     <p class="mb-4 text-center text-sm text-mrc-muted">{{ formatDateRange(tournament.start_date, tournament.end_date) }}</p>
     <div class="flex">
-      <div v-for="t in ordered" :key="t.id" class="w-1/2">
+      <div v-for="t in teams" :key="t.id" class="w-1/2">
         <div class="flex items-center justify-center gap-2 font-semibold leading-none" :class="teamColor(t.color).text">
           <TrophyIcon v-if="winnerId === t.id" class="text-mrc-gold" />
           <span class="text-6xl tracking-tighter tabular-nums">{{ Math.trunc(t.points) }}</span>

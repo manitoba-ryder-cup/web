@@ -25,7 +25,7 @@ const { data, error, loading } = useAsync(() =>
     scorecardApi.getMatchHoles(props.matchId),
   ]),
 )
-const teams = computed(() => [...(data.value?.[0] ?? [])].sort((a, b) => a.id.localeCompare(b.id)))
+const teams = computed(() => data.value?.[0] ?? [])
 const results = computed(() => data.value?.[1] ?? [])
 const match = computed(() => results.value.find((m) => m.match_id === props.matchId) ?? null)
 const holeInfo = computed(() => new Map((data.value?.[2] ?? []).map((h) => [h.number, h])).get(holeNumber.value) ?? null)

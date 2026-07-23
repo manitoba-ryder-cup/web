@@ -23,8 +23,7 @@ const { data, error, loading } = useAsync(() =>
   ]),
   { intervalMs: 20000 },
 )
-// Same stable order as the tournament page (by id) so a team keeps its side.
-const teams = computed(() => [...(data.value?.[0] ?? [])].sort((a, b) => a.id.localeCompare(b.id)))
+const teams = computed(() => data.value?.[0] ?? [])
 const results = computed(() => data.value?.[1] ?? [])
 const match = computed(() => results.value.find((m) => m.match_id === props.matchId) ?? null)
 const holes = computed(() => data.value?.[2] ?? [])

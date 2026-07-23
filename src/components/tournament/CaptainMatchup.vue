@@ -5,15 +5,14 @@ import { teamColor } from '@/lib/teamColor'
 
 // "Captain vs Captain" for a hero on a dark/photo background. Team colours by default
 // (the dashboard centrepiece); `white` drops them where colour would be redundant next to
-// a ScoreBar (the leaderboard). Teams are ordered by id and identified by their captain.
+// a ScoreBar (the leaderboard). Teams arrive Blue-left/Red-right; identified by captain.
 const props = withDefaults(defineProps<{ teams: TournamentTeam[]; size?: 'md' | 'lg'; white?: boolean }>(), {
   size: 'md',
   white: false,
 })
 
-const ordered = computed(() => [...props.teams].sort((a, b) => a.id.localeCompare(b.id)))
-const left = computed(() => ordered.value[0] ?? null)
-const right = computed(() => ordered.value[1] ?? null)
+const left = computed(() => props.teams[0] ?? null)
+const right = computed(() => props.teams[1] ?? null)
 const leftMeta = computed(() => teamColor(left.value?.color))
 const rightMeta = computed(() => teamColor(right.value?.color))
 </script>

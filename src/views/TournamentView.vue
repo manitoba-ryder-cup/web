@@ -21,10 +21,6 @@ const tournament = computed(() => data.value?.[0] ?? null)
 const teams = computed(() => data.value?.[1] ?? [])
 const results = computed(() => data.value?.[2] ?? [])
 
-// One stable left/right order for the whole page (hero, ScoreBar, cards), by team id —
-// independent of colour, so nothing hardcodes "blue is left".
-const orderedTeams = computed(() => [...teams.value].sort((a, b) => a.id.localeCompare(b.id)))
-
 // Hero matches the dashboard: the coloured captain-vs-captain matchup, with year · location
 // above it. A team is identified by its captain, never by its colour.
 const heroEyebrow = computed(() => {
@@ -33,22 +29,22 @@ const heroEyebrow = computed(() => {
   return [t.start_date?.slice(0, 4), t.location].filter(Boolean).join(' · ')
 })
 // Both captains needed for the matchup; otherwise the eyebrow stands alone.
-const hasCaptains = computed(() => !!(orderedTeams.value[0]?.captain && orderedTeams.value[1]?.captain))
+const hasCaptains = computed(() => !!(teams.value[0]?.captain && teams.value[1]?.captain))
 </script>
 <template>
   <PageLayout image="/img/crowd.webp">
     <template #hero>
       <p v-if="heroEyebrow" class="mb-3 text-sm font-semibold uppercase tracking-widest text-white/80">{{ heroEyebrow }}</p>
-      <CaptainMatchup v-if="hasCaptains" :teams="orderedTeams" white />
+      <CaptainMatchup v-if="hasCaptains" :teams="teams" white />
     </template>
     <!-- Standings bar pinned above the hero. -->
     <template #top>
-      <ScoreBar v-if="orderedTeams.length >= 2" :results="results" :teams="orderedTeams" />
+      <ScoreBar v-if="teams.length >= 2" :results="results" :teams="teams" />
     </template>
     <AsyncState :loading="loading" :error="error">
       <template v-if="tournament">
         <FullBleed flush-top v-if="results.length">
-          <MatchResultsSection :matches="results" :teams="orderedTeams" :tournament-id="id" />
+          <MatchResultsSection :matches="results" :teams="teams" :tournament-id="id" />
         </FullBleed>
         <p v-else class="pt-6 text-center text-mrc-muted">There are currently no matches scheduled.</p>
       </template>
