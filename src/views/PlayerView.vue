@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -21,7 +20,6 @@ const cupsWon = computed(() => history.value.filter((h) => h.result === 'won').l
 </script>
 <template>
   <PageLayout>
-    <RouterLink :to="{ name: 'players' }" class="text-sm text-mrc-accent hover:underline">← All players</RouterLink>
     <AsyncState :loading="loading" :error="error">
       <template v-if="player">
         <div class="mt-4 flex items-center gap-4">

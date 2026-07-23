@@ -42,7 +42,13 @@ const router = createRouter({
       },
     },
     { path: '/players', name: 'players', component: () => import('@/views/PlayersView.vue') },
-    { path: '/players/:id', name: 'player', component: () => import('@/views/PlayerView.vue'), props: true },
+    {
+      path: '/players/:id',
+      name: 'player',
+      component: () => import('@/views/PlayerView.vue'),
+      props: true,
+      meta: { back: () => ({ to: { name: 'players' }, label: 'Players' }) },
+    },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
   ],
 })
