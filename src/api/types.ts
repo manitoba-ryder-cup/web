@@ -19,7 +19,7 @@ export interface Player {
   photo_path: string
 }
 export interface PlayerRecord { wins: number; losses: number; ties: number }
-export interface PlayerProfile extends Player { record: PlayerRecord }
+export interface PlayerProfile extends Player { record: PlayerRecord; cups_won: number }
 // A player's entry in a specific tournament: their team (the draft), tier, and that
 // year's biography (per-tournament, so it isn't overwritten between events).
 export interface TournamentPlayer {

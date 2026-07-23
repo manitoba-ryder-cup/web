@@ -1,17 +1,39 @@
 <script setup lang="ts">
-import LinkCard from '@/components/base/LinkCard.vue'
-import PlayerAvatar from './PlayerAvatar.vue'
+import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import type { PlayerRecord } from '@/api/types'
-defineProps<{ id: string; firstName: string; lastName: string; photoPath: string; record: PlayerRecord }>()
+import PlayerAvatar from './PlayerAvatar.vue'
+import TierBadge from '@/components/base/TierBadge.vue'
+
+// A photo-forward player card: square headshot, then career form (W-L-T · cups). tier is
+// shown only where a player has one (the current roster) — it's per-tournament, so the
+// all-players listing omits it.
+const props = defineProps<{
+  id: string
+  firstName: string
+  lastName: string
+  photoPath: string
+  record: PlayerRecord
+  cups: number
+  tier?: string
+}>()
+
+const fullName = computed(() => `${props.firstName} ${props.lastName}`)
 </script>
 <template>
-  <LinkCard :to="{ name: 'player', params: { id } }">
-    <div class="flex items-center gap-4">
-      <PlayerAvatar :photo-path="photoPath" :alt="`${firstName} ${lastName}`" />
-      <div>
-        <h4 class="font-semibold">{{ firstName }} {{ lastName }}</h4>
-        <p class="text-sm text-mrc-muted">{{ record.wins }}–{{ record.losses }}–{{ record.ties }}</p>
+  <RouterLink :to="{ name: 'player', params: { id } }"
+              class="group block overflow-hidden rounded-md border border-mrc-line bg-mrc-surface shadow transition hover:shadow-lg">
+    <div class="flex items-stretch">
+      <PlayerAvatar :photo-path="photoPath" :alt="fullName" size="card" />
+      <div class="flex min-w-0 flex-1 flex-col justify-center p-4">
+        <TierBadge v-if="tier" :tier="tier" class="mb-1.5 self-start">{{ tier }}</TierBadge>
+        <h4 class="truncate font-display text-2xl font-semibold text-mrc-ink transition group-hover:text-mrc-accent">
+          {{ fullName }}
+        </h4>
+        <p class="mt-0.5 text-sm tabular-nums text-mrc-muted">
+          {{ record.wins }}–{{ record.losses }}–{{ record.ties }}<template v-if="cups > 0"> · {{ cups }} {{ cups === 1 ? 'CUP' : 'CUPS' }}</template>
+        </p>
       </div>
     </div>
-  </LinkCard>
+  </RouterLink>
 </template>
