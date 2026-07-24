@@ -40,9 +40,11 @@ export const scorecardApi = {
     sc().post<void>(`/v1/teams/${teamId}/members`, { player_id: playerId }),
   undraftPlayer: (teamId: string, playerId: string) =>
     sc().del<void>(`/v1/teams/${teamId}/members/${playerId}`),
-  // Designate a team's captain (one per team — this replaces any previous captain).
+  // Designate a team's captain (one per team — this replaces any previous captain), or
+  // clear it (to reassign).
   setTeamCaptain: (teamId: string, captainId: string) =>
     sc().put<void>(`/v1/teams/${teamId}/captain`, { captain_id: captainId }),
+  clearTeamCaptain: (teamId: string) => sc().del<void>(`/v1/teams/${teamId}/captain`),
   // Assign a drafted player (with their team) to a match, or remove them from it.
   addParticipant: (matchId: string, playerId: string, teamId: string) =>
     sc().post<void>(`/v1/matches/${matchId}/participants`, { player_id: playerId, team_id: teamId }),

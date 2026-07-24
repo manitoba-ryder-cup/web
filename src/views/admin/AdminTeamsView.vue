@@ -69,24 +69,35 @@ async function assign(p: TournamentPlayer, target: string | null) {
   }
 }
 
-// Captaincy is per-team: one captain, replaced on set, and only a drafted player can hold
-// it. The server enforces the same, but we mirror it locally for a snappy toggle.
+// Captaincy is per-team: one captain, and only a drafted player can hold it. The C shows
+// only where it's actionable — on a team with no captain yet (any drafted player, tap to
+// set) or on the current captain (tap to clear) — so the list stays quiet once captains
+// are set. To reassign, clear the current captain, then pick a new one.
 function teamOf(id: string | null) {
   return id ? teams.value.find((t) => t.id === id) ?? null : null
 }
 function isCaptain(p: TournamentPlayer): boolean {
   return teamOf(p.team_id)?.captain?.id === p.player_id
 }
-async function setCaptain(p: TournamentPlayer) {
-  if (busyId.value || !p.team_id || isCaptain(p)) return
+function showCaptainToggle(p: TournamentPlayer): boolean {
+  const t = teamOf(p.team_id)
+  return !!t && (!t.captain || t.captain.id === p.player_id)
+}
+async function toggleCaptain(p: TournamentPlayer) {
+  if (busyId.value || !p.team_id) return
   busyId.value = p.player_id
   failed.value = ''
+  const t = teamOf(p.team_id)
   try {
-    await scorecardApi.setTeamCaptain(p.team_id, p.player_id)
-    const t = teamOf(p.team_id)
-    if (t) t.captain = { id: p.player_id, first_name: p.first_name, last_name: p.last_name, email: p.email }
+    if (isCaptain(p)) {
+      await scorecardApi.clearTeamCaptain(p.team_id)
+      if (t) t.captain = null
+    } else {
+      await scorecardApi.setTeamCaptain(p.team_id, p.player_id)
+      if (t) t.captain = { id: p.player_id, first_name: p.first_name, last_name: p.last_name, email: p.email }
+    }
   } catch {
-    failed.value = `Couldn't make ${p.first_name} ${p.last_name} captain. Please try again.`
+    failed.value = "Couldn't update the captain. Please try again."
     await refresh()
   } finally {
     busyId.value = ''
@@ -121,13 +132,13 @@ const chips = computed<{ key: Filter; label: string; n: number }[]>(() => [
              class="flex items-center gap-3 border-b border-mrc-line px-3 py-2 last:border-b-0">
           <PlayerAvatar :photo-path="p.photo_path" :alt="`${p.first_name} ${p.last_name}`" size="sm" class="!h-10 !w-10" />
           <span class="min-w-0 flex-1 truncate font-semibold">{{ p.first_name }} {{ p.last_name }}</span>
-          <!-- Captain toggle (gold C). Always shown so rows don't shift; disabled until the
-               player is on a team. Setting it replaces that team's previous captain. -->
-          <button type="button" :disabled="!p.team_id || busyId === p.player_id" @click="setCaptain(p)"
-                  :aria-pressed="isCaptain(p)" :title="isCaptain(p) ? 'Team captain' : 'Make captain'"
+          <!-- Captain (gold C). Shown only when actionable: on a captainless team (tap to
+               set) or on the current captain (tap to clear). Hidden otherwise to keep the
+               list uncluttered. -->
+          <button v-if="showCaptainToggle(p)" type="button" :disabled="busyId === p.player_id" @click="toggleCaptain(p)"
+                  :aria-pressed="isCaptain(p)" :title="isCaptain(p) ? 'Captain — tap to clear' : 'Make captain'"
                   class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition"
                   :class="isCaptain(p) ? 'border-mrc-gold bg-mrc-gold text-white'
-                    : !p.team_id ? 'border-mrc-line text-mrc-line-strong'
                     : 'border-mrc-line text-mrc-faint hover:border-mrc-gold hover:text-mrc-gold'">C</button>
           <!-- Blue / Red, each a toggle: tap the active colour again to unassign. -->
           <div class="flex shrink-0 overflow-hidden rounded border border-mrc-line" role="group"
