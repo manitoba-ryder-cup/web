@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
+import { useBusy } from '@/composables/useBusy'
 import { formatTeeTime } from '@/lib/teeTime'
-import { tierDot } from '@/lib/tier'
+import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
+import TierDot from '@/components/base/TierDot.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
-import BaseAlert from '@/components/base/BaseAlert.vue'
 import XIcon from '@/components/icons/XIcon.vue'
 
 const props = defineProps<{ id: string; matchId: string }>()
@@ -37,40 +38,26 @@ const panels = computed(() => {
     const available = roster.value
       .filter((p) => p.team_id === team.id && !assignedIds.has(p.player_id))
       .sort((a, b) => a.last_name.localeCompare(b.last_name))
-    return { team, assigned, available }
+    return { team, assigned, available, colors: teamColor(team.color) }
   })
 })
 
-const busy = ref(false)
-const failed = ref('')
-async function run(fn: () => Promise<unknown>, label: string) {
-  if (busy.value) return
-  busy.value = true
-  failed.value = ''
-  try {
-    await fn()
-    await refresh()
-  } catch {
-    failed.value = `Couldn't ${label}. Please try again.`
-  } finally {
-    busy.value = false
-  }
-}
+const { isBusy, run } = useBusy()
 const add = (playerId: string, teamId: string) =>
-  run(() => scorecardApi.addParticipant(props.matchId, playerId, teamId), 'add that player')
+  run(true, async () => {
+    await scorecardApi.addParticipant(props.matchId, playerId, teamId)
+    await refresh()
+  }, { error: "Couldn't add that player. Please try again." })
 const remove = (playerId: string) =>
-  run(() => scorecardApi.removeParticipant(props.matchId, playerId), 'remove that player')
+  run(true, async () => {
+    await scorecardApi.removeParticipant(props.matchId, playerId)
+    await refresh()
+  }, { error: "Couldn't remove that player. Please try again." })
 
 // Assigned players come from the match sides (no tier); look their flight up on the roster
 // so the swatch shows on both assigned and available pills — handy for keeping a pairing even.
 function tierOf(playerId: string): string {
   return roster.value.find((p) => p.player_id === playerId)?.tier ?? ''
-}
-
-function color(teamColor: string) {
-  return teamColor === 'Blue'
-    ? { head: 'text-mrc-blue-strong', dot: 'bg-mrc-blue-team', chip: 'border-mrc-blue-line bg-mrc-blue-tint' }
-    : { head: 'text-mrc-red-strong', dot: 'bg-mrc-red-team', chip: 'border-mrc-red-line bg-mrc-red-tint' }
 }
 
 // Teams read by their captain ("Team Bale"); fall back to the colour until one is named.
@@ -87,12 +74,10 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
           <template v-if="formatTeeTime(match.tee_time)"> · {{ formatTeeTime(match.tee_time) }}</template>
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
-        <BaseAlert v-if="failed" variant="error" class="mb-4">{{ failed }}</BaseAlert>
-
-        <div class="grid gap-4 md:grid-cols-2" :class="busy ? 'pointer-events-none opacity-60' : ''">
+        <div class="grid gap-4 md:grid-cols-2" :class="isBusy() ? 'pointer-events-none opacity-60' : ''">
           <BaseCard v-for="panel in panels" :key="panel.team.id">
-            <div class="flex items-center gap-2" :class="color(panel.team.color).head">
-              <span class="inline-block h-2.5 w-2.5 rounded-full" :class="color(panel.team.color).dot" />
+            <div class="flex items-center gap-2" :class="panel.colors.textStrong">
+              <span class="inline-block h-2.5 w-2.5 rounded-full" :class="panel.colors.solid" />
               <h4>{{ teamLabel(panel.team) }}</h4>
               <span class="ml-auto text-sm tabular-nums text-mrc-muted">{{ panel.assigned.length }}/{{ slots }}</span>
             </div>
@@ -100,10 +85,10 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
             <!-- Assigned players — remove with the ×. -->
             <div class="mt-3 space-y-2">
               <div v-for="p in panel.assigned" :key="p.player_id"
-                   class="flex items-center justify-between rounded border px-3 py-2" :class="color(panel.team.color).chip">
+                   class="flex items-center justify-between rounded border px-3 py-2" :class="[panel.colors.tint, panel.colors.line]">
                 <div class="flex min-w-0 items-center gap-1.5">
                   <span class="truncate font-semibold">{{ p.first_name }} {{ p.last_name }}</span>
-                  <span v-if="tierOf(p.player_id)" class="h-2.5 w-2.5 shrink-0 rounded-full" :class="tierDot(tierOf(p.player_id))" />
+                  <TierDot :tier="tierOf(p.player_id)" />
                 </div>
                 <button type="button" aria-label="Remove" class="shrink-0 text-mrc-muted hover:text-mrc-ink" @click="remove(p.player_id)">
                   <XIcon />
@@ -120,7 +105,7 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
                         class="inline-flex items-center gap-1.5 rounded-full border border-mrc-line px-3 py-1 text-sm transition hover:border-mrc-accent hover:text-mrc-accent"
                         @click="add(p.player_id, panel.team.id)">
                   + {{ p.first_name }} {{ p.last_name }}
-                  <span v-if="p.tier" class="h-2 w-2 shrink-0 rounded-full" :class="tierDot(p.tier)" />
+                  <TierDot :tier="p.tier" size="xs" />
                 </button>
                 <p v-if="!panel.available.length" class="text-sm text-mrc-faint">No drafted players left to add.</p>
               </div>

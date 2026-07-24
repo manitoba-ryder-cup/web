@@ -6,6 +6,7 @@ export interface TeamColorClasses {
   soft: string // lighter fill (a projected / in-progress lead) — distinct from the grey toss-up
   softText: string // lighter coloured text (legible on a dark/photo background)
   text: string // coloured text
+  textStrong: string // stronger coloured text (a heading on a light background)
   border: string // 5px accent border on the team strip
   tint: string // faint background (lead state)
   line: string // faint border (lead state)
@@ -18,6 +19,7 @@ const REGISTRY: Record<string, TeamColorClasses> = {
     soft: 'bg-mrc-blue-soft',
     softText: 'text-mrc-blue-soft',
     text: 'text-mrc-blue-team',
+    textStrong: 'text-mrc-blue-strong',
     border: 'border-mrc-blue-team',
     tint: 'bg-mrc-blue-tint',
     line: 'border-mrc-blue-line',
@@ -28,6 +30,7 @@ const REGISTRY: Record<string, TeamColorClasses> = {
     soft: 'bg-mrc-red-soft',
     softText: 'text-mrc-red-soft',
     text: 'text-mrc-red-team',
+    textStrong: 'text-mrc-red-strong',
     border: 'border-mrc-red-team',
     tint: 'bg-mrc-red-tint',
     line: 'border-mrc-red-line',
@@ -40,6 +43,7 @@ const NEUTRAL: TeamColorClasses = {
   soft: 'bg-mrc-line-strong',
   softText: 'text-mrc-line-strong',
   text: 'text-mrc-ink',
+  textStrong: 'text-mrc-ink',
   border: 'border-mrc-line',
   tint: 'bg-mrc-surface',
   line: 'border-mrc-line',
