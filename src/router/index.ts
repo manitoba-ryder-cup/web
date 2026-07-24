@@ -57,6 +57,12 @@ const router = createRouter({
       meta: { back: (r) => ({ to: { name: 'player', params: { id: r.params.id } }, label: 'Profile' }) },
     },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('@/views/ForgotPasswordView.vue'),
+      meta: { back: () => ({ to: { name: 'login' }, label: 'Login' }) },
+    },
   ],
 })
 
