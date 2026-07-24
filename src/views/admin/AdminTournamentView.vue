@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import type { MatchResult, TeeSetSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { toast } from '@/composables/useToast'
 import { playerSurnames } from '@/lib/matchResult'
 import { formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -111,6 +112,7 @@ async function submit(format: string) {
     })
     adding.value = null
     await refresh()
+    toast.success('Match created')
   } catch {
     formError.value = 'Could not create the match. Check the tee time and try again.'
   } finally {
