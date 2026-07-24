@@ -49,6 +49,13 @@ const router = createRouter({
       props: true,
       meta: { back: () => ({ to: { name: 'players' }, label: 'Players' }) },
     },
+    {
+      path: '/players/:id/tournaments/:tournamentId',
+      name: 'player-tournament',
+      component: () => import('@/views/PlayerTournamentView.vue'),
+      props: true,
+      meta: { back: (r) => ({ to: { name: 'player', params: { id: r.params.id } }, label: 'Profile' }) },
+    },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
   ],
 })

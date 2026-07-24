@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 const DEFAULT = '/img/default-avatar.webp'
-// 'sm'/'lg' are round avatars; 'card' is a square photo panel that fills a card's edge.
-const props = withDefaults(defineProps<{ photoPath?: string; alt?: string; size?: 'sm' | 'lg' | 'card' }>(), {
+// 'sm'/'lg' are round avatars; 'card' is a square photo panel that fills a card's edge;
+// 'hero' is the large round headshot on a dark hero band (a light ring instead of a line).
+const props = withDefaults(defineProps<{ photoPath?: string; alt?: string; size?: 'sm' | 'lg' | 'card' | 'hero' }>(), {
   photoPath: '',
   alt: '',
   size: 'sm',
@@ -14,6 +15,7 @@ function onError() { if (src.value !== DEFAULT) src.value = DEFAULT }
 const sizeClass = computed(() => {
   switch (props.size) {
     case 'card': return 'h-28 w-28'
+    case 'hero': return 'h-28 w-28 md:h-36 md:w-36 rounded-full ring-4 ring-white/80 shadow-xl'
     case 'lg': return 'h-24 w-24 rounded-full border border-mrc-line'
     default: return 'h-16 w-16 rounded-full border border-mrc-line'
   }
