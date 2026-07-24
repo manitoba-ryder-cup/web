@@ -56,6 +56,35 @@ const router = createRouter({
       props: true,
       meta: { back: (r) => ({ to: { name: 'player', params: { id: r.params.id } }, label: 'Profile' }) },
     },
+    // Admin area — assigning players to teams and matches. Gated behind login; the
+    // write endpoints additionally require the tournaments:write scope on the token.
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('@/views/admin/AdminView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/admin/tournaments/:id',
+      name: 'admin-tournament',
+      component: () => import('@/views/admin/AdminTournamentView.vue'),
+      props: true,
+      meta: { requiresAuth: true, back: () => ({ to: { name: 'admin' }, label: 'Admin' }) },
+    },
+    {
+      path: '/admin/tournaments/:id/teams',
+      name: 'admin-teams',
+      component: () => import('@/views/admin/AdminTeamsView.vue'),
+      props: true,
+      meta: { requiresAuth: true, back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }) },
+    },
+    {
+      path: '/admin/tournaments/:id/matches/:matchId',
+      name: 'admin-lineup',
+      component: () => import('@/views/admin/AdminMatchLineupView.vue'),
+      props: true,
+      meta: { requiresAuth: true, back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }) },
+    },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
     {
       path: '/forgot-password',
@@ -68,8 +97,7 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   // Referenced inside the guard (not at module scope) so Pinia is active when this runs.
-  // No route sets requiresAuth yet (all reads are public); the guard remains as
-  // infrastructure for future admin/write pages.
+  // The /admin/* routes set requiresAuth; public reads stay open to everyone.
   const auth = useAuthStore()
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }

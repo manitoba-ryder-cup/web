@@ -9,6 +9,26 @@ export interface LoginResponse {
 export interface User { id: string; email: string; first_name: string; last_name: string }
 export interface Tournament { id: string; name: string; start_date: string; end_date: string; location: string }
 export interface MatchFormat { id: string; name: string }
+export interface Course { id: string; name: string }
+// A course's configured tee set, colour name resolved — a valid (course, tee) option.
+export interface TeeSetSummary { course_id: string; tee_color_id: string; color: string; slope: number; rating: number }
+export interface Match {
+  id: string
+  tournament_id: string
+  course_id: string
+  tee_color_id: string
+  match_format_id: string
+  tee_time: string | null
+  handicapped: boolean
+}
+// Body for creating a match. tee_time is RFC3339 (UTC) or null (unscheduled).
+export interface CreateMatchBody {
+  course_id: string
+  tee_color_id: string
+  match_format_id: string
+  tee_time: string | null
+  handicapped: boolean
+}
 export interface PlayerSummary { id: string; first_name: string; last_name: string; email: string | null }
 export interface Player {
   id: string

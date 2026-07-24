@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
+import { useAuthStore } from '@/stores/auth'
 import { useAsync } from '@/composables/useAsync'
 import { useMatchSides } from '@/composables/useMatchSides'
 import { playerInitials, resultText } from '@/lib/matchResult'
@@ -11,6 +13,8 @@ import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import MatchScorecard from '@/components/tournament/MatchScorecard.vue'
 
 const props = defineProps<{ tournamentId: string; matchId: string }>()
+
+const auth = useAuthStore()
 
 // The results list carries the match's sides/result; the scores endpoint the played holes;
 // the holes endpoint the tee set (par). Par is non-fatal — the card renders without it.
@@ -54,6 +58,10 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
              Width-matched to the card below. -->
         <div class="mx-auto mb-4 max-w-2xl">
           <MatchSummary :match="match" :teams="teams" />
+          <div v-if="auth.isAuthenticated" class="mt-2 text-right">
+            <RouterLink :to="{ name: 'admin-lineup', params: { id: tournamentId, matchId } }"
+                        class="text-sm font-semibold text-mrc-accent hover:underline">Set lineup →</RouterLink>
+          </div>
         </div>
         <MatchScorecard :holes="holes" :left-team="leftTeam" :right-team="rightTeam"
                         :left-label="leftLabel" :right-label="rightLabel" :hole-info="holeInfo"

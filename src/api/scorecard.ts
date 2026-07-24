@@ -1,5 +1,5 @@
 import { ApiClient } from './client'
-import type { Hole, HoleStatus, MatchFormat, MatchResult, PlayerProfile, PlayerTournamentHistory, ScoreSubmission, Tournament, TournamentPlayer, TournamentTeam, WinnerResponse } from './types'
+import type { Course, CreateMatchBody, Hole, HoleStatus, Match, MatchFormat, MatchResult, PlayerProfile, PlayerTournamentHistory, ScoreSubmission, TeeSetSummary, Tournament, TournamentPlayer, TournamentTeam, WinnerResponse } from './types'
 import { orderTeams } from '@/lib/teamOrder'
 import { useAuthStore } from '@/stores/auth'
 
@@ -32,4 +32,25 @@ export const scorecardApi = {
   getPlayer: (id: string) => sc().get<PlayerProfile>(`/v1/players/${id}`),
   getPlayerTournaments: (id: string) =>
     sc().get<PlayerTournamentHistory[]>(`/v1/players/${id}/tournaments`),
+
+  // --- Admin writes (tournaments:write scope) ---
+  // Draft an entered player onto a team, or undraft them (undraft cascades them out of
+  // any matches). Reassigning is undraft-then-draft.
+  draftPlayer: (teamId: string, playerId: string) =>
+    sc().post<void>(`/v1/teams/${teamId}/members`, { player_id: playerId }),
+  undraftPlayer: (teamId: string, playerId: string) =>
+    sc().del<void>(`/v1/teams/${teamId}/members/${playerId}`),
+  // Designate a team's captain (one per team — this replaces any previous captain).
+  setTeamCaptain: (teamId: string, captainId: string) =>
+    sc().put<void>(`/v1/teams/${teamId}/captain`, { captain_id: captainId }),
+  // Assign a drafted player (with their team) to a match, or remove them from it.
+  addParticipant: (matchId: string, playerId: string, teamId: string) =>
+    sc().post<void>(`/v1/matches/${matchId}/participants`, { player_id: playerId, team_id: teamId }),
+  removeParticipant: (matchId: string, playerId: string) =>
+    sc().del<void>(`/v1/matches/${matchId}/participants/${playerId}`),
+  // Match setup: courses + their tee sets feed the create-match form.
+  listCourses: () => sc().get<Course[]>('/v1/courses'),
+  getCourseTees: (courseId: string) => sc().get<TeeSetSummary[]>(`/v1/courses/${courseId}/tees`),
+  createMatch: (tournamentId: string, body: CreateMatchBody) =>
+    sc().post<Match>(`/v1/tournaments/${tournamentId}/matches`, body),
 }

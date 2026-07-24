@@ -5,6 +5,7 @@ import type { MatchResult, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
 import { orderSides } from '@/lib/teamOrder'
 import { playerSurnames, resultText } from '@/lib/matchResult'
+import { formatTeeTime as fmtTime, teeDayLabel as dayLabel, teeDayKey as dayKeyOf } from '@/lib/teeTime'
 
 // The event grouped into sessions (a day + a format, like a real order of play): the
 // session header carries the day and format, so multi-day fields don't repeat per row and
@@ -17,23 +18,6 @@ const teamById = computed(() => new Map(props.teams.map((t) => [t.id, t])))
 function teamMeta(teamId: string | null | undefined) {
   return teamColor(teamId ? teamById.value.get(teamId)?.color : null)
 }
-// Tee times are stored as UTC instants but belong to the event's local time — MBRC is
-// always in Manitoba (Central) — so they're formatted here in that zone, not UTC.
-const EVENT_TZ = 'America/Winnipeg'
-function fmtTime(iso: string | null): string {
-  if (!iso) return ''
-  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: EVENT_TZ }).format(new Date(iso))
-}
-function dayLabel(iso: string | null): string {
-  if (!iso) return 'TBD'
-  return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: EVENT_TZ }).format(new Date(iso))
-}
-// Group key by the event-local date (not the UTC date, which can differ at day edges).
-function dayKeyOf(iso: string | null): string {
-  if (!iso) return ''
-  return new Intl.DateTimeFormat('en-CA', { timeZone: EVENT_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
-}
-
 // A team-colour dot per side (consistent top/bottom across rows) shows who's on what
 // team; strong/dim follows the actual result so the leader — not just the top row — pops.
 interface Side { name: string; dot: string; dim: boolean }
