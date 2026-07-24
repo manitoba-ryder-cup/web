@@ -1,21 +1,12 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import type { TournamentPlayer } from '@/api/types'
+import { tierDot } from '@/lib/tier'
 
 // One player line, shared by the team sheet and the pre-draft field: name (linking to the
 // profile, where the year's bio lives), a tier dot, and career form below.
 defineProps<{ player: TournamentPlayer }>()
 
-// The draft flights are named for colours (black/blue/gold/white); the dot paints each.
-const TIER_DOT: Record<string, string> = {
-  black: 'bg-mrc-ink',
-  blue: 'bg-mrc-blue-team',
-  gold: 'bg-mrc-gold',
-  white: 'bg-white ring-1 ring-inset ring-mrc-line-strong',
-}
-function tierDot(tier: string): string {
-  return TIER_DOT[tier.toLowerCase()] ?? 'bg-mrc-line-strong'
-}
 function record(p: TournamentPlayer): string {
   return `${p.record.wins}-${p.record.losses}-${p.record.ties}`
 }

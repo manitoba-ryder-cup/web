@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import type { TournamentPlayer } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { tierDot } from '@/lib/tier'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import BaseAlert from '@/components/base/BaseAlert.vue'
@@ -131,7 +132,11 @@ const chips = computed<{ key: Filter; label: string; n: number }[]>(() => [
         <div v-for="p in filtered" :key="p.player_id"
              class="flex items-center gap-3 border-b border-mrc-line px-3 py-2 last:border-b-0">
           <PlayerAvatar :photo-path="p.photo_path" :alt="`${p.first_name} ${p.last_name}`" size="sm" class="!h-10 !w-10" />
-          <span class="min-w-0 flex-1 truncate font-semibold">{{ p.first_name }} {{ p.last_name }}</span>
+          <!-- Name + a small tier swatch (skill flight) right after it — informational only. -->
+          <div class="flex min-w-0 flex-1 items-center gap-1.5">
+            <span class="truncate font-semibold">{{ p.first_name }} {{ p.last_name }}</span>
+            <span v-if="p.tier" class="h-2.5 w-2.5 shrink-0 rounded-full" :class="tierDot(p.tier)" />
+          </div>
           <!-- Captain (gold C). Shown only when actionable: on a captainless team (tap to
                set) or on the current captain (tap to clear). Hidden otherwise to keep the
                list uncluttered. -->
