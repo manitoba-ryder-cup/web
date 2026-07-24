@@ -20,7 +20,8 @@ const { data, error, loading, refresh } = useAsync(() =>
     scorecardApi.getTournamentPlayers(props.id),
   ]))
 
-const match = computed(() => (data.value?.[0] ?? []).find((m) => m.match_id === props.matchId) ?? null)
+const matches = computed(() => data.value?.[0] ?? [])
+const match = computed(() => matches.value.find((m) => m.match_id === props.matchId) ?? null)
 const teams = computed(() => data.value?.[1] ?? [])
 const roster = computed(() => data.value?.[2] ?? [])
 
@@ -28,15 +29,21 @@ const roster = computed(() => data.value?.[2] ?? [])
 const slots = computed(() => (match.value?.format_name === 'Singles' ? 1 : 2))
 
 // A panel per side (Blue then Red): who's assigned now, and which drafted players are
-// still available to add. Available = drafted on that team, minus who's already in.
+// available to add. A player plays at most once per round, so availability is scoped to the
+// whole format: every drafted player is eligible except those already placed in any match of
+// this round (including this one — those show in the assigned list, not as available).
 const panels = computed(() => {
   const m = match.value
   if (!m) return []
+  const bookedInRound = new Set<string>()
+  for (const other of matches.value) {
+    if (other.format_name !== m.format_name) continue
+    for (const side of other.sides) for (const pl of side.players) bookedInRound.add(pl.player_id)
+  }
   return teams.value.map((team) => {
     const assigned = m.sides.find((s) => s.team_id === team.id)?.players ?? []
-    const assignedIds = new Set(assigned.map((p) => p.player_id))
     const available = roster.value
-      .filter((p) => p.team_id === team.id && !assignedIds.has(p.player_id))
+      .filter((p) => p.team_id === team.id && !bookedInRound.has(p.player_id))
       .sort((a, b) => a.last_name.localeCompare(b.last_name))
     return { team, assigned, available, colors: teamColor(team.color) }
   })
