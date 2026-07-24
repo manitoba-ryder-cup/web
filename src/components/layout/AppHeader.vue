@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { scorecardApi } from '@/api/scorecard'
@@ -29,22 +29,18 @@ const links = [
   { to: '/tournaments', label: 'History' },
 ]
 
-// Leaderboard jumps to the most recent tournament, fetched once we're authenticated;
-// it falls back to the tournament list until (or unless) that resolves.
+// Leaderboard jumps to the most recent tournament. Reads are public (like every other
+// view in the app), so this resolves on mount regardless of auth — gating it behind login
+// left the link pointing at the history list for signed-out visitors.
 const latestTournamentId = ref<string | null>(null)
-watch(
-  () => auth.isAuthenticated,
-  async (authed) => {
-    if (!authed || latestTournamentId.value) return
-    try {
-      const ts = await scorecardApi.listTournaments()
-      latestTournamentId.value = [...ts].sort((a, b) => b.start_date.localeCompare(a.start_date))[0]?.id ?? null
-    } catch {
-      // Nav degrades gracefully — Leaderboard keeps the list fallback.
-    }
-  },
-  { immediate: true },
-)
+onMounted(async () => {
+  try {
+    const ts = await scorecardApi.listTournaments()
+    latestTournamentId.value = [...ts].sort((a, b) => b.start_date.localeCompare(a.start_date))[0]?.id ?? null
+  } catch {
+    // Nav degrades gracefully — Leaderboard keeps the list fallback.
+  }
+})
 const leaderboardTo = computed(() => (latestTournamentId.value ? `/tournaments/${latestTournamentId.value}` : '/tournaments'))
 
 async function onLogout() {
