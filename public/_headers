@@ -1,0 +1,4 @@
+# Keep the private tournament app out of search engines (carried over from the previous
+# nginx config's X-Robots-Tag).
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex

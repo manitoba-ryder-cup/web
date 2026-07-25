@@ -1,0 +1,5 @@
+# SPA fallback: every non-asset path is served by the Vue app's client-side router.
+# /api/* never reaches here — the Cloudflare Worker (infrastructure repo) intercepts it
+# at the edge and proxies to Cloud Run. If an /api/* call ever returns this index.html,
+# the Worker route isn't taking precedence (see infra cloudflare/api-proxy/README.md).
+/*    /index.html   200
