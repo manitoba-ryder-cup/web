@@ -40,7 +40,7 @@ services:
       JWT_PRIVATE_KEY_PATH: /keys/private-key.pem
       JWT_PUBLIC_KEY_PATH: /keys/public-key.pem
       JWT_ISSUER: heimdall-dev
-      JWT_EXPIRATION: 24h
+      REFRESH_TOKEN_EXPIRATION: 24h
       PUBLIC_URL: http://localhost:8080
       ENVIRONMENT: development
       # Dev-only 32-byte hex key for encrypting OIDC/MFA secrets at rest.
