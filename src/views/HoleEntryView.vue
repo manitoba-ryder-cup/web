@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
-import { ApiError, type MatchSide, type MatchStatus } from '@/api/types'
+import { ApiError, type MatchSide } from '@/api/types'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
 import { matchCompleteMessage } from '@/lib/matchResult'
@@ -66,21 +66,16 @@ async function saveAndNext() {
   saving.value = true
   saveError.value = ''
   try {
-    // Sequential so the match result recompute on each write stays ordered. Each write
-    // returns the recomputed match, and the last one is the state after the whole hole.
-    let status: MatchStatus | null = null
-    for (const e of entries.value) {
-      status = await scorecardApi.submitScore(props.matchId, {
-        hole_number: holeNumber.value,
-        strokes: e.strokes,
-        team_id: e.teamId,
-        player_id: e.playerId,
-      })
-    }
+    // One write for the hole: it lands whole or not at all, so a dropped connection can
+    // never leave one side scored and the other not.
+    const status = await scorecardApi.submitHoleScores(props.matchId, {
+      hole_number: holeNumber.value,
+      scores: entries.value.map((e) => ({ team_id: e.teamId, player_id: e.playerId, strokes: e.strokes })),
+    })
     // This hole closed the match out, so there is no next hole to walk to. The scorecard
     // shows the result and each hole taps back here, so a wrong score is a tap from being
     // fixed — the toast only explains why Save didn't land on the next hole.
-    if (status?.finished) {
+    if (status.finished) {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
       goToScorecard()

@@ -39,7 +39,7 @@ vi.mock('@/api/scorecard', () => ({
     getTournamentResults: vi.fn(() => Promise.resolve([match])),
     getMatchHoles: vi.fn(() => Promise.resolve(holes)),
     getMatchScores: vi.fn(() => Promise.resolve([])),
-    submitScore: (...args: unknown[]) => submitScore(...args),
+    submitHoleScores: (...args: unknown[]) => submitScore(...args),
   },
 }))
 
@@ -81,15 +81,33 @@ describe('HoleEntryView saving', () => {
     await saveButton(w).trigger('click')
     await flushPromises()
 
-    expect(submitScore).toHaveBeenCalledTimes(2) // one per side
+    expect(submitScore).toHaveBeenCalledTimes(1) // the whole hole in one write
     expect(router.currentRoute.value.name).toBe('hole')
     expect(router.currentRoute.value.params.hole).toBe('16')
+  })
+
+  it("sends every side's score for the hole in one request", async () => {
+    // Both sides in one body is what makes the write atomic — a half-scored hole stops
+    // being reachable, rather than being something the reader has to cope with.
+    submitScore.mockResolvedValue(open)
+    const w = await openHole('15')
+
+    await saveButton(w).trigger('click')
+    await flushPromises()
+
+    expect(submitScore).toHaveBeenCalledWith('m1', {
+      hole_number: 15,
+      scores: [
+        { team_id: 'blue', player_id: 'p1', strokes: 4 },
+        { team_id: 'red', player_id: 'p2', strokes: 4 },
+      ],
+    })
   })
 
   it('goes to the scorecard when the hole closes the match out', async () => {
     // The write says the match ended, so there is no hole 16 to walk to — without this
     // the stale mount-time `finished` would march on and keep offering entry.
-    submitScore.mockResolvedValueOnce(open).mockResolvedValueOnce(closedOut)
+    submitScore.mockResolvedValue(closedOut)
     const w = await openHole('15')
 
     await saveButton(w).trigger('click')

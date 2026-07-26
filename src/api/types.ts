@@ -169,12 +169,18 @@ export interface Hole {
   hdcp: number
   yards: number
 }
-// One hole score to record. player_id is null for one-ball team formats (scramble, etc.).
+// Every score for one hole, recorded together. The hole is written whole or not at all,
+// so a dropped connection cannot leave one side scored and the other not.
 export interface ScoreSubmission {
   hole_number: number
-  strokes: number
+  scores: ScoreEntry[]
+}
+// One competitor's score. player_id is null for one-ball team formats (scramble, etc.),
+// where the score belongs to the team.
+export interface ScoreEntry {
   team_id: string
   player_id: string | null
+  strokes: number
 }
 export interface WinnerResponse {
   finished: boolean
