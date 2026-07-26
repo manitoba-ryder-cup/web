@@ -12,7 +12,8 @@ import ScorecardSummaryRow from './ScorecardSummaryRow.vue'
 // leads (col 2), the running match state sits between the teams and par, and the hole/par
 // columns are dark bands (the Southwood look). OUT/IN/TOT give the nine + total subtotals.
 const props = defineProps<{
-  holes: HoleStatus[]
+  holeStates: HoleStatus[] // per-hole match state; holeInfo carries the tee set's par
+
   leftTeam: TournamentTeam
   rightTeam: TournamentTeam
   leftLabel: string
@@ -26,7 +27,7 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
-const byHole = computed(() => new Map(props.holes.map((h) => [h.hole_number, h])))
+const byHole = computed(() => new Map(props.holeStates.map((h) => [h.hole_number, h])))
 const leftMeta = computed(() => teamColor(props.leftTeam.color))
 const rightMeta = computed(() => teamColor(props.rightTeam.color))
 

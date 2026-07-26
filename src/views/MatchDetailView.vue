@@ -19,20 +19,24 @@ const auth = useAuthStore()
 
 // The results list carries the match's sides/result; the scores endpoint the played holes;
 // the holes endpoint the tee set (par). Par is non-fatal — the card renders without it.
-const { data, error, loading } = useAsync(() =>
-  Promise.all([
-    scorecardApi.getTournamentTeams(props.tournamentId),
-    scorecardApi.getTournamentResults(props.tournamentId),
-    scorecardApi.getMatchScores(props.matchId),
-    scorecardApi.getMatchHoles(props.matchId).catch(() => []),
-  ]),
+const { data, error, loading } = useAsync(
+  async () => {
+    const [teams, results, holeStates, holes] = await Promise.all([
+      scorecardApi.getTournamentTeams(props.tournamentId),
+      scorecardApi.getTournamentResults(props.tournamentId),
+      scorecardApi.getMatchScores(props.matchId),
+      scorecardApi.getMatchHoles(props.matchId).catch(() => []),
+    ])
+    return { teams, results, holeStates, holes }
+  },
   { intervalMs: 20000 },
 )
-const teams = computed(() => data.value?.[0] ?? [])
-const results = computed(() => data.value?.[1] ?? [])
+const teams = computed(() => data.value?.teams ?? [])
+const results = computed(() => data.value?.results ?? [])
 const match = computed(() => results.value.find((m) => m.match_id === props.matchId) ?? null)
-const holes = computed(() => data.value?.[2] ?? [])
-const holeInfo = computed(() => new Map((data.value?.[3] ?? []).map((h) => [h.number, h])))
+// holeStates is the per-hole match state (who's up); holeInfo is the tee set's par/yardage.
+const holeStates = computed(() => data.value?.holeStates ?? [])
+const holeInfo = computed(() => new Map((data.value?.holes ?? []).map((h) => [h.number, h])))
 
 const { left, right } = useMatchSides(() => match.value, () => teams.value)
 const leftTeam = computed(() => teams.value.find((t) => t.id === left.value?.team_id) ?? null)
@@ -64,7 +68,7 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
                         class="text-sm font-semibold text-mrc-accent hover:underline">Set lineup →</RouterLink>
           </div>
         </div>
-        <MatchScorecard :holes="holes" :left-team="leftTeam" :right-team="rightTeam"
+        <MatchScorecard :hole-states="holeStates" :left-team="leftTeam" :right-team="rightTeam"
                         :left-label="leftLabel" :right-label="rightLabel" :hole-info="holeInfo"
                         :course-name="match.course_name" :format-name="match.format_name"
                         :result-label="match.finished ? resultText(match) : undefined"

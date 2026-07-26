@@ -22,6 +22,8 @@ const sizeClass = computed(() => {
 })
 </script>
 <template>
-  <img :src="src" :alt="alt" @error="onError" :class="sizeClass"
+  <!-- The players page renders the whole roster at once, so avatars load lazily; the
+       size classes already reserve the box, so nothing shifts as they arrive. -->
+  <img :src="src" :alt="alt" @error="onError" :class="sizeClass" loading="lazy" decoding="async"
        class="shrink-0 object-cover object-top" />
 </template>

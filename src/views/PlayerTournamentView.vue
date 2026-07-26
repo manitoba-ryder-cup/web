@@ -17,20 +17,22 @@ const props = defineProps<{ id: string; tournamentId: string }>()
 // One event, seen through one player: their scouting report + flight for the cup, and the
 // matches they actually played. Results carry each match's lineup (by player id), so we
 // filter to this player; teams/roster give colour and the per-tournament write-up.
-const { data, error, loading } = useAsync(() =>
-  Promise.all([
+const { data, error, loading } = useAsync(async () => {
+  const [player, tournament, teams, results, roster] = await Promise.all([
     scorecardApi.getPlayer(props.id),
     scorecardApi.getTournament(props.tournamentId),
     scorecardApi.getTournamentTeams(props.tournamentId),
     scorecardApi.getTournamentResults(props.tournamentId),
     scorecardApi.getTournamentPlayers(props.tournamentId),
-  ]))
+  ])
+  return { player, tournament, teams, results, roster }
+})
 
-const player = computed(() => data.value?.[0] ?? null)
-const tournament = computed(() => data.value?.[1] ?? null)
-const teams = computed(() => data.value?.[2] ?? [])
-const results = computed(() => data.value?.[3] ?? [])
-const roster = computed(() => data.value?.[4] ?? [])
+const player = computed(() => data.value?.player ?? null)
+const tournament = computed(() => data.value?.tournament ?? null)
+const teams = computed(() => data.value?.teams ?? [])
+const results = computed(() => data.value?.results ?? [])
+const roster = computed(() => data.value?.roster ?? [])
 
 const fullName = computed(() => (player.value ? `${player.value.first_name} ${player.value.last_name}` : ''))
 const year = computed(() => tournament.value?.start_date.slice(0, 4) ?? '')

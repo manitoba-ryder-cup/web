@@ -12,15 +12,18 @@ import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue
 
 const props = defineProps<{ id: string }>()
 // Poll so the standings + results stay live during a round without a manual refresh.
-const { data, error, loading } = useAsync(() => Promise.all([
-  scorecardApi.getTournament(props.id),
-  scorecardApi.getTournamentTeams(props.id),
-  scorecardApi.getTournamentResults(props.id),
-]), { intervalMs: 20000 })
+const { data, error, loading } = useAsync(async () => {
+  const [tournament, teams, results] = await Promise.all([
+    scorecardApi.getTournament(props.id),
+    scorecardApi.getTournamentTeams(props.id),
+    scorecardApi.getTournamentResults(props.id),
+  ])
+  return { tournament, teams, results }
+}, { intervalMs: 20000 })
 
-const tournament = computed(() => data.value?.[0] ?? null)
-const teams = computed(() => data.value?.[1] ?? [])
-const results = computed(() => data.value?.[2] ?? [])
+const tournament = computed(() => data.value?.tournament ?? null)
+const teams = computed(() => data.value?.teams ?? [])
+const results = computed(() => data.value?.results ?? [])
 
 const heroEyebrow = computed(() => tournamentEyebrow(tournament.value))
 // Both captains needed for the matchup; otherwise the eyebrow stands alone.

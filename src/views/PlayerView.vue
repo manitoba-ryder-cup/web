@@ -14,11 +14,16 @@ const props = defineProps<{ id: string }>()
 // One useAsync over both fetches so the page has a single loading/error state. Career
 // profile (record + cups) comes from the player; the per-event history — including each
 // year's flight and scouting report — from its own endpoint.
-const { data, error, loading } = useAsync(() =>
-  Promise.all([scorecardApi.getPlayer(props.id), scorecardApi.getPlayerTournaments(props.id)]))
+const { data, error, loading } = useAsync(async () => {
+  const [player, history] = await Promise.all([
+    scorecardApi.getPlayer(props.id),
+    scorecardApi.getPlayerTournaments(props.id),
+  ])
+  return { player, history }
+})
 
-const player = computed(() => data.value?.[0] ?? null)
-const history = computed(() => data.value?.[1] ?? [])
+const player = computed(() => data.value?.player ?? null)
+const history = computed(() => data.value?.history ?? [])
 const fullName = computed(() => (player.value ? `${player.value.first_name} ${player.value.last_name}` : ''))
 const cupsPlayed = computed(() => history.value.length)
 const cupsWon = computed(() => history.value.filter((h) => h.result === 'won').length)

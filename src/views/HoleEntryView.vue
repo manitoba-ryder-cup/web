@@ -18,17 +18,18 @@ const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
 // Match/teams/holes are per-match, so this loads once; changing hole only re-derives.
-const { data, error, loading } = useAsync(() =>
-  Promise.all([
+const { data, error, loading } = useAsync(async () => {
+  const [teams, results, holes] = await Promise.all([
     scorecardApi.getTournamentTeams(props.tournamentId),
     scorecardApi.getTournamentResults(props.tournamentId),
     scorecardApi.getMatchHoles(props.matchId),
-  ]),
-)
-const teams = computed(() => data.value?.[0] ?? [])
-const results = computed(() => data.value?.[1] ?? [])
+  ])
+  return { teams, results, holes }
+})
+const teams = computed(() => data.value?.teams ?? [])
+const results = computed(() => data.value?.results ?? [])
 const match = computed(() => results.value.find((m) => m.match_id === props.matchId) ?? null)
-const holeInfo = computed(() => new Map((data.value?.[2] ?? []).map((h) => [h.number, h])).get(holeNumber.value) ?? null)
+const holeInfo = computed(() => (data.value?.holes ?? []).find((h) => h.number === holeNumber.value) ?? null)
 
 const { left, right } = useMatchSides(() => match.value, () => teams.value)
 // A finished match is read-only (the write flow only makes sense for a live round).

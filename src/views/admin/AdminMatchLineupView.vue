@@ -13,17 +13,19 @@ import XIcon from '@/components/icons/XIcon.vue'
 
 const props = defineProps<{ id: string; matchId: string }>()
 
-const { data, error, loading, refresh } = useAsync(() =>
-  Promise.all([
+const { data, error, loading, refresh } = useAsync(async () => {
+  const [matches, teams, roster] = await Promise.all([
     scorecardApi.getTournamentResults(props.id),
     scorecardApi.getTournamentTeams(props.id),
     scorecardApi.getTournamentPlayers(props.id),
-  ]))
+  ])
+  return { matches, teams, roster }
+})
 
-const matches = computed(() => data.value?.[0] ?? [])
+const matches = computed(() => data.value?.matches ?? [])
 const match = computed(() => matches.value.find((m) => m.match_id === props.matchId) ?? null)
-const teams = computed(() => data.value?.[1] ?? [])
-const roster = computed(() => data.value?.[2] ?? [])
+const teams = computed(() => data.value?.teams ?? [])
+const roster = computed(() => data.value?.roster ?? [])
 
 // One slot per side for Singles, two for every pairs format (Fourball, Alt Shot, …).
 const slots = computed(() => (match.value?.format_name === 'Singles' ? 1 : 2))

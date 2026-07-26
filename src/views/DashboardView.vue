@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import type { MatchResult, TournamentPlayer, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
+import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
 import { tournamentEyebrow } from '@/lib/tournament'
@@ -83,17 +84,8 @@ const phase = computed<'upcoming' | 'live' | 'finished'>(() => {
 })
 
 const heroEyebrow = computed(() => tournamentEyebrow(tournament.value))
-// A per-second clock drives the live countdown; `now` re-evaluates the segments each tick.
-// `previewBase` is captured once so the `?days=` target stays fixed while `now` advances.
+// Captured once so the `?days=` preview target stays fixed as the clock advances.
 const previewBase = Date.now()
-const now = ref(previewBase)
-let ticker: number | undefined
-onMounted(() => {
-  ticker = window.setInterval(() => (now.value = Date.now()), 1000)
-})
-onUnmounted(() => {
-  if (ticker) clearInterval(ticker)
-})
 
 // The moment the event tees off: the earliest scheduled match, falling back to the start
 // date. `?days=` overrides it for previewing (demo tournaments are all in the past).
@@ -111,29 +103,14 @@ const teeOffAt = computed<number | null>(() => {
   return iso ? new Date(`${iso}T00:00:00Z`).getTime() : null
 })
 
-// The countdown broken into d/h/m/s segments, or null once the event has started.
-const segments = computed(() => {
-  if (teeOffAt.value == null) return null
-  const ms = teeOffAt.value - now.value
-  if (ms <= 0) return null
-  const s = Math.floor(ms / 1000)
-  return [
-    { value: Math.floor(s / 86_400), label: 'Days' },
-    { value: Math.floor((s % 86_400) / 3600), label: 'Hrs' },
-    { value: Math.floor((s % 3600) / 60), label: 'Min' },
-    { value: s % 60, label: 'Sec' },
-  ]
-})
-function pad(n: number): string {
-  return String(n).padStart(2, '0')
-}
+const { segments } = useCountdown(teeOffAt)
 
 </script>
 <template>
   <div>
     <!-- Immersive hero: adapts to the event phase. -->
     <section class="relative flex min-h-[26rem] flex-col items-center justify-center overflow-hidden bg-mrc-ink px-4 py-12 text-center text-white md:min-h-[32rem]">
-      <img src="/img/crowd.webp" alt="" class="absolute inset-0 h-full w-full object-cover" />
+      <img src="/img/crowd.webp" alt="" fetchpriority="high" class="absolute inset-0 h-full w-full object-cover" />
       <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/60 to-black/80" />
       <div class="relative w-full max-w-2xl">
         <p v-if="heroEyebrow" class="text-sm font-semibold uppercase tracking-widest text-white/80">{{ heroEyebrow }}</p>
@@ -146,7 +123,7 @@ function pad(n: number): string {
             <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-white/60">Tees off in</p>
             <div class="flex items-start justify-center gap-5 tabular-nums sm:gap-7">
               <div v-for="seg in segments" :key="seg.label" class="flex flex-col items-center">
-                <span class="font-body text-5xl font-bold leading-none md:text-6xl">{{ pad(seg.value) }}</span>
+                <span class="font-body text-5xl font-bold leading-none md:text-6xl">{{ seg.text }}</span>
                 <span class="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/60">{{ seg.label }}</span>
               </div>
             </div>

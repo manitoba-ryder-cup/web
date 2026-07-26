@@ -11,15 +11,20 @@ import TeamAssignRow from '@/components/admin/TeamAssignRow.vue'
 
 const props = defineProps<{ id: string }>()
 
-const { data, error, loading, refresh } = useAsync(() =>
-  Promise.all([scorecardApi.getTournamentPlayers(props.id), scorecardApi.getTournamentTeams(props.id)]))
+const { data, error, loading, refresh } = useAsync(async () => {
+  const [roster, teams] = await Promise.all([
+    scorecardApi.getTournamentPlayers(props.id),
+    scorecardApi.getTournamentTeams(props.id),
+  ])
+  return { roster, teams }
+})
 
-const teams = computed(() => data.value?.[1] ?? [])
+const teams = computed(() => data.value?.teams ?? [])
 const blueId = computed(() => teams.value.find((t) => t.color === 'Blue')?.id ?? null)
 const redId = computed(() => teams.value.find((t) => t.color === 'Red')?.id ?? null)
 
 const roster = computed(() =>
-  [...(data.value?.[0] ?? [])].sort(
+  [...(data.value?.roster ?? [])].sort(
     (a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)))
 
 const counts = computed(() => ({
