@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      # Every check runs even when an earlier one fails, so one push surfaces
+      # everything that needs fixing rather than one problem at a time.
+      fail-fast: false
+      matrix:
+        include:
+          - name: Format
+            run: npm run format:check
+          - name: Lint
+            run: npm run lint
+          - name: Types
+            run: npm run typecheck
+          - name: Test
+            run: npm run test:run
+          - name: Build
+            run: npm run build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ${{ matrix.name }}
+        run: ${{ matrix.run }}
