@@ -118,16 +118,21 @@ export interface MatchSide {
   team_id: string
   players: MatchPlayer[]
 }
-export interface MatchResult {
-  match_id: string
-  format_name: string
+// A match's outcome state. The server's one shape for it: returned by the match status
+// read, by submitScore (so a client learns what a score did without re-deriving the
+// close-out rule), and flattened into every MatchResult.
+export interface MatchStatus {
   finished: boolean
-  winner_team_id: string | null // null = halved or unfinished
+  winner_team_id: string | null // the leader once finished, null while live or halved
   // Who is ahead right now (null = all square), set whether or not the match has
   // finished — so a live view never has to count hole_results to find the leader.
   leader_team_id: string | null
   lead: number
   holes_remaining: number
+}
+export interface MatchResult extends MatchStatus {
+  match_id: string
+  format_name: string
   sides: MatchSide[] // the two competing teams; order/colour is the client's concern
   // Per played hole (in order): winning team's id, or null for a halved hole.
   // Length = holes played; holes beyond the length are unplayed.
@@ -170,15 +175,6 @@ export interface ScoreSubmission {
   strokes: number
   team_id: string
   player_id: string | null
-}
-// A match's outcome state, returned by submitScore so the client learns what a score did
-// to the match instead of re-deriving the close-out rule.
-export interface MatchStatus {
-  finished: boolean
-  winner_team_id: string | null // the leader once finished, null otherwise
-  leader_team_id: string | null
-  lead: number
-  holes_remaining: number
 }
 export interface WinnerResponse {
   finished: boolean

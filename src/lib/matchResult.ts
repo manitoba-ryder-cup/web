@@ -1,9 +1,4 @@
-import type { MatchResult, MatchPlayer, MatchSide } from '@/api/types'
-
-// The state an outcome is read from. Both MatchResult and the MatchStatus a score write
-// returns satisfy it, so the same text renders from either — the write's response is the
-// only current state right after a score, since the loaded result predates it.
-type OutcomeState = Pick<MatchResult, 'finished' | 'winner_team_id' | 'lead' | 'holes_remaining'>
+import type { MatchPlayer, MatchSide, MatchStatus } from '@/api/types'
 
 // The semantic outcome of a match, derived from the team-id result — never from a
 // parsed display string. Rendering keys off `kind` (big numbers, "TIED", etc.).
@@ -13,7 +8,7 @@ export type MatchOutcome =
   | { kind: 'up'; lead: number } // a side is N up → "N up" — in progress, or won at the last hole
   | { kind: 'margin'; lead: number; holesRemaining: number } // decided early → "N & M"
 
-export function matchOutcome(m: OutcomeState): MatchOutcome {
+export function matchOutcome(m: MatchStatus): MatchOutcome {
   // A live match reads as its running state, exactly like the scorecard's per-hole status:
   // "N up" for whoever's ahead, "AS" when nobody's won a net hole yet (incl. not-started).
   if (!m.finished) return m.lead > 0 ? { kind: 'up', lead: m.lead } : { kind: 'all_square' }
@@ -23,7 +18,7 @@ export function matchOutcome(m: OutcomeState): MatchOutcome {
 
 // Compact one-line form (e.g. the MatchSummary pill). Components that need structure
 // (MatchDetails) use matchOutcome directly rather than parsing this string.
-export function resultText(m: OutcomeState): string {
+export function resultText(m: MatchStatus): string {
   const o = matchOutcome(m)
   switch (o.kind) {
     case 'all_square':
@@ -40,7 +35,7 @@ export function resultText(m: OutcomeState): string {
 // Announces a match that just ended, e.g. "Match complete — Bale / Phin win 3 & 2". The
 // prefix carries the news the scorecard can't: that the save is why you landed there
 // instead of on the next hole.
-export function matchCompleteMessage(state: OutcomeState, sides: MatchSide[]): string {
+export function matchCompleteMessage(state: MatchStatus, sides: MatchSide[]): string {
   if (matchOutcome(state).kind === 'tied') return 'Match complete — halved'
   const winner = sides.find((s) => s.team_id === state.winner_team_id)
   if (!winner) return `Match complete — ${resultText(state)}`
