@@ -57,10 +57,16 @@ describe('OrderOfPlay live status', () => {
   })
 
   it('shows the finished result instead of a live state', () => {
-    const w = render(match({
-      finished: true, winner_team_id: 't-blue', leader_team_id: 't-blue',
-      lead: 3, holes_remaining: 2, hole_results: ['t-blue'],
-    }))
+    const w = render(
+      match({
+        finished: true,
+        winner_team_id: 't-blue',
+        leader_team_id: 't-blue',
+        lead: 3,
+        holes_remaining: 2,
+        hole_results: ['t-blue'],
+      }),
+    )
     expect(w.text()).toContain('3 & 2')
     expect(w.text()).not.toContain('thru')
   })

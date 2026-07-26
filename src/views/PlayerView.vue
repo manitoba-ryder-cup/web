@@ -15,10 +15,7 @@ const props = defineProps<{ id: string }>()
 // profile (record + cups) comes from the player; the per-event history — including each
 // year's flight and scouting report — from its own endpoint.
 const { data, error, loading } = useAsync(async () => {
-  const [player, history] = await Promise.all([
-    scorecardApi.getPlayer(props.id),
-    scorecardApi.getPlayerTournaments(props.id),
-  ])
+  const [player, history] = await Promise.all([scorecardApi.getPlayer(props.id), scorecardApi.getPlayerTournaments(props.id)])
   return { player, history }
 })
 
@@ -28,9 +25,7 @@ const fullName = computed(() => (player.value ? `${player.value.first_name} ${pl
 const cupsPlayed = computed(() => history.value.length)
 const cupsWon = computed(() => history.value.filter((h) => h.result === 'won').length)
 
-const heroBg = computed(
-  () => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)), url('/img/mountain-green.webp')`,
-)
+const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)), url('/img/mountain-green.webp')`)
 </script>
 <template>
   <PageLayout>
@@ -45,7 +40,9 @@ const heroBg = computed(
           <h1 class="mt-4 text-white">{{ fullName }}</h1>
           <div class="mt-5 inline-flex divide-x divide-white/15 overflow-hidden rounded-sm bg-black/25 ring-1 ring-white/15">
             <div class="px-5 py-2 text-center">
-              <div class="text-lg font-semibold tabular-nums">{{ player.record.wins }}–{{ player.record.losses }}–{{ player.record.ties }}</div>
+              <div class="text-lg font-semibold tabular-nums">
+                {{ player.record.wins }}–{{ player.record.losses }}–{{ player.record.ties }}
+              </div>
               <div class="text-[10px] uppercase tracking-widest text-white/60">Record</div>
             </div>
             <div class="px-5 py-2 text-center">

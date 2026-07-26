@@ -41,11 +41,14 @@ const matches: MatchResult[] = [
 ]
 
 describe('MatchResultsSection', () => {
-  const mountIt = () =>
-    mount(MatchResultsSection, { props: { matches, teams, tournamentId: 't1' }, global: { plugins: [router] } })
+  const mountIt = () => mount(MatchResultsSection, { props: { matches, teams, tournamentId: 't1' }, global: { plugins: [router] } })
 
   it('makes a tab per format in first-appearance order', () => {
-    expect(mountIt().findAll('button').map((b) => b.text())).toEqual(['Fourball', 'Singles'])
+    expect(
+      mountIt()
+        .findAll('button')
+        .map((b) => b.text()),
+    ).toEqual(['Fourball', 'Singles'])
   })
 
   it("renders each side's players on the active tab", () => {

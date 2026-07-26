@@ -23,9 +23,20 @@ export function teeDayKey(iso: string | null): string {
 // Break a UTC instant into its event-timezone wall-clock parts.
 function eventParts(d: Date): Record<string, string> {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: EVENT_TZ, hourCycle: 'h23',
-    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).formatToParts(d).reduce<Record<string, string>>((acc, p) => { acc[p.type] = p.value; return acc }, {})
+    timeZone: EVENT_TZ,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+    .formatToParts(d)
+    .reduce<Record<string, string>>((acc, p) => {
+      acc[p.type] = p.value
+      return acc
+    }, {})
 }
 
 // UTC instant → a `<input type="datetime-local">` value ("YYYY-MM-DDTHH:mm") in event time.

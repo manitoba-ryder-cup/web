@@ -5,10 +5,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 // its scoring term; the centred tile is the selection (dark), the rest are faded — no
 // highlight box. The mechanism is rebuilt to measure tile positions from the DOM rather
 // than deriving them from screen width.
-const props = withDefaults(
-  defineProps<{ modelValue: number; par: number; name: string; readonly?: boolean }>(),
-  { readonly: false },
-)
+const props = withDefaults(defineProps<{ modelValue: number; par: number; name: string; readonly?: boolean }>(), { readonly: false })
 const emit = defineEmits<{ 'update:modelValue': [strokes: number] }>()
 
 const MAX = 20
@@ -23,12 +20,18 @@ const rel = computed(() => {
 function term(s: number): string {
   if (s === 1) return 'Ace'
   switch (s - props.par) {
-    case -3: return 'Albatross'
-    case -2: return 'Eagle'
-    case -1: return 'Birdie'
-    case 0: return 'Par'
-    case 1: return 'Bogey'
-    default: return `${s - props.par} Bogey`
+    case -3:
+      return 'Albatross'
+    case -2:
+      return 'Eagle'
+    case -1:
+      return 'Birdie'
+    case 0:
+      return 'Par'
+    case 1:
+      return 'Bogey'
+    default:
+      return `${s - props.par} Bogey`
   }
 }
 
@@ -82,14 +85,22 @@ watch(
       <span class="font-display font-semibold text-mrc-ink">{{ name }}</span>
       <span class="tabular-nums text-mrc-ink">{{ modelValue }} ({{ rel }})</span>
     </div>
-    <div ref="track" @scroll="onScroll"
-         class="relative flex snap-x snap-mandatory py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-         :class="readonly ? 'overflow-x-hidden' : 'overflow-x-auto'">
+    <div
+      ref="track"
+      @scroll="onScroll"
+      class="relative flex snap-x snap-mandatory py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      :class="readonly ? 'overflow-x-hidden' : 'overflow-x-auto'"
+    >
       <div class="w-[calc(50%-3rem)] shrink-0" />
-      <button v-for="s in strokes" :key="s" type="button" data-tile
-              class="w-24 shrink-0 snap-center text-center transition-colors"
-              :class="s === modelValue ? 'text-mrc-ink' : 'text-mrc-line'"
-              @click="select(s)">
+      <button
+        v-for="s in strokes"
+        :key="s"
+        type="button"
+        data-tile
+        class="w-24 shrink-0 snap-center text-center transition-colors"
+        :class="s === modelValue ? 'text-mrc-ink' : 'text-mrc-line'"
+        @click="select(s)"
+      >
         <span class="block text-7xl font-bold leading-none">{{ s }}</span>
         <span class="mt-1 block whitespace-nowrap text-lg">{{ term(s) }}</span>
       </button>

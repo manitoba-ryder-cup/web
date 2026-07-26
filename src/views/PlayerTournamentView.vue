@@ -40,8 +40,7 @@ const entry = computed(() => roster.value.find((p) => p.player_id === props.id) 
 
 // The player's matches, in the order results arrive (by tee time). A match belongs to the
 // player when they appear on either side's lineup.
-const matches = computed(() =>
-  results.value.filter((m) => m.sides.some((s) => s.players.some((p) => p.player_id === props.id))))
+const matches = computed(() => results.value.filter((m) => m.sides.some((s) => s.players.some((p) => p.player_id === props.id))))
 
 // The team the player is on in a given match — the side that carries them.
 function sideTeamId(m: MatchResult): string | null {
@@ -55,7 +54,9 @@ const teamName = computed(() => (team.value?.captain?.last_name ? `Team ${team.v
 // That cup's W–L–T, tallied from the player's finished matches (win = their side took it,
 // tie = halved). Unfinished matches don't count yet — same rule the leaderboard uses.
 const record = computed(() => {
-  let wins = 0, losses = 0, ties = 0
+  let wins = 0,
+    losses = 0,
+    ties = 0
   for (const m of matches.value) {
     if (!m.finished) continue
     if (!m.winner_team_id) ties++
@@ -75,8 +76,10 @@ const record = computed(() => {
           <PlayerAvatar :photo-path="player.photo_path" :alt="fullName" size="lg" />
           <div class="min-w-0">
             <h2 class="truncate">{{ fullName }}</h2>
-            <RouterLink :to="{ name: 'tournament', params: { id: tournamentId } }"
-                        class="text-mrc-muted transition hover:text-mrc-accent hover:underline">
+            <RouterLink
+              :to="{ name: 'tournament', params: { id: tournamentId } }"
+              class="text-mrc-muted transition hover:text-mrc-accent hover:underline"
+            >
               {{ year }}<template v-if="teamName"> · {{ teamName }}</template>
             </RouterLink>
             <p class="truncate text-sm text-mrc-muted">{{ tournament.location }}</p>

@@ -11,8 +11,10 @@ const props = withDefaults(defineProps<{ teams: TournamentTeam[]; size?: 'md' | 
 const { left, right, leftColors, rightColors } = useTeamPair(() => props.teams)
 </script>
 <template>
-  <div class="flex items-center justify-center gap-4 font-display font-bold uppercase leading-tight"
-       :class="size === 'lg' ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl'">
+  <div
+    class="flex items-center justify-center gap-4 font-display font-bold uppercase leading-tight"
+    :class="size === 'lg' ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl'"
+  >
     <span class="min-w-0 truncate" :class="white ? 'text-white' : leftColors.softText">{{ left?.captain?.last_name }}</span>
     <span class="shrink-0 font-normal text-white" :class="size === 'lg' ? 'text-xl' : 'text-lg'">vs</span>
     <span class="min-w-0 truncate" :class="white ? 'text-white' : rightColors.softText">{{ right?.captain?.last_name }}</span>

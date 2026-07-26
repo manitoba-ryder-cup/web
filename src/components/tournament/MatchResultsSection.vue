@@ -12,7 +12,10 @@ const grouped = computed(() => {
   const order: string[] = []
   const byFormat: Record<string, MatchResult[]> = {}
   for (const m of props.matches) {
-    if (!byFormat[m.format_name]) { byFormat[m.format_name] = []; order.push(m.format_name) }
+    if (!byFormat[m.format_name]) {
+      byFormat[m.format_name] = []
+      order.push(m.format_name)
+    }
     byFormat[m.format_name].push(m)
   }
   return { order, byFormat }
@@ -22,8 +25,12 @@ const grouped = computed(() => {
   <BaseTabs :tabs="grouped.order" v-slot="{ tab }">
     <!-- Tab bar is full-bleed (the parent applies -mx-4); pad the content back in. -->
     <div class="px-2">
-      <RouterLink v-for="m in grouped.byFormat[tab]" :key="m.match_id"
-                  :to="{ name: 'match', params: { tournamentId, matchId: m.match_id } }" class="block">
+      <RouterLink
+        v-for="m in grouped.byFormat[tab]"
+        :key="m.match_id"
+        :to="{ name: 'match', params: { tournamentId, matchId: m.match_id } }"
+        class="block"
+      >
         <MatchOverview :match="m" :teams="teams" />
       </RouterLink>
     </div>

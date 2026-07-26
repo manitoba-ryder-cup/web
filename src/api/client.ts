@@ -16,10 +16,18 @@ export class ApiClient {
     this.refresh = refresh
   }
 
-  get<T>(path: string): Promise<T> { return this.request<T>('GET', path) }
-  post<T>(path: string, body?: unknown): Promise<T> { return this.request<T>('POST', path, body) }
-  put<T>(path: string, body?: unknown): Promise<T> { return this.request<T>('PUT', path, body) }
-  del<T>(path: string): Promise<T> { return this.request<T>('DELETE', path) }
+  get<T>(path: string): Promise<T> {
+    return this.request<T>('GET', path)
+  }
+  post<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>('POST', path, body)
+  }
+  put<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>('PUT', path, body)
+  }
+  del<T>(path: string): Promise<T> {
+    return this.request<T>('DELETE', path)
+  }
 
   private async request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }

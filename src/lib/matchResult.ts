@@ -13,9 +13,7 @@ export function matchOutcome(m: MatchResult): MatchOutcome {
   // A match with no lead (nobody's won a net hole yet, including not-started) is all square.
   if (!m.finished) return m.lead > 0 ? { kind: 'in_progress' } : { kind: 'all_square' }
   if (!m.winner_team_id) return { kind: 'tied' }
-  return m.holes_remaining > 0
-    ? { kind: 'margin', lead: m.lead, holesRemaining: m.holes_remaining }
-    : { kind: 'up', lead: m.lead }
+  return m.holes_remaining > 0 ? { kind: 'margin', lead: m.lead, holesRemaining: m.holes_remaining } : { kind: 'up', lead: m.lead }
 }
 
 // Compact one-line form (e.g. the MatchSummary pill). Components that need structure

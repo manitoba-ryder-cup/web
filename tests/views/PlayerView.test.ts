@@ -5,21 +5,35 @@ import { createRouter, createWebHistory } from 'vue-router'
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     getPlayer: vi.fn().mockResolvedValue({
-      id: 'p1', user_id: null, first_name: 'Jane', last_name: 'Doe',
-      photo_path: '', record: { wins: 5, losses: 2, ties: 1 },
+      id: 'p1',
+      user_id: null,
+      first_name: 'Jane',
+      last_name: 'Doe',
+      photo_path: '',
+      record: { wins: 5, losses: 2, ties: 1 },
     }),
     getPlayerTournaments: vi.fn().mockResolvedValue([
       {
-        tournament_id: 't1', name: 'Cup 2024', location: 'Clear Lake',
-        start_date: '2024-08-10', end_date: '2024-08-11',
-        captain_first_name: 'Cam', captain_last_name: 'Macaulay',
-        result: 'won', record: { wins: 3, losses: 1, ties: 0 },
+        tournament_id: 't1',
+        name: 'Cup 2024',
+        location: 'Clear Lake',
+        start_date: '2024-08-10',
+        end_date: '2024-08-11',
+        captain_first_name: 'Cam',
+        captain_last_name: 'Macaulay',
+        result: 'won',
+        record: { wins: 3, losses: 1, ties: 0 },
       },
       {
-        tournament_id: 't2', name: 'Cup 2023', location: 'Hecla',
-        start_date: '2023-08-12', end_date: '2023-08-13',
-        captain_first_name: 'Nick', captain_last_name: 'Milnes',
-        result: 'lost', record: { wins: 1, losses: 3, ties: 0 },
+        tournament_id: 't2',
+        name: 'Cup 2023',
+        location: 'Hecla',
+        start_date: '2023-08-12',
+        end_date: '2023-08-13',
+        captain_first_name: 'Nick',
+        captain_last_name: 'Milnes',
+        result: 'lost',
+        record: { wins: 1, losses: 3, ties: 0 },
       },
     ]),
   },
@@ -38,7 +52,10 @@ const router = createRouter({
 })
 
 describe('PlayerView', () => {
-  beforeEach(async () => { router.push('/players/p1'); await router.isReady() })
+  beforeEach(async () => {
+    router.push('/players/p1')
+    await router.isReady()
+  })
   it('renders the player name and W-L-T record', async () => {
     const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
     await flushPromises()

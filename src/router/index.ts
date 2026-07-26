@@ -1,9 +1,4 @@
-import {
-  createRouter,
-  createWebHistory,
-  type RouteLocationNormalizedLoaded,
-  type RouteLocationRaw,
-} from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded, type RouteLocationRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 // Some detail routes declare a contextual back link. The app header renders it (replacing

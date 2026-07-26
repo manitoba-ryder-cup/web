@@ -74,48 +74,48 @@
 
 @theme {
   /* Accent / chrome (Material deep-purple) */
-  --color-mrc-accent:       #4527a0;
-  --color-mrc-accent-dark:  #311b92;
-  --color-mrc-accent-soft:  #b39ddb; /* lighter fill — pops on a dark hero */
-  --color-mrc-accent-tint:  #ede7f6; /* faint fill */
+  --color-mrc-accent: #4527a0;
+  --color-mrc-accent-dark: #311b92;
+  --color-mrc-accent-soft: #b39ddb; /* lighter fill — pops on a dark hero */
+  --color-mrc-accent-tint: #ede7f6; /* faint fill */
 
   /* Team BLUE (always LEFT) */
-  --color-mrc-blue-team:    #1565c0;
-  --color-mrc-blue-strong:  #0d47a1;
-  --color-mrc-blue-soft:    #90caf9;
-  --color-mrc-blue-tint:    #e3f2fd;
-  --color-mrc-blue-line:    #bbdefb;
+  --color-mrc-blue-team: #1565c0;
+  --color-mrc-blue-strong: #0d47a1;
+  --color-mrc-blue-soft: #90caf9;
+  --color-mrc-blue-tint: #e3f2fd;
+  --color-mrc-blue-line: #bbdefb;
 
   /* Team RED (always RIGHT) */
-  --color-mrc-red-team:     #c62828;
-  --color-mrc-red-strong:   #b71c1c;
-  --color-mrc-red-soft:     #ef9a9a;
-  --color-mrc-red-tint:     #ffebee;
-  --color-mrc-red-line:     #ffcdd2;
+  --color-mrc-red-team: #c62828;
+  --color-mrc-red-strong: #b71c1c;
+  --color-mrc-red-soft: #ef9a9a;
+  --color-mrc-red-tint: #ffebee;
+  --color-mrc-red-line: #ffcdd2;
 
   /* Neutrals (Material grey) */
-  --color-mrc-ink:          #212121;
-  --color-mrc-charcoal:     #424242;
-  --color-mrc-muted:        #757575;
-  --color-mrc-faint:        #9e9e9e;
-  --color-mrc-line-strong:  #bdbdbd;
-  --color-mrc-line:         #e0e0e0;
-  --color-mrc-panel-alt:    #eeeeee;
-  --color-mrc-panel:        #f5f5f5;
-  --color-mrc-surface:      #ffffff;
+  --color-mrc-ink: #212121;
+  --color-mrc-charcoal: #424242;
+  --color-mrc-muted: #757575;
+  --color-mrc-faint: #9e9e9e;
+  --color-mrc-line-strong: #bdbdbd;
+  --color-mrc-line: #e0e0e0;
+  --color-mrc-panel-alt: #eeeeee;
+  --color-mrc-panel: #f5f5f5;
+  --color-mrc-surface: #ffffff;
 
   /* Semantic accents & status */
-  --color-mrc-gold:         #ff8f00;
-  --color-mrc-success:      #388e3c;
+  --color-mrc-gold: #ff8f00;
+  --color-mrc-success: #388e3c;
   --color-mrc-success-tint: #c8e6c9;
-  --color-mrc-success-ink:  #1b5e20;
-  --color-mrc-warning:      #f57c00;
+  --color-mrc-success-ink: #1b5e20;
+  --color-mrc-warning: #f57c00;
   --color-mrc-warning-tint: #ffe0b2;
-  --color-mrc-warning-ink:  #e65100;
+  --color-mrc-warning-ink: #e65100;
 
   /* Type (KEEP existing) */
   --font-display: 'Raleway', ui-sans-serif, system-ui, sans-serif;
-  --font-body:    'OpenSans', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'OpenSans', ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
@@ -131,17 +131,33 @@
     font-size: 0.875rem;
   }
   @media (min-width: 48rem) {
-    html { font-size: 1rem; }
+    html {
+      font-size: 1rem;
+    }
   }
-  body { color: var(--color-mrc-ink); }
+  body {
+    color: var(--color-mrc-ink);
+  }
 
   /* Default heading scale: font-display + weight + a size per level, so a bare
      <h1>..<h6> is sized without per-element `text-*` utilities. Add a `text-*` class
      only where a heading intentionally differs from its level's default. */
-  h1 { @apply font-display font-bold text-4xl; }
-  h2 { @apply font-display font-bold text-3xl; }
-  h3 { @apply font-display font-bold text-2xl; }
-  h4 { @apply font-display font-bold text-xl; }
-  h5 { @apply font-display font-bold text-lg; }
-  h6 { @apply font-display font-bold text-base; }
+  h1 {
+    @apply font-display font-bold text-4xl;
+  }
+  h2 {
+    @apply font-display font-bold text-3xl;
+  }
+  h3 {
+    @apply font-display font-bold text-2xl;
+  }
+  h4 {
+    @apply font-display font-bold text-xl;
+  }
+  h5 {
+    @apply font-display font-bold text-lg;
+  }
+  h6 {
+    @apply font-display font-bold text-base;
+  }
 }

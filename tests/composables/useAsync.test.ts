@@ -4,7 +4,12 @@ import { defineComponent } from 'vue'
 import { useAsync } from '@/composables/useAsync'
 
 function harness<T>(fetcher: () => Promise<T>) {
-  return defineComponent({ setup() { return useAsync(fetcher) }, template: '<div/>' })
+  return defineComponent({
+    setup() {
+      return useAsync(fetcher)
+    },
+    template: '<div/>',
+  })
 }
 
 describe('useAsync', () => {

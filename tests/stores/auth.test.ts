@@ -14,7 +14,10 @@ import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api/auth'
 
 describe('auth store', () => {
-  beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks() })
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
 
   it('login stores token + user and marks authenticated', async () => {
     const auth = useAuthStore()
@@ -33,7 +36,7 @@ describe('auth store', () => {
   })
 
   it('restore stays logged out when refresh fails', async () => {
-    ;vi.mocked(authApi.refresh).mockRejectedValueOnce(new Error('no cookie'))
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new Error('no cookie'))
     const auth = useAuthStore()
     await auth.restore()
     expect(auth.isAuthenticated).toBe(false)
@@ -51,14 +54,14 @@ describe('auth store', () => {
   it('refresh failure clears auth state and rethrows', async () => {
     const auth = useAuthStore()
     await auth.login('dev@x.com', 'pw')
-    ;vi.mocked(authApi.refresh).mockRejectedValueOnce(new Error('no cookie'))
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new Error('no cookie'))
     await expect(auth.refresh()).rejects.toThrow('no cookie')
     expect(auth.accessToken).toBeNull()
     expect(auth.isAuthenticated).toBe(false)
   })
 
   it('login failure at me() leaves logged out', async () => {
-    ;vi.mocked(authApi.me).mockRejectedValueOnce(new Error('me failed'))
+    vi.mocked(authApi.me).mockRejectedValueOnce(new Error('me failed'))
     const auth = useAuthStore()
     await expect(auth.login('dev@x.com', 'pw')).rejects.toThrow('me failed')
     expect(auth.isAuthenticated).toBe(false)

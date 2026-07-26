@@ -20,7 +20,11 @@ function teamMeta(teamId: string | null | undefined) {
 }
 // A team-colour dot per side (consistent top/bottom across rows) shows who's on what
 // team; strong/dim follows the actual result so the leader — not just the top row — pops.
-interface Side { name: string; dot: string; dim: boolean }
+interface Side {
+  name: string
+  dot: string
+  dim: boolean
+}
 interface Row {
   id: string
   sides: Side[]
@@ -56,7 +60,12 @@ function rowOf(m: MatchResult): Row {
 
 // One session = a day + format. Matches arrive tee-time ordered; a Map keyed by day|format
 // keeps each session's first-seen order, so sessions read chronologically.
-interface Session { key: string; day: string; format: string; rows: Row[] }
+interface Session {
+  key: string
+  day: string
+  format: string
+  rows: Row[]
+}
 const sessions = computed<Session[]>(() => {
   const byKey = new Map<string, Session>()
   for (const m of props.matches) {
@@ -80,14 +89,20 @@ const sessions = computed<Session[]>(() => {
         <span class="font-semibold">{{ s.format }}</span>
       </div>
       <div class="divide-y divide-mrc-line">
-        <RouterLink v-for="r in s.rows" :key="r.id"
-                    :to="{ name: 'match', params: { tournamentId, matchId: r.id } }"
-                    class="flex items-center gap-3 px-3 py-3 transition hover:bg-mrc-panel">
+        <RouterLink
+          v-for="r in s.rows"
+          :key="r.id"
+          :to="{ name: 'match', params: { tournamentId, matchId: r.id } }"
+          class="flex items-center gap-3 px-3 py-3 transition hover:bg-mrc-panel"
+        >
           <div class="w-14 shrink-0 text-xs text-mrc-muted">{{ r.time }}</div>
           <div class="min-w-0 flex-1 space-y-0.5 leading-tight">
-            <p v-for="(side, i) in r.sides" :key="i"
-               class="flex items-center gap-2 text-sm"
-               :class="side.dim ? 'text-mrc-muted' : 'text-mrc-ink'">
+            <p
+              v-for="(side, i) in r.sides"
+              :key="i"
+              class="flex items-center gap-2 text-sm"
+              :class="side.dim ? 'text-mrc-muted' : 'text-mrc-ink'"
+            >
               <span class="inline-block h-2 w-2 shrink-0 rounded-full" :style="{ background: side.dot }" />
               <span class="min-w-0 truncate">{{ side.name }}</span>
             </p>

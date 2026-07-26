@@ -10,7 +10,10 @@ import MatchDetails from './MatchDetails.vue'
 // by who won each hole. Sides/colour come from useMatchSides (by team id) — nothing here
 // hardcodes a colour.
 const props = defineProps<{ match: MatchResult; teams: TournamentTeam[] }>()
-const { left, right, colorFor } = useMatchSides(() => props.match, () => props.teams)
+const { left, right, colorFor } = useMatchSides(
+  () => props.match,
+  () => props.teams,
+)
 
 // A seeded-but-unassigned slot has no sides yet; fall back to a placeholder pairing so the
 // card still reads as "pairing vs pairing" instead of collapsing to just the result.
@@ -50,9 +53,12 @@ function holeClass(hole: number): string {
       <TeamNames :players="rightPlayers" align="right" :border-class="rightBorder" />
     </div>
     <div class="flex justify-center p-4">
-      <div v-for="hole in 18" :key="hole"
-           class="mx-px flex h-5 w-5 items-center justify-center rounded-full text-xs tracking-tighter"
-           :class="holeClass(hole)">
+      <div
+        v-for="hole in 18"
+        :key="hole"
+        class="mx-px flex h-5 w-5 items-center justify-center rounded-full text-xs tracking-tighter"
+        :class="holeClass(hole)"
+      >
         {{ hole }}
       </div>
     </div>

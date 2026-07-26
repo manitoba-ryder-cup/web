@@ -31,7 +31,10 @@ const results = computed(() => data.value?.results ?? [])
 const match = computed(() => results.value.find((m) => m.match_id === props.matchId) ?? null)
 const holeInfo = computed(() => (data.value?.holes ?? []).find((h) => h.number === holeNumber.value) ?? null)
 
-const { left, right } = useMatchSides(() => match.value, () => teams.value)
+const { left, right } = useMatchSides(
+  () => match.value,
+  () => teams.value,
+)
 // A finished match is read-only (the write flow only makes sense for a live round).
 const readonly = computed(() => match.value?.finished ?? false)
 
@@ -112,9 +115,7 @@ async function saveAndNext() {
           <p class="mt-3 text-center text-xs font-semibold uppercase tracking-wide text-mrc-muted">{{ match.format_name }}</p>
           <MatchSummary class="mt-1" :match="match" :teams="teams" />
           <div class="mt-3 flex items-center justify-center gap-10 text-mrc-muted">
-            <span class="flex items-center gap-2 text-xl font-semibold">
-              <FlagIcon />{{ hole }}
-            </span>
+            <span class="flex items-center gap-2 text-xl font-semibold"> <FlagIcon />{{ hole }} </span>
             <span>Par {{ holeInfo.par }}</span>
             <span>{{ holeInfo.yards }} Yards</span>
             <span>HDCP {{ holeInfo.hdcp }}</span>
@@ -122,13 +123,16 @@ async function saveAndNext() {
         </div>
 
         <div class="mt-6 -mx-4 divide-y divide-mrc-line border-b border-mrc-line">
-          <ScoreWheel v-for="e in entries" :key="e.key" v-model="e.strokes"
-                      :par="holeInfo.par" :name="e.name" :readonly="readonly" />
+          <ScoreWheel v-for="e in entries" :key="e.key" v-model="e.strokes" :par="holeInfo.par" :name="e.name" :readonly="readonly" />
         </div>
 
         <p v-if="saveError" class="mt-6 text-center text-sm text-mrc-red-team">{{ saveError }}</p>
-        <button type="button" class="mt-6 w-full rounded-md bg-mrc-accent py-4 font-semibold text-white transition hover:bg-mrc-accent-dark disabled:opacity-60"
-                :disabled="saving" @click="saveAndNext">
+        <button
+          type="button"
+          class="mt-6 w-full rounded-md bg-mrc-accent py-4 font-semibold text-white transition hover:bg-mrc-accent-dark disabled:opacity-60"
+          :disabled="saving"
+          @click="saveAndNext"
+        >
           {{ saving ? 'Saving…' : buttonLabel }}
         </button>
       </template>

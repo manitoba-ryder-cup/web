@@ -39,8 +39,10 @@ async function onSubmit() {
        below the site nav, no card. The dark gradient overlay is the site's signature hero
        treatment (see ImageHeader) — it keeps white type legible and the mood consistent.
        min-height fills the viewport under the 4rem header. -->
-  <div class="flex min-h-[calc(100vh-4rem)] justify-center bg-cover bg-center px-4"
-       :style="{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('/img/empty-course.webp')` }">
+  <div
+    class="flex min-h-[calc(100vh-4rem)] justify-center bg-cover bg-center px-4"
+    :style="{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('/img/empty-course.webp')` }"
+  >
     <div class="mt-16 w-full max-w-sm">
       <h1 class="mb-10 text-center text-white">Welcome Back</h1>
       <BaseAlert v-if="error" variant="error" class="mb-6">{{ error }}</BaseAlert>

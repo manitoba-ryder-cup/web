@@ -8,9 +8,7 @@ import PlayerRow from './PlayerRow.vue'
 const props = defineProps<{ players: TournamentPlayer[] }>()
 
 const columns = computed(() => {
-  const sorted = [...props.players].sort(
-    (a, b) => a.tier.localeCompare(b.tier) || a.last_name.localeCompare(b.last_name),
-  )
+  const sorted = [...props.players].sort((a, b) => a.tier.localeCompare(b.tier) || a.last_name.localeCompare(b.last_name))
   const half = Math.ceil(sorted.length / 2)
   return [sorted.slice(0, half), sorted.slice(half)]
 })

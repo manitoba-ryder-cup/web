@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  formatTeeTime,
-  teeDayLabel,
-  teeDayKey,
-  utcToEventInput,
-  eventInputToUtc,
-} from '@/lib/teeTime'
+import { formatTeeTime, teeDayLabel, teeDayKey, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 
 // Tee times are UTC instants shown in the event's zone (America/Winnipeg). The zone is
 // CDT (UTC−5) in summer and CST (UTC−6) in winter, so every conversion is checked on

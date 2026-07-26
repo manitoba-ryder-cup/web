@@ -12,11 +12,7 @@ export function useBusy() {
     return key === undefined ? busy.value !== null : busy.value === key
   }
 
-  async function run(
-    key: string | true,
-    action: () => Promise<void>,
-    opts: { error: string; onError?: () => Promise<void> | void },
-  ) {
+  async function run(key: string | true, action: () => Promise<void>, opts: { error: string; onError?: () => Promise<void> | void }) {
     if (busy.value !== null) return
     busy.value = key
     try {

@@ -1,12 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  matchOutcome,
-  resultText,
-  playerNames,
-  playerSurnames,
-  playerInitials,
-  placeholderPairing,
-} from '@/lib/matchResult'
+import { matchOutcome, resultText, playerNames, playerSurnames, playerInitials, placeholderPairing } from '@/lib/matchResult'
 import type { MatchResult } from '@/api/types'
 
 function match(overrides: Partial<MatchResult> = {}): MatchResult {
@@ -75,10 +68,7 @@ describe('placeholderPairing', () => {
     expect(placeholderPairing('Singles').map((p) => `${p.first_name} ${p.last_name}`)).toEqual(['Player One'])
   })
   it('gives two placeholders for a team format', () => {
-    expect(placeholderPairing('Fourball').map((p) => `${p.first_name} ${p.last_name}`)).toEqual([
-      'Player One',
-      'Player Two',
-    ])
+    expect(placeholderPairing('Fourball').map((p) => `${p.first_name} ${p.last_name}`)).toEqual(['Player One', 'Player Two'])
   })
   it('gives each placeholder a stable, unique key', () => {
     const ids = placeholderPairing('Alt Shot').map((p) => p.player_id)

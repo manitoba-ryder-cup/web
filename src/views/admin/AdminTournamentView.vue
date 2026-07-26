@@ -84,7 +84,11 @@ async function openForm(format: string) {
   const siblings = byFormat.value[format] ?? []
   // Default the tee time to 10 minutes after the round's latest match (the next slot), or
   // the tournament's first morning when the round is empty.
-  const latest = siblings.map((m) => m.tee_time).filter(Boolean).sort().pop() as string | undefined
+  const latest = siblings
+    .map((m) => m.tee_time)
+    .filter(Boolean)
+    .sort()
+    .pop() as string | undefined
   form.teeTime = latest
     ? utcToEventInput(new Date(new Date(latest).getTime() + 10 * 60000).toISOString())
     : `${tournament.value?.start_date ?? ''}T08:00`
@@ -147,9 +151,12 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
           <BaseTabs :tabs="formats" v-slot="{ tab }">
             <div class="px-4">
               <div class="overflow-hidden rounded-md border border-mrc-line bg-mrc-surface shadow">
-                <RouterLink v-for="m in byFormat[tab]" :key="m.match_id"
-                            :to="{ name: 'admin-lineup', params: { id, matchId: m.match_id } }"
-                            class="group flex items-center justify-between border-b border-mrc-line px-4 py-3 transition last:border-b-0 hover:bg-mrc-panel">
+                <RouterLink
+                  v-for="m in byFormat[tab]"
+                  :key="m.match_id"
+                  :to="{ name: 'admin-lineup', params: { id, matchId: m.match_id } }"
+                  class="group flex items-center justify-between border-b border-mrc-line px-4 py-3 transition last:border-b-0 hover:bg-mrc-panel"
+                >
                   <div class="min-w-0">
                     <p class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time) || 'Tee time TBD' }}</p>
                     <p class="truncate text-sm text-mrc-muted">{{ pairing(m.sides) }}</p>
@@ -160,8 +167,14 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
 
               <!-- Add another match to this round. Course/tee default to what the round uses; the
                    tee time defaults to the next slot. -->
-              <button v-if="adding !== tab" type="button" @click="openForm(tab)"
-                      class="mt-3 text-sm font-semibold text-mrc-accent hover:underline">+ Add {{ tab }} match</button>
+              <button
+                v-if="adding !== tab"
+                type="button"
+                @click="openForm(tab)"
+                class="mt-3 text-sm font-semibold text-mrc-accent hover:underline"
+              >
+                + Add {{ tab }} match
+              </button>
               <div v-else class="mt-3 space-y-3 rounded-md border border-mrc-line bg-mrc-panel p-4">
                 <BaseAlert v-if="formError" variant="error">{{ formError }}</BaseAlert>
                 <div>

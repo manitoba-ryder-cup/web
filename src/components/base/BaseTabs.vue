@@ -14,7 +14,11 @@ const props = defineProps<{ tabs: string[] }>()
 const route = useRoute()
 const router = useRouter()
 
-const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+const slugify = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
 const slugs = computed(() => props.tabs.map(slugify))
 
 // The tab the current hash points at, or the first tab when the hash is absent/unknown.
@@ -39,17 +43,24 @@ watch([() => route.hash, slugs], () => {
 })
 
 // Keep the active index valid if the tab list shrinks/changes.
-watch(() => props.tabs.length, (len) => {
-  if (active.value >= len) active.value = 0
-})
+watch(
+  () => props.tabs.length,
+  (len) => {
+    if (active.value >= len) active.value = 0
+  },
+)
 </script>
 <template>
   <div>
     <div class="flex shadow-md">
-      <button v-for="(t, i) in tabs" :key="t" type="button"
-              class="flex-grow border-b-4 pb-3 pt-5 text-center font-display font-bold uppercase tracking-wide"
-              :class="i === active ? 'border-mrc-accent text-mrc-accent' : 'border-transparent text-mrc-muted'"
-              @click="active = i">
+      <button
+        v-for="(t, i) in tabs"
+        :key="t"
+        type="button"
+        class="flex-grow border-b-4 pb-3 pt-5 text-center font-display font-bold uppercase tracking-wide"
+        :class="i === active ? 'border-mrc-accent text-mrc-accent' : 'border-transparent text-mrc-muted'"
+        @click="active = i"
+      >
         {{ t }}
       </button>
     </div>

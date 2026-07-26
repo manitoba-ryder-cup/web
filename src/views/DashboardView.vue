@@ -104,12 +104,13 @@ const teeOffAt = computed<number | null>(() => {
 })
 
 const { segments } = useCountdown(teeOffAt)
-
 </script>
 <template>
   <div>
     <!-- Immersive hero: adapts to the event phase. -->
-    <section class="relative flex min-h-[26rem] flex-col items-center justify-center overflow-hidden bg-mrc-ink px-4 py-12 text-center text-white md:min-h-[32rem]">
+    <section
+      class="relative flex min-h-[26rem] flex-col items-center justify-center overflow-hidden bg-mrc-ink px-4 py-12 text-center text-white md:min-h-[32rem]"
+    >
       <img src="/img/crowd.webp" alt="" fetchpriority="high" class="absolute inset-0 h-full w-full object-cover" />
       <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/60 to-black/80" />
       <div class="relative w-full max-w-2xl">
@@ -136,12 +137,19 @@ const { segments } = useCountdown(teeOffAt)
             <p class="truncate font-display text-xl font-bold uppercase tracking-wide">{{ left.captain?.last_name }}</p>
             <span />
             <p class="truncate font-display text-xl font-bold uppercase tracking-wide">{{ right.captain?.last_name }}</p>
-            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="leftColors.softText">{{ pointsText(left.points) }}</p>
+            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="leftColors.softText">
+              {{ pointsText(left.points) }}
+            </p>
             <span class="pb-2 text-4xl font-bold text-white/50">–</span>
-            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="rightColors.softText">{{ pointsText(right.points) }}</p>
+            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="rightColors.softText">
+              {{ pointsText(right.points) }}
+            </p>
           </div>
-          <RouterLink v-if="tournament" :to="{ name: 'tournament', params: { id: tournament.id } }"
-                      class="mt-8 inline-block rounded-md bg-mrc-accent-tint px-6 py-3 font-semibold text-mrc-accent shadow-lg">
+          <RouterLink
+            v-if="tournament"
+            :to="{ name: 'tournament', params: { id: tournament.id } }"
+            class="mt-8 inline-block rounded-md bg-mrc-accent-tint px-6 py-3 font-semibold text-mrc-accent shadow-lg"
+          >
             View Leaderboard
           </RouterLink>
         </template>

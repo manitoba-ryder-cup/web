@@ -15,12 +15,15 @@ describe('ApiClient', () => {
   })
 
   it('on 401 refreshes once and retries with the new token', async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(new Response('unauthorized', { status: 401 }))
       .mockResolvedValueOnce(new Response('{"ok":true}', { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
     let token = 'stale'
-    const refresh = vi.fn().mockImplementation(async () => { token = 'fresh' })
+    const refresh = vi.fn().mockImplementation(async () => {
+      token = 'fresh'
+    })
     const client = new ApiClient('/api/scorecard', () => token, refresh)
     await client.get('/v1/tournaments')
     expect(refresh).toHaveBeenCalledOnce()

@@ -12,10 +12,7 @@ import TeamAssignRow from '@/components/admin/TeamAssignRow.vue'
 const props = defineProps<{ id: string }>()
 
 const { data, error, loading, refresh } = useAsync(async () => {
-  const [roster, teams] = await Promise.all([
-    scorecardApi.getTournamentPlayers(props.id),
-    scorecardApi.getTournamentTeams(props.id),
-  ])
+  const [roster, teams] = await Promise.all([scorecardApi.getTournamentPlayers(props.id), scorecardApi.getTournamentTeams(props.id)])
   return { roster, teams }
 })
 
@@ -24,8 +21,8 @@ const blueId = computed(() => teams.value.find((t) => t.color === 'Blue')?.id ??
 const redId = computed(() => teams.value.find((t) => t.color === 'Red')?.id ?? null)
 
 const roster = computed(() =>
-  [...(data.value?.roster ?? [])].sort(
-    (a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)))
+  [...(data.value?.roster ?? [])].sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)),
+)
 
 const counts = computed(() => ({
   all: roster.value.length,
@@ -56,14 +53,18 @@ const { isBusy, run } = useBusy()
 function assign(p: TournamentPlayer, target: string | null) {
   if (p.team_id === target) return
   const prev = p.team_id
-  return run(p.player_id, async () => {
-    if (prev) await scorecardApi.undraftPlayer(prev, p.player_id)
-    if (target) await scorecardApi.draftPlayer(target, p.player_id)
-    // Leaving a team drops any captaincy there (the server clears it on undraft too).
-    const prevTeam = teamOf(prev)
-    if (prevTeam?.captain?.id === p.player_id) prevTeam.captain = null
-    p.team_id = target
-  }, { error: `Couldn't update ${p.first_name} ${p.last_name}. Please try again.`, onError: refresh })
+  return run(
+    p.player_id,
+    async () => {
+      if (prev) await scorecardApi.undraftPlayer(prev, p.player_id)
+      if (target) await scorecardApi.draftPlayer(target, p.player_id)
+      // Leaving a team drops any captaincy there (the server clears it on undraft too).
+      const prevTeam = teamOf(prev)
+      if (prevTeam?.captain?.id === p.player_id) prevTeam.captain = null
+      p.team_id = target
+    },
+    { error: `Couldn't update ${p.first_name} ${p.last_name}. Please try again.`, onError: refresh },
+  )
 }
 
 // Captaincy is per-team: one captain, and only a drafted player can hold it. The C shows
@@ -71,7 +72,7 @@ function assign(p: TournamentPlayer, target: string | null) {
 // set) or on the current captain (tap to clear) — so the list stays quiet once captains
 // are set. To reassign, clear the current captain, then pick a new one.
 function teamOf(id: string | null) {
-  return id ? teams.value.find((t) => t.id === id) ?? null : null
+  return id ? (teams.value.find((t) => t.id === id) ?? null) : null
 }
 function isCaptain(p: TournamentPlayer): boolean {
   return teamOf(p.team_id)?.captain?.id === p.player_id
@@ -83,15 +84,19 @@ function showCaptainToggle(p: TournamentPlayer): boolean {
 function toggleCaptain(p: TournamentPlayer) {
   if (!p.team_id) return
   const t = teamOf(p.team_id)
-  return run(p.player_id, async () => {
-    if (isCaptain(p)) {
-      await scorecardApi.clearTeamCaptain(p.team_id!)
-      if (t) t.captain = null
-    } else {
-      await scorecardApi.setTeamCaptain(p.team_id!, p.player_id)
-      if (t) t.captain = { id: p.player_id, first_name: p.first_name, last_name: p.last_name }
-    }
-  }, { error: "Couldn't update the captain. Please try again." })
+  return run(
+    p.player_id,
+    async () => {
+      if (isCaptain(p)) {
+        await scorecardApi.clearTeamCaptain(p.team_id!)
+        if (t) t.captain = null
+      } else {
+        await scorecardApi.setTeamCaptain(p.team_id!, p.player_id)
+        if (t) t.captain = { id: p.player_id, first_name: p.first_name, last_name: p.last_name }
+      }
+    },
+    { error: "Couldn't update the captain. Please try again." },
+  )
 }
 
 const chips = computed<{ key: Filter; label: string; n: number }[]>(() => [
@@ -106,9 +111,16 @@ const chips = computed<{ key: Filter; label: string; n: number }[]>(() => [
     <AsyncState :loading="loading" :error="error">
       <!-- Filter chips double as a live tally so you can see who's left to place. -->
       <div class="mb-3 flex flex-wrap gap-2">
-        <button v-for="c in chips" :key="c.key" type="button" @click="filter = c.key"
-                class="rounded-full border px-3 py-1 text-sm font-semibold transition"
-                :class="filter === c.key ? 'border-mrc-accent bg-mrc-accent text-white' : 'border-mrc-line text-mrc-muted hover:border-mrc-line-strong'">
+        <button
+          v-for="c in chips"
+          :key="c.key"
+          type="button"
+          @click="filter = c.key"
+          class="rounded-full border px-3 py-1 text-sm font-semibold transition"
+          :class="
+            filter === c.key ? 'border-mrc-accent bg-mrc-accent text-white' : 'border-mrc-line text-mrc-muted hover:border-mrc-line-strong'
+          "
+        >
           {{ c.label }} <span class="tabular-nums opacity-80">{{ c.n }}</span>
         </button>
       </div>
@@ -116,10 +128,18 @@ const chips = computed<{ key: Filter; label: string; n: number }[]>(() => [
       <BaseInput v-model="search" type="search" placeholder="Search players" class="mb-4" />
 
       <div class="overflow-hidden rounded-md border border-mrc-line bg-mrc-surface shadow">
-        <TeamAssignRow v-for="p in filtered" :key="p.player_id"
-                       :player="p" :blue-id="blueId" :red-id="redId" :busy="isBusy(p.player_id)"
-                       :show-captain="showCaptainToggle(p)" :is-captain="isCaptain(p)"
-                       @assign="(target) => assign(p, target)" @toggle-captain="toggleCaptain(p)" />
+        <TeamAssignRow
+          v-for="p in filtered"
+          :key="p.player_id"
+          :player="p"
+          :blue-id="blueId"
+          :red-id="redId"
+          :busy="isBusy(p.player_id)"
+          :show-captain="showCaptainToggle(p)"
+          :is-captain="isCaptain(p)"
+          @assign="(target) => assign(p, target)"
+          @toggle-captain="toggleCaptain(p)"
+        />
         <p v-if="!filtered.length" class="px-3 py-6 text-center text-mrc-muted">No players match.</p>
       </div>
     </AsyncState>

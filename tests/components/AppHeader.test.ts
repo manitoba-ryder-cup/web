@@ -16,10 +16,13 @@ const router = createRouter({
 })
 
 describe('AppHeader', () => {
-  beforeEach(() => { setActivePinia(createPinia()) })
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
 
   it('shows Login (not Logout) when logged out, plus News + History', async () => {
-    router.push('/'); await router.isReady()
+    router.push('/')
+    await router.isReady()
     const w = mount(AppHeader, { global: { plugins: [router] } })
     expect(w.text()).toContain('Login')
     expect(w.text()).not.toContain('Logout')
@@ -28,7 +31,8 @@ describe('AppHeader', () => {
   })
 
   it('opens the drawer when the hamburger is clicked', async () => {
-    router.push('/'); await router.isReady()
+    router.push('/')
+    await router.isReady()
     const w = mount(AppHeader, { global: { plugins: [router] } })
     // drawer starts translated off-screen
     expect(w.find('aside').classes()).toContain('translate-x-full')
@@ -41,7 +45,8 @@ describe('AppHeader', () => {
     auth.user = { id: '1', email: 'a@b.c', first_name: 'A', last_name: 'B' } as never
     // isAuthenticated derives from accessToken !== null (see src/stores/auth.ts)
     auth.accessToken = 'tok'
-    router.push('/'); await router.isReady()
+    router.push('/')
+    await router.isReady()
     const w = mount(AppHeader, { global: { plugins: [router] } })
     expect(w.text()).toContain('Logout')
     expect(w.text()).not.toContain('Login')
@@ -50,7 +55,8 @@ describe('AppHeader', () => {
   // The drawer's three close paths (backdrop, Esc, route change) are the trickiest
   // part of NavDrawer, so each gets its own regression test.
   async function openDrawer() {
-    router.push('/'); await router.isReady()
+    router.push('/')
+    await router.isReady()
     const w = mount(AppHeader, { attachTo: document.body, global: { plugins: [router] } })
     await w.get('button[aria-label="Open menu"]').trigger('click')
     expect(w.find('aside').classes()).toContain('translate-x-0')

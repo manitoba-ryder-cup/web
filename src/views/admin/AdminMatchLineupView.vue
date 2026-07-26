@@ -53,15 +53,23 @@ const panels = computed(() => {
 
 const { isBusy, run } = useBusy()
 const add = (playerId: string, teamId: string) =>
-  run(true, async () => {
-    await scorecardApi.addParticipant(props.matchId, playerId, teamId)
-    await refresh()
-  }, { error: "Couldn't add that player. Please try again." })
+  run(
+    true,
+    async () => {
+      await scorecardApi.addParticipant(props.matchId, playerId, teamId)
+      await refresh()
+    },
+    { error: "Couldn't add that player. Please try again." },
+  )
 const remove = (playerId: string) =>
-  run(true, async () => {
-    await scorecardApi.removeParticipant(props.matchId, playerId)
-    await refresh()
-  }, { error: "Couldn't remove that player. Please try again." })
+  run(
+    true,
+    async () => {
+      await scorecardApi.removeParticipant(props.matchId, playerId)
+      await refresh()
+    },
+    { error: "Couldn't remove that player. Please try again." },
+  )
 
 // Assigned players come from the match sides (no tier); look their flight up on the roster
 // so the swatch shows on both assigned and available pills — handy for keeping a pairing even.
@@ -93,8 +101,12 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
 
             <!-- Assigned players — remove with the ×. -->
             <div class="mt-3 space-y-2">
-              <div v-for="p in panel.assigned" :key="p.player_id"
-                   class="flex items-center justify-between rounded border px-3 py-2" :class="[panel.colors.tint, panel.colors.line]">
+              <div
+                v-for="p in panel.assigned"
+                :key="p.player_id"
+                class="flex items-center justify-between rounded border px-3 py-2"
+                :class="[panel.colors.tint, panel.colors.line]"
+              >
                 <div class="flex min-w-0 items-center gap-1.5">
                   <span class="truncate font-semibold">{{ p.first_name }} {{ p.last_name }}</span>
                   <TierDot :tier="tierOf(p.player_id)" />
@@ -110,9 +122,13 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
             <template v-if="panel.assigned.length < slots">
               <p class="mt-4 text-xs font-semibold uppercase tracking-widest text-mrc-muted">Add a player</p>
               <div class="mt-2 flex flex-wrap gap-2">
-                <button v-for="p in panel.available" :key="p.player_id" type="button"
-                        class="inline-flex items-center gap-1.5 rounded-full border border-mrc-line px-3 py-1 text-sm transition hover:border-mrc-accent hover:text-mrc-accent"
-                        @click="add(p.player_id, panel.team.id)">
+                <button
+                  v-for="p in panel.available"
+                  :key="p.player_id"
+                  type="button"
+                  class="inline-flex items-center gap-1.5 rounded-full border border-mrc-line px-3 py-1 text-sm transition hover:border-mrc-accent hover:text-mrc-accent"
+                  @click="add(p.player_id, panel.team.id)"
+                >
                   + {{ p.first_name }} {{ p.last_name }}
                   <TierDot :tier="p.tier" size="xs" />
                 </button>

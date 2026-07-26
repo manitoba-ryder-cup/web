@@ -28,7 +28,10 @@ describe('useMatchSides', () => {
   // Teams passed Red-first, and the Red id ('a-red') sorts before the Blue id
   // ('z-blue') — the case that used to land Red on the left.
   it('puts the Blue side on the left and Red on the right', () => {
-    const { left, right, colorFor } = useMatchSides(() => match(), () => [redTeam, blueTeam])
+    const { left, right, colorFor } = useMatchSides(
+      () => match(),
+      () => [redTeam, blueTeam],
+    )
     expect(left.value?.team_id).toBe('z-blue')
     expect(right.value?.team_id).toBe('a-red')
     expect(colorFor(left.value?.team_id).text).toBe('text-mrc-blue-team')

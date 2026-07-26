@@ -22,19 +22,13 @@ function sendResetInstructions() {
   <PageLayout title="Reset Password" image="/img/oceanside.webp">
     <div class="mx-auto max-w-md pt-2">
       <p v-if="emailSent" class="mb-8">
-        If the email address you provided is linked to an account you will receive an email with
-        instructions on how to reset your password.
+        If the email address you provided is linked to an account you will receive an email with instructions on how to reset your password.
       </p>
       <template v-else>
-        <p class="mb-8">
-          To reset your password, please provide the email address associated with your Manitoba
-          Ryder Cup account.
-        </p>
+        <p class="mb-8">To reset your password, please provide the email address associated with your Manitoba Ryder Cup account.</p>
         <BaseLabel>Email Address</BaseLabel>
         <BaseInput v-model="email" type="email" @keyup.enter="sendResetInstructions" />
-        <BaseButton :loading="sending" class="mt-4 w-full py-4" @click="sendResetInstructions">
-          Send Reset Instructions
-        </BaseButton>
+        <BaseButton :loading="sending" class="mt-4 w-full py-4" @click="sendResetInstructions"> Send Reset Instructions </BaseButton>
       </template>
     </div>
   </PageLayout>

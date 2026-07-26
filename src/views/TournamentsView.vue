@@ -16,7 +16,7 @@ const { data, error, loading } = useAsync(async () => {
 </script>
 <template>
   <PageLayout title="History" image="/img/oceanside.webp">
-    <AsyncState :loading="loading" :error="error" :empty="!(data?.length)" empty-text="No tournaments yet.">
+    <AsyncState :loading="loading" :error="error" :empty="!data?.length" empty-text="No tournaments yet.">
       <CardGrid>
         <TournamentCard v-for="x in data ?? []" :key="x.tournament.id" :tournament="x.tournament" :teams="x.teams" />
       </CardGrid>

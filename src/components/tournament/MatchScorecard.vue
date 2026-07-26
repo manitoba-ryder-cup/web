@@ -87,9 +87,7 @@ const tot = computed(() => ({
 
 // Colour the total-row result like the running state: the final leader's colour.
 const resultCls = computed(() => {
-  const states = [...front.value, ...back.value]
-    .map((r) => r.state)
-    .filter((s): s is { text: string; cls: string } => s !== null)
+  const states = [...front.value, ...back.value].map((r) => r.state).filter((s): s is { text: string; cls: string } => s !== null)
   return states.length ? states[states.length - 1].cls : 'text-mrc-ink'
 })
 
@@ -138,8 +136,15 @@ function open(hole: number) {
         <ScorecardRow v-for="r in back" :key="r.hole" :row="r" :left-meta="leftMeta" :right-meta="rightMeta" @open="open" />
         <ScorecardSummaryRow label="In" :yards="inc.yards" :left="inc.left" :right="inc.right" :par="inc.par" />
         <ScorecardSummaryRow
-          label="Tot" total :yards="tot.yards" :left="tot.left" :right="tot.right" :par="tot.par"
-          :result="resultLabel" :result-cls="resultCls" />
+          label="Tot"
+          total
+          :yards="tot.yards"
+          :left="tot.left"
+          :right="tot.right"
+          :par="tot.par"
+          :result="resultLabel"
+          :result-cls="resultCls"
+        />
       </tbody>
     </table>
   </div>

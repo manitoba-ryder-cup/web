@@ -6,8 +6,10 @@ withDefaults(defineProps<{ image?: string; above?: string; below?: string }>(), 
 })
 </script>
 <template>
-  <div class="flex h-36 flex-col items-center justify-center bg-cover bg-bottom px-2 text-center md:h-72"
-       :style="{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('${image}')` }">
+  <div
+    class="flex h-36 flex-col items-center justify-center bg-cover bg-bottom px-2 text-center md:h-72"
+    :style="{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('${image}')` }"
+  >
     <!-- `hero` replaces the whole title block for rich content (e.g. a coloured matchup). -->
     <slot name="hero">
       <p v-if="above" class="text-base text-white md:text-lg mb-2">{{ above }}</p>

@@ -18,10 +18,14 @@ const resultClass =
       : 'bg-mrc-panel text-mrc-muted'
 </script>
 <template>
-  <RouterLink :to="{ name: 'player-tournament', params: { id: playerId, tournamentId: entry.tournament_id } }"
-              class="group -mx-4 flex items-center justify-between border-b border-mrc-line px-4 py-3 transition hover:bg-mrc-panel">
+  <RouterLink
+    :to="{ name: 'player-tournament', params: { id: playerId, tournamentId: entry.tournament_id } }"
+    class="group -mx-4 flex items-center justify-between border-b border-mrc-line px-4 py-3 transition hover:bg-mrc-panel"
+  >
     <div class="min-w-0">
-      <p class="font-semibold">{{ year }}<template v-if="teamName"> · {{ teamName }}</template></p>
+      <p class="font-semibold">
+        {{ year }}<template v-if="teamName"> · {{ teamName }}</template>
+      </p>
       <p class="truncate text-sm text-mrc-muted">{{ entry.location }}</p>
     </div>
     <div class="flex shrink-0 items-center gap-3 pl-3">

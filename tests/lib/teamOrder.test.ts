@@ -29,7 +29,7 @@ describe('orderTeams', () => {
 describe('orderSides', () => {
   const side = (teamId: string): MatchSide => ({ team_id: teamId, players: [] })
 
-  it('orders a match\'s sides Blue-left/Red-right using the teams\' colours', () => {
+  it("orders a match's sides Blue-left/Red-right using the teams' colours", () => {
     const teams = [team('a-red', 'Red'), team('z-blue', 'Blue')]
     const sides = [side('a-red'), side('z-blue')]
     expect(orderSides(sides, teams).map((s) => s.team_id)).toEqual(['z-blue', 'a-red'])

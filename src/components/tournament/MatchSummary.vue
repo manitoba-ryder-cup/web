@@ -7,7 +7,10 @@ import { useMatchSides } from '@/composables/useMatchSides'
 // Compact leaderboard row: side | result pill | side. The winning side fills with its
 // team colour; sides/colour come from useMatchSides (by team id) — never hardcoded.
 const props = defineProps<{ match: MatchResult; teams: TournamentTeam[] }>()
-const { left, right, colorFor } = useMatchSides(() => props.match, () => props.teams)
+const { left, right, colorFor } = useMatchSides(
+  () => props.match,
+  () => props.teams,
+)
 const winner = computed(() => (props.match.finished ? props.match.winner_team_id : null))
 
 function sideClass(side: MatchSide | null): string {

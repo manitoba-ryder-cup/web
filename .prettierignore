@@ -1,3 +1,8 @@
 dist
 node_modules
 coverage
+
+# Prose and infra are left alone: prettier's quote and wrapping rules churn them without
+# settling any real formatting debate, and it un-aligns hand-spaced lists and comments.
+*.md
+docker-compose.yml

@@ -13,10 +13,7 @@ import PlayerCard from '@/components/player/PlayerCard.vue'
 // every player who's ever taken part. The roster's tier is per-tournament, so it only
 // appears on the first tab.
 const { data, error, loading } = useAsync(async () => {
-  const [tournaments, all] = await Promise.all([
-    scorecardApi.listTournaments(),
-    scorecardApi.listPlayers(),
-  ])
+  const [tournaments, all] = await Promise.all([scorecardApi.listTournaments(), scorecardApi.listPlayers()])
   const current = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))[0] ?? null
   const roster = current ? await scorecardApi.getTournamentPlayers(current.id) : []
   return { roster, all }
@@ -28,8 +25,8 @@ const byName = (a: { last_name: string; first_name: string }, b: { last_name: st
   a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)
 
 const roster = computed(() =>
-  [...(data.value?.roster ?? [])].sort(
-    (a, b) => (TIER_RANK[a.tier] ?? 9) - (TIER_RANK[b.tier] ?? 9) || byName(a, b)))
+  [...(data.value?.roster ?? [])].sort((a, b) => (TIER_RANK[a.tier] ?? 9) - (TIER_RANK[b.tier] ?? 9) || byName(a, b)),
+)
 const allPlayers = computed(() => [...(data.value?.all ?? [])].sort(byName))
 </script>
 <template>
@@ -45,17 +42,32 @@ const allPlayers = computed(() => [...(data.value?.all ?? [])].sort(byName))
               <template v-if="index === 0">
                 <p v-if="!roster.length" class="text-center text-mrc-muted">This year's roster hasn't been set yet.</p>
                 <CardGrid v-else>
-                  <PlayerCard v-for="p in roster" :key="p.player_id" :id="p.player_id"
-                              :first-name="p.first_name" :last-name="p.last_name" :photo-path="p.photo_path"
-                              :record="p.record" :cups="p.cups_won" :tier="p.tier" />
+                  <PlayerCard
+                    v-for="p in roster"
+                    :key="p.player_id"
+                    :id="p.player_id"
+                    :first-name="p.first_name"
+                    :last-name="p.last_name"
+                    :photo-path="p.photo_path"
+                    :record="p.record"
+                    :cups="p.cups_won"
+                    :tier="p.tier"
+                  />
                 </CardGrid>
               </template>
               <template v-else>
                 <p v-if="!allPlayers.length" class="text-center text-mrc-muted">No players yet.</p>
                 <CardGrid v-else>
-                  <PlayerCard v-for="p in allPlayers" :key="p.id" :id="p.id"
-                              :first-name="p.first_name" :last-name="p.last_name" :photo-path="p.photo_path"
-                              :record="p.record" :cups="p.cups_won" />
+                  <PlayerCard
+                    v-for="p in allPlayers"
+                    :key="p.id"
+                    :id="p.id"
+                    :first-name="p.first_name"
+                    :last-name="p.last_name"
+                    :photo-path="p.photo_path"
+                    :record="p.record"
+                    :cups="p.cups_won"
+                  />
                 </CardGrid>
               </template>
             </div>

@@ -5,8 +5,7 @@ import type { MatchPlayer } from '@/api/types'
 defineProps<{ players: MatchPlayer[]; align: 'left' | 'right'; borderClass: string }>()
 </script>
 <template>
-  <div class="flex w-2/5 items-center px-3 py-4 leading-tight"
-       :class="[borderClass, align === 'right' ? 'justify-end text-right' : '']">
+  <div class="flex w-2/5 items-center px-3 py-4 leading-tight" :class="[borderClass, align === 'right' ? 'justify-end text-right' : '']">
     <div>
       <template v-for="(p, i) in players" :key="p.player_id">
         <div class="italic" :class="i > 0 ? 'mt-3' : ''">{{ p.first_name }}</div>
