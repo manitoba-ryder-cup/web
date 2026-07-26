@@ -11,6 +11,7 @@ function match(): MatchResult {
     format_name: 'Singles',
     finished: false,
     winner_team_id: null,
+    leader_team_id: null,
     lead: 0,
     holes_remaining: 18,
     sides: [

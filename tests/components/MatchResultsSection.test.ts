@@ -20,6 +20,7 @@ function match(o: Partial<MatchResult> = {}): MatchResult {
     format_name: 'Fourball',
     finished: true,
     winner_team_id: 't-red',
+    leader_team_id: 't-red',
     lead: 3,
     holes_remaining: 2,
     sides: [
@@ -27,6 +28,8 @@ function match(o: Partial<MatchResult> = {}): MatchResult {
       { team_id: 't-red', players: [{ player_id: 'r1', first_name: 'Amy', last_name: 'Smith' }] },
     ],
     hole_results: ['t-red', null, 't-blue'],
+    tee_time: null,
+    course_name: 'Test GC',
     ...o,
   }
 }

@@ -74,6 +74,9 @@ export interface MatchResult {
   format_name: string
   finished: boolean
   winner_team_id: string | null // null = halved or unfinished
+  // Who is ahead right now (null = all square), set whether or not the match has
+  // finished — so a live view never has to count hole_results to find the leader.
+  leader_team_id: string | null
   lead: number
   holes_remaining: number
   sides: MatchSide[] // the two competing teams; order/colour is the client's concern

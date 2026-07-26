@@ -15,10 +15,13 @@ function match(overrides: Partial<MatchResult> = {}): MatchResult {
     format_name: 'Singles',
     finished: true,
     winner_team_id: 't-1',
+    leader_team_id: 't-1',
     lead: 3,
     holes_remaining: 2,
     sides: [],
     hole_results: [],
+    tee_time: null,
+    course_name: 'Test GC',
     ...overrides,
   }
 }
