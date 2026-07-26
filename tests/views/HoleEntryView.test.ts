@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import { ApiError, type MatchResult, type MatchStatus } from '@/api/types'
@@ -68,15 +68,6 @@ async function openHole(hole = '15') {
 }
 
 describe('HoleEntryView saving', () => {
-  // The wheel centres itself on mount; jsdom has no scrollTo, and no layout to assert on.
-  const noScrollTo = !Element.prototype.scrollTo
-  beforeAll(() => {
-    if (noScrollTo) Element.prototype.scrollTo = () => {}
-  })
-  afterAll(() => {
-    if (noScrollTo) Reflect.deleteProperty(Element.prototype, 'scrollTo')
-  })
-
   beforeEach(() => {
     submitScore.mockReset()
     toasts.length = 0

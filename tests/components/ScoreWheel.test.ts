@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ScoreWheel from '@/components/tournament/ScoreWheel.vue'
 
@@ -6,15 +6,6 @@ const base = { modelValue: 4, par: 4, name: 'Justin Rabe' }
 const tiles = (w: ReturnType<typeof mount>) => w.findAll('[data-tile]')
 
 describe('ScoreWheel', () => {
-  // The wheel centres itself on mount; jsdom has no scrollTo, and no layout to assert on.
-  const noScrollTo = !Element.prototype.scrollTo
-  beforeAll(() => {
-    if (noScrollTo) Element.prototype.scrollTo = () => {}
-  })
-  afterAll(() => {
-    if (noScrollTo) Reflect.deleteProperty(Element.prototype, 'scrollTo')
-  })
-
   it('picks out the selected stroke and fades the rest', () => {
     const w = mount(ScoreWheel, { props: base })
 

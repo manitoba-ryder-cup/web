@@ -33,8 +33,6 @@ const teams = computed(() => data.value?.teams ?? [])
 const results = computed(() => data.value?.results ?? [])
 const match = computed(() => results.value.find((m) => m.match_id === props.matchId) ?? null)
 const holeInfo = computed(() => (data.value?.holes ?? []).find((h) => h.number === holeNumber.value) ?? null)
-// What was already recorded for this hole, if anything — the wheels open on it.
-const scored = computed(() => (data.value?.holeStates ?? []).find((h) => h.hole_number === holeNumber.value) ?? null)
 
 const { left, right } = useMatchSides(
   () => match.value,
@@ -62,7 +60,7 @@ function rebuild() {
   })
 }
 // A scored hole opens on its scores, an unplayed one on par.
-watch([() => props.hole, left, right, holeInfo, scored], rebuild, { immediate: true })
+watch([() => props.hole, left, right, holeInfo], rebuild, { immediate: true })
 
 const saving = ref(false)
 const saveError = ref('')

@@ -1,5 +1,5 @@
 import type { Hole, HoleStatus, MatchSide } from '@/api/types'
-import { playerSurnames } from '@/lib/matchResult'
+import { playerNames, playerSurnames } from '@/lib/matchResult'
 
 // One score wheel on the hole-entry page. playerId is null for a one-ball format, where
 // the score belongs to the team. `scored` separates a recorded par from par-as-a-default,
@@ -56,15 +56,14 @@ export function buildHoleEntries(sides: MatchSide[], { perPlayer, holeNumber, ho
 
   const entries: HoleEntry[] = []
   for (const side of sides) {
-    const players: (string | null)[] = perPlayer ? side.players.map((p) => p.player_id) : [null]
-    for (const playerId of players) {
-      const player = side.players.find((p) => p.player_id === playerId)
+    for (const player of perPlayer ? side.players : [null]) {
+      const playerId = player?.player_id ?? null
       const strokes = scored ? strokesOn(scored, side.team_id, playerId) : null
       entries.push({
         key: player?.player_id ?? side.team_id,
         teamId: side.team_id,
         playerId,
-        name: player ? `${player.first_name} ${player.last_name}` : playerSurnames(side.players),
+        name: player ? playerNames([player]) : playerSurnames(side.players),
         strokes: strokes ?? par,
         scored: strokes !== null,
         ...prior(side.team_id, playerId),
