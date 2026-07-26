@@ -136,9 +136,16 @@ export interface MatchResult {
   course_name: string
 }
 
-// One team's (best-ball) gross score on a hole.
+// One team's (best-ball) gross score on a hole. In Fourball `strokes` is the better of
+// the two balls, so only player_scores says what each player shot. Empty for one-ball
+// formats (alt shot/scramble/scotch), where the score belongs to the team.
 export interface HoleScore {
   team_id: string
+  strokes: number
+  player_scores: PlayerHoleScore[]
+}
+export interface PlayerHoleScore {
+  player_id: string
   strokes: number
 }
 // The match-play state after a scored hole (only scored holes are returned).
@@ -163,6 +170,15 @@ export interface ScoreSubmission {
   strokes: number
   team_id: string
   player_id: string | null
+}
+// A match's outcome state, returned by submitScore so the client learns what a score did
+// to the match instead of re-deriving the close-out rule.
+export interface MatchStatus {
+  finished: boolean
+  winner_team_id: string | null // the leader once finished, null otherwise
+  leader_team_id: string | null
+  lead: number
+  holes_remaining: number
 }
 export interface WinnerResponse {
   finished: boolean

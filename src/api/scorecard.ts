@@ -7,6 +7,7 @@ import type {
   Match,
   MatchFormat,
   MatchResult,
+  MatchStatus,
   PlayerProfile,
   PlayerTournamentHistory,
   ScoreSubmission,
@@ -46,8 +47,10 @@ export const scorecardApi = {
   getTournamentPlayers: (id: string) => sc().get<TournamentPlayer[]>(`/v1/tournaments/${id}/players`),
   getMatchScores: (id: string) => sc().get<HoleStatus[]>(`/v1/matches/${id}/scores`),
   getMatchHoles: (id: string) => sc().get<Hole[]>(`/v1/matches/${id}/holes`),
-  // Records one hole score (scores:write). One call per player/team; returns 204.
-  submitScore: (matchId: string, body: ScoreSubmission) => sc().post<void>(`/v1/matches/${matchId}/scores`, body),
+  // Records one hole score (scores:write). One call per player/team; returns the match's
+  // recomputed state, so the caller sees whether that score closed the match out. 409 if
+  // the match is already complete and the hole was never played.
+  submitScore: (matchId: string, body: ScoreSubmission) => sc().post<MatchStatus>(`/v1/matches/${matchId}/scores`, body),
   listPlayers: () => sc().get<PlayerProfile[]>('/v1/players'),
   getPlayer: (id: string) => sc().get<PlayerProfile>(`/v1/players/${id}`),
   getPlayerTournaments: (id: string) => sc().get<PlayerTournamentHistory[]>(`/v1/players/${id}/tournaments`),

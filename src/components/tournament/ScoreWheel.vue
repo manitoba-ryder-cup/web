@@ -5,7 +5,23 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 // its scoring term; the centred tile is the selection (dark), the rest are faded — no
 // highlight box. The mechanism is rebuilt to measure tile positions from the DOM rather
 // than deriving them from screen width.
-const props = withDefaults(defineProps<{ modelValue: number; par: number; name: string; readonly?: boolean }>(), { readonly: false })
+// `unscored` still centres on modelValue but picks out nothing: a selected par would
+// read as a score nobody made.
+// priorStrokes/priorPar are the round before this hole, so the readout is a running
+// total that follows the wheel — you see what the score you're about to record does to
+// the round, not just the hole. Default 0/0 reads as this hole alone.
+const props = withDefaults(
+  defineProps<{
+    modelValue: number
+    par: number
+    name: string
+    readonly?: boolean
+    unscored?: boolean
+    priorStrokes?: number
+    priorPar?: number
+  }>(),
+  { readonly: false, unscored: false, priorStrokes: 0, priorPar: 0 },
+)
 const emit = defineEmits<{ 'update:modelValue': [strokes: number] }>()
 
 const MAX = 20
@@ -13,8 +29,11 @@ const strokes = Array.from({ length: MAX }, (_, i) => i + 1)
 const track = ref<HTMLElement | null>(null)
 let raf = 0
 
+// An unscored hole adds nothing to either side of the comparison — the wheel sits on par
+// but that par was never made — so the readout is the round as it stood before it.
+const total = computed(() => props.priorStrokes + (props.unscored ? 0 : props.modelValue))
 const rel = computed(() => {
-  const d = props.modelValue - props.par
+  const d = total.value - (props.priorPar + (props.unscored ? 0 : props.par))
   return d === 0 ? 'E' : d > 0 ? `+${d}` : `${d}`
 })
 function term(s: number): string {
@@ -83,7 +102,7 @@ watch(
   <div class="py-4">
     <div class="flex items-center justify-between px-4 text-2xl">
       <span class="font-display font-semibold text-mrc-ink">{{ name }}</span>
-      <span class="tabular-nums text-mrc-ink">{{ modelValue }} ({{ rel }})</span>
+      <span class="tabular-nums text-mrc-ink">{{ total }} ({{ rel }})</span>
     </div>
     <div
       ref="track"
@@ -98,7 +117,7 @@ watch(
         type="button"
         data-tile
         class="w-24 shrink-0 snap-center text-center transition-colors"
-        :class="s === modelValue ? 'text-mrc-ink' : 'text-mrc-line'"
+        :class="!unscored && s === modelValue ? 'text-mrc-ink' : 'text-mrc-line'"
         @click="select(s)"
       >
         <span class="block text-7xl font-bold leading-none">{{ s }}</span>

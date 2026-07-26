@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { matchOutcome, resultText, playerNames, playerSurnames, playerInitials, placeholderPairing } from '@/lib/matchResult'
-import type { MatchResult } from '@/api/types'
+import {
+  matchOutcome,
+  resultText,
+  playerNames,
+  playerSurnames,
+  playerInitials,
+  placeholderPairing,
+  matchCompleteMessage,
+} from '@/lib/matchResult'
+import type { MatchResult, MatchSide, MatchStatus } from '@/api/types'
 
 function match(overrides: Partial<MatchResult> = {}): MatchResult {
   return {
@@ -110,5 +118,33 @@ describe('playerInitials', () => {
         { player_id: 'p2', first_name: 'Bo', last_name: 'Jones' },
       ]),
     ).toBe('AS / BJ')
+  })
+})
+
+describe('matchCompleteMessage', () => {
+  const sides: MatchSide[] = [
+    { team_id: 'blue', players: [{ player_id: 'p1', first_name: 'Travis', last_name: 'Bale' }] },
+    { team_id: 'red', players: [{ player_id: 'p2', first_name: 'Sam', last_name: 'Phin' }] },
+  ]
+  // Built from the write's response, which is a MatchStatus — not the MatchResult the
+  // page loaded, because that snapshot predates the score that ended the match.
+  function status(overrides: Partial<MatchStatus> = {}): MatchStatus {
+    return { finished: true, winner_team_id: 'blue', leader_team_id: 'blue', lead: 3, holes_remaining: 2, ...overrides }
+  }
+
+  it('names the winning side and the margin', () => {
+    expect(matchCompleteMessage(status(), sides)).toBe('Match complete — Bale win 3 & 2')
+  })
+
+  it('reads as N up when it went to the last hole', () => {
+    expect(matchCompleteMessage(status({ lead: 1, holes_remaining: 0 }), sides)).toBe('Match complete — Bale win 1 up')
+  })
+
+  it('says halved rather than naming a winner when nobody won', () => {
+    expect(matchCompleteMessage(status({ winner_team_id: null, lead: 0, holes_remaining: 0 }), sides)).toBe('Match complete — halved')
+  })
+
+  it('falls back to the margin alone when the winning side is not in the lineup', () => {
+    expect(matchCompleteMessage(status({ winner_team_id: 'ghost' }), sides)).toBe('Match complete — 3 & 2')
   })
 })
