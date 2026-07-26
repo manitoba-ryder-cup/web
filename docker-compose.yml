@@ -66,6 +66,10 @@ services:
       JWT_PUBLIC_KEY_PATH: /keys/public-key.pem
       ENVIRONMENT: development
       LOG_FORMAT: text
+      # Anonymous reads resolve to this tenant, which is the one ./dev/seed.sh and the
+      # imported history live under. Without it every public page 401s, since the site
+      # reads the dashboard, leaderboard and players without a token.
+      SCORECARD_PUBLIC_TENANT_ID: 11111111-1111-1111-1111-111111111111
     volumes:
       - ./dev/keys:/keys:ro
     ports:
