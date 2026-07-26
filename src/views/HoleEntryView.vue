@@ -3,8 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { ApiError, type MatchSide, type MatchStatus } from '@/api/types'
-import { useAsync } from '@/composables/useAsync'
-import { useMatchSides } from '@/composables/useMatchSides'
+import { useMatchContext } from '@/composables/useMatchContext'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
 import { matchCompleteMessage } from '@/lib/matchResult'
 import { toast } from '@/composables/useToast'
@@ -19,25 +18,9 @@ const props = defineProps<{ tournamentId: string; matchId: string; hole: string 
 const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
-// Match/teams/holes/scores are per-match, so this loads once; changing hole only re-derives.
-const { data, error, loading } = useAsync(async () => {
-  const [teams, results, holes, holeStates] = await Promise.all([
-    scorecardApi.getTournamentTeams(props.tournamentId),
-    scorecardApi.getTournamentResults(props.tournamentId),
-    scorecardApi.getMatchHoles(props.matchId),
-    scorecardApi.getMatchScores(props.matchId),
-  ])
-  return { teams, results, holes, holeStates }
-})
-const teams = computed(() => data.value?.teams ?? [])
-const results = computed(() => data.value?.results ?? [])
-const match = computed(() => results.value.find((m) => m.match_id === props.matchId) ?? null)
-const holeInfo = computed(() => (data.value?.holes ?? []).find((h) => h.number === holeNumber.value) ?? null)
-
-const { left, right } = useMatchSides(
-  () => match.value,
-  () => teams.value,
-)
+// Loads once — walking to the next hole only re-derives from what is already here.
+const { error, loading, teams, results, holeStates, holes, match, left, right } = useMatchContext(props.tournamentId, props.matchId)
+const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
 // A finished match is read-only (the write flow only makes sense for a live round). The
 // loaded result is a snapshot from mount, so a save that ends the match sets this too —
 // otherwise walking to the next hole would still offer an editable wheel.
@@ -55,8 +38,8 @@ function rebuild() {
   entries.value = buildHoleEntries(sides, {
     perPlayer: perPlayer.value,
     holeNumber: holeNumber.value,
-    holes: data.value?.holes ?? [],
-    holeStates: data.value?.holeStates ?? [],
+    holes: holes.value,
+    holeStates: holeStates.value,
   })
 }
 // A scored hole opens on its scores, an unplayed one on par.

@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { scorecardApi } from '@/api/scorecard'
 import { useAuthStore } from '@/stores/auth'
-import { useAsync } from '@/composables/useAsync'
-import { useMatchSides } from '@/composables/useMatchSides'
+import { useMatchContext } from '@/composables/useMatchContext'
 import { playerInitials, resultText } from '@/lib/matchResult'
 import { formatTeeTime } from '@/lib/teeTime'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -17,31 +15,13 @@ const props = defineProps<{ tournamentId: string; matchId: string }>()
 
 const auth = useAuthStore()
 
-// The results list carries the match's sides/result; the scores endpoint the played holes;
-// the holes endpoint the tee set (par). Par is non-fatal — the card renders without it.
-const { data, error, loading } = useAsync(
-  async () => {
-    const [teams, results, holeStates, holes] = await Promise.all([
-      scorecardApi.getTournamentTeams(props.tournamentId),
-      scorecardApi.getTournamentResults(props.tournamentId),
-      scorecardApi.getMatchScores(props.matchId),
-      scorecardApi.getMatchHoles(props.matchId).catch(() => []),
-    ])
-    return { teams, results, holeStates, holes }
-  },
-  { intervalMs: 20000 },
-)
-const teams = computed(() => data.value?.teams ?? [])
-const results = computed(() => data.value?.results ?? [])
-const match = computed(() => results.value.find((m) => m.match_id === props.matchId) ?? null)
-// holeStates is the per-hole match state (who's up); holeInfo is the tee set's par/yardage.
-const holeStates = computed(() => data.value?.holeStates ?? [])
-const holeInfo = computed(() => new Map((data.value?.holes ?? []).map((h) => [h.number, h])))
-
-const { left, right } = useMatchSides(
-  () => match.value,
-  () => teams.value,
-)
+// Polls, so a spectator watching the round sees it move. Par is non-fatal here — the
+// card renders without it.
+const { error, loading, teams, results, holeStates, holes, match, left, right } = useMatchContext(props.tournamentId, props.matchId, {
+  intervalMs: 20000,
+  parOptional: true,
+})
+const holeInfo = computed(() => new Map(holes.value.map((h) => [h.number, h])))
 const leftTeam = computed(() => teams.value.find((t) => t.id === left.value?.team_id) ?? null)
 const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.team_id) ?? null)
 const leftLabel = computed(() => (left.value ? playerInitials(left.value.players) : ''))
