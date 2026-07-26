@@ -5,7 +5,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     getPlayer: vi.fn().mockResolvedValue({
-      id: 'p1', user_id: null, email: null, first_name: 'Jane', last_name: 'Doe',
+      id: 'p1', user_id: null, first_name: 'Jane', last_name: 'Doe',
       photo_path: '', record: { wins: 5, losses: 2, ties: 1 },
     }),
     getPlayerTournaments: vi.fn().mockResolvedValue([

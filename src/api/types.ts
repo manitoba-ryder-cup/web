@@ -29,11 +29,10 @@ export interface CreateMatchBody {
   tee_time: string | null
   handicapped: boolean
 }
-export interface PlayerSummary { id: string; first_name: string; last_name: string; email: string | null }
+export interface PlayerSummary { id: string; first_name: string; last_name: string }
 export interface Player {
   id: string
   user_id: string | null
-  email: string | null
   first_name: string
   last_name: string
   photo_path: string
@@ -50,7 +49,6 @@ export interface TournamentPlayer {
   hdcp: number
   first_name: string
   last_name: string
-  email: string | null
   photo_path: string
   team_id: string | null
   record: PlayerRecord // all-time W-L-T

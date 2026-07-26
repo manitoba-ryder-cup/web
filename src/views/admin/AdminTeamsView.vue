@@ -84,7 +84,7 @@ function toggleCaptain(p: TournamentPlayer) {
       if (t) t.captain = null
     } else {
       await scorecardApi.setTeamCaptain(p.team_id!, p.player_id)
-      if (t) t.captain = { id: p.player_id, first_name: p.first_name, last_name: p.last_name, email: p.email }
+      if (t) t.captain = { id: p.player_id, first_name: p.first_name, last_name: p.last_name }
     }
   }, { error: "Couldn't update the captain. Please try again." })
 }

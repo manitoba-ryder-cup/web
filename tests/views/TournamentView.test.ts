@@ -11,8 +11,8 @@ vi.mock('@/api/scorecard', () => ({
       location: 'Winnipeg',
     }),
     getTournamentTeams: vi.fn().mockResolvedValue([
-      { id: 'red-1', color: 'Red', captain: { id: 'p1', first_name: 'Amy', last_name: 'Smith', email: null }, points: 8 },
-      { id: 'blue-1', color: 'Blue', captain: { id: 'p2', first_name: 'Bo', last_name: 'Jones', email: null }, points: 6 },
+      { id: 'red-1', color: 'Red', captain: { id: 'p1', first_name: 'Amy', last_name: 'Smith' }, points: 8 },
+      { id: 'blue-1', color: 'Blue', captain: { id: 'p2', first_name: 'Bo', last_name: 'Jones' }, points: 6 },
     ]),
     getTournamentResults: vi.fn().mockResolvedValue([
       {
@@ -72,7 +72,7 @@ describe('TournamentView', () => {
   it('omits the hero captains line when a team has no captain', async () => {
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValueOnce([
       { id: 'red-1', color: 'Red', captain: null, points: 3 },
-      { id: 'blue-1', color: 'Blue', captain: { id: 'p2', first_name: 'Bo', last_name: 'Jones', email: null }, points: 5 },
+      { id: 'blue-1', color: 'Blue', captain: { id: 'p2', first_name: 'Bo', last_name: 'Jones' }, points: 5 },
     ])
     const wrapper = mount(TournamentView, { props: { id: 't1' }, global: { plugins: [router] } })
     await flushPromises()
