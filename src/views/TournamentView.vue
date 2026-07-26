@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
+import { tournamentEyebrow } from '@/lib/tournament'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -21,13 +22,7 @@ const tournament = computed(() => data.value?.[0] ?? null)
 const teams = computed(() => data.value?.[1] ?? [])
 const results = computed(() => data.value?.[2] ?? [])
 
-// Hero matches the dashboard: the coloured captain-vs-captain matchup, with year · location
-// above it. A team is identified by its captain, never by its colour.
-const heroEyebrow = computed(() => {
-  const t = tournament.value
-  if (!t) return ''
-  return [t.start_date?.slice(0, 4), t.location].filter(Boolean).join(' · ')
-})
+const heroEyebrow = computed(() => tournamentEyebrow(tournament.value))
 // Both captains needed for the matchup; otherwise the eyebrow stands alone.
 const hasCaptains = computed(() => !!(teams.value[0]?.captain && teams.value[1]?.captain))
 </script>

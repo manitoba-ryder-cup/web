@@ -4,7 +4,9 @@ import { RouterLink, useRoute } from 'vue-router'
 import type { MatchResult, TournamentPlayer, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
-import { teamColor } from '@/lib/teamColor'
+import { useTeamPair } from '@/composables/useTeamPair'
+import { pointsText } from '@/lib/points'
+import { tournamentEyebrow } from '@/lib/tournament'
 import ContentContainer from '@/components/layout/ContentContainer.vue'
 import SectionCard from '@/components/layout/SectionCard.vue'
 import OrderOfPlay from '@/components/tournament/OrderOfPlay.vue'
@@ -42,10 +44,7 @@ const tournament = computed(() => data.value?.tournament ?? null)
 const teams = computed(() => data.value?.teams ?? [])
 const results = computed(() => data.value?.results ?? [])
 const players = computed(() => data.value?.players ?? [])
-const left = computed(() => teams.value[0] ?? null)
-const right = computed(() => teams.value[1] ?? null)
-const leftMeta = computed(() => teamColor(left.value?.color))
-const rightMeta = computed(() => teamColor(right.value?.color))
+const { left, right, leftColors, rightColors } = useTeamPair(teams)
 
 // The pre-event page fills in progressively as data lands: field → (captains) matchup →
 // (draft) team sheets → (schedule) order of play. The `?captains|drafted|schedule=false`
@@ -83,11 +82,7 @@ const phase = computed<'upcoming' | 'live' | 'finished'>(() => {
   return 'live'
 })
 
-const heroEyebrow = computed(() => {
-  const t = tournament.value
-  if (!t) return ''
-  return [t.start_date?.slice(0, 4), t.location].filter(Boolean).join(' · ')
-})
+const heroEyebrow = computed(() => tournamentEyebrow(tournament.value))
 // A per-second clock drives the live countdown; `now` re-evaluates the segments each tick.
 // `previewBase` is captured once so the `?days=` target stays fixed while `now` advances.
 const previewBase = Date.now()
@@ -132,11 +127,7 @@ const segments = computed(() => {
 function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
-function score(pts: number | undefined): string {
-  const p = pts ?? 0
-  const whole = Math.trunc(p)
-  return p % 1 !== 0 ? `${whole}½` : `${whole}`
-}
+
 </script>
 <template>
   <div>
@@ -168,9 +159,9 @@ function score(pts: number | undefined): string {
             <p class="truncate font-display text-xl font-bold uppercase tracking-wide">{{ left.captain?.last_name }}</p>
             <span />
             <p class="truncate font-display text-xl font-bold uppercase tracking-wide">{{ right.captain?.last_name }}</p>
-            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="leftMeta.softText">{{ score(left.points) }}</p>
+            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="leftColors.softText">{{ pointsText(left.points) }}</p>
             <span class="pb-2 text-4xl font-bold text-white/50">–</span>
-            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="rightMeta.softText">{{ score(right.points) }}</p>
+            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="rightColors.softText">{{ pointsText(right.points) }}</p>
           </div>
           <RouterLink v-if="tournament" :to="{ name: 'tournament', params: { id: tournament.id } }"
                       class="mt-8 inline-block rounded-md bg-mrc-accent-tint px-6 py-3 font-semibold text-mrc-accent shadow-lg">

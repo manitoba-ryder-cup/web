@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { MatchResult, TournamentTeam } from '@/api/types'
-import { teamColor } from '@/lib/teamColor'
+import { useTeamPair } from '@/composables/useTeamPair'
+import { splitPoints } from '@/lib/points'
 
 // The signature standings bar. Two bars per match (each = ½ a point) so halved matches
 // paint cleanly. From each end a team fills its DECIDED points in solid colour, then its
@@ -13,27 +14,18 @@ const props = withDefaults(defineProps<{ results: MatchResult[]; teams: Tourname
   flat: false,
 })
 
-const left = computed(() => props.teams[0] ?? null)
-const right = computed(() => props.teams[1] ?? null)
-const leftSolid = computed(() => teamColor(left.value?.color).solid)
-const rightSolid = computed(() => teamColor(right.value?.color).solid)
-const leftSoft = computed(() => teamColor(left.value?.color).soft)
-const rightSoft = computed(() => teamColor(right.value?.color).soft)
+const { left, right, leftColors, rightColors } = useTeamPair(() => props.teams)
 const numBars = computed(() => props.results.length * 2)
 
-// Projected points = in-progress matches each side currently leads (net holes won),
-// derived from hole_results. Finished matches are already in the teams' points totals.
+// Projected points = in-progress matches each side currently leads. Finished matches are
+// already in the teams' points totals.
 const projected = computed(() => {
-  const lid = left.value?.id
-  const rid = right.value?.id
   let l = 0
   let r = 0
   for (const m of props.results) {
-    if (m.finished) continue
-    const lw = m.hole_results.filter((h) => h === lid).length
-    const rw = m.hole_results.filter((h) => h === rid).length
-    if (lw > rw) l++
-    else if (rw > lw) r++
+    if (m.finished || !m.leader_team_id) continue
+    if (m.leader_team_id === left.value?.id) l++
+    else if (m.leader_team_id === right.value?.id) r++
   }
   return { l, r }
 })
@@ -44,10 +36,10 @@ function blockClass(i: number): string {
   const rS = (right.value?.points ?? 0) * 2 // decided, from the right
   const rT = projected.value.r * 2
   const n = numBars.value
-  if (i <= lS) return leftSolid.value
-  if (i <= lS + lT) return leftSoft.value
-  if (i > n - rS) return rightSolid.value
-  if (i > n - rS - rT) return rightSoft.value
+  if (i <= lS) return leftColors.value.solid
+  if (i <= lS + lT) return leftColors.value.soft
+  if (i > n - rS) return rightColors.value.solid
+  if (i > n - rS - rT) return rightColors.value.soft
   return 'bg-mrc-line'
 }
 function borderClass(i: number): string {
@@ -56,12 +48,8 @@ function borderClass(i: number): string {
   return ''
 }
 
-function fmt(pts: number | undefined) {
-  const p = pts ?? 0
-  return { whole: Math.trunc(p), half: p % 1 !== 0 }
-}
-const leftScore = computed(() => fmt(left.value?.points))
-const rightScore = computed(() => fmt(right.value?.points))
+const leftScore = computed(() => splitPoints(left.value?.points))
+const rightScore = computed(() => splitPoints(right.value?.points))
 </script>
 <template>
   <div :class="flat ? '' : 'sticky top-0 z-10 bg-mrc-surface shadow'">

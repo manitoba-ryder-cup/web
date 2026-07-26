@@ -17,12 +17,11 @@ const { left, right, colorFor } = useMatchSides(() => props.match, () => props.t
 const leftPlayers = computed(() => (left.value?.players.length ? left.value.players : placeholderPairing(props.match.format_name)))
 const rightPlayers = computed(() => (right.value?.players.length ? right.value.players : placeholderPairing(props.match.format_name)))
 
-// Borders reflect the two teams (blue left, red right) — known from the draft even before
-// this match's lineup is assigned, so an unassigned card still shows the team colours.
-const blueTeam = computed(() => props.teams.find((t) => t.color === 'Blue'))
-const redTeam = computed(() => props.teams.find((t) => t.color === 'Red'))
-const leftBorder = computed(() => `border-l-[5px] ${colorFor(left.value?.team_id ?? blueTeam.value?.id).border}`)
-const rightBorder = computed(() => `border-r-[5px] ${colorFor(right.value?.team_id ?? redTeam.value?.id).border}`)
+// Borders reflect the tournament's two sides, known from the draft even before this
+// match's lineup is assigned, so an unassigned card still shows the team colours. Teams
+// arrive in render order, so position is the side.
+const leftBorder = computed(() => `border-l-[5px] ${colorFor(left.value?.team_id ?? props.teams[0]?.id).border}`)
+const rightBorder = computed(() => `border-r-[5px] ${colorFor(right.value?.team_id ?? props.teams[1]?.id).border}`)
 
 const winnerTextClass = computed(() => {
   // No winner (tied or still in progress) reads softer than a coloured win.

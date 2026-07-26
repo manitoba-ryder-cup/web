@@ -37,12 +37,8 @@ function rowOf(m: MatchResult): Row {
     strongId = m.winner_team_id
     status = { text: resultText(m), cls: strongId ? teamMeta(strongId).text : 'text-mrc-muted', live: false }
   } else if (played > 0) {
-    // Leader from net holes won (hole_results = winning team id per hole, or null).
-    const [a, b] = sorted
-    const na = m.hole_results.filter((h) => h === a?.team_id).length
-    const nb = m.hole_results.filter((h) => h === b?.team_id).length
-    strongId = na > nb ? a?.team_id ?? null : nb > na ? b?.team_id ?? null : null
-    const state = strongId ? `${Math.abs(na - nb)}↑` : 'AS'
+    strongId = m.leader_team_id
+    const state = strongId ? `${m.lead}↑` : 'AS'
     status = { text: `${state} · thru ${played}`, cls: strongId ? teamMeta(strongId).text : 'text-mrc-muted', live: true }
   }
   const decided = strongId != null
