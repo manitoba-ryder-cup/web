@@ -26,8 +26,23 @@ how the RSA keypair and scopes are wired up, resetting the database, etc).
 ## Commands
 
 ```sh
-npm run dev        # start the Vite dev server (:5173)
-npm run build      # type-check (vue-tsc -b) + production build
-npm run preview    # preview the production build locally
-npx vitest run      # run the test suite
+npm run dev           # start the Vite dev server (:5173)
+npm run build         # type-check (vue-tsc -b) + production build
+npm run preview       # preview the production build locally
+npm run test:run      # run the test suite
+npm run lint          # eslint
+npm run typecheck     # vue-tsc over src and tests
+npm run format        # prettier, write
+npm run format:check  # prettier, check only (what CI gates on)
+```
+
+CI runs format, lint, typecheck, test and build on every push and pull request.
+
+## Git hooks
+
+A pre-commit hook rejects unformatted staged files, so formatting is caught here rather
+than in CI. Hooks are not cloned, so enable them once per checkout:
+
+```sh
+git config core.hooksPath .githooks
 ```

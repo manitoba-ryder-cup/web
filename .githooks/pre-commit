@@ -1,0 +1,16 @@
+#!/bin/sh
+# Rejects unformatted code before it reaches CI, where `npm run format:check` is a hard
+# gate. Only staged files are checked, so this stays near-instant; the whole repo takes
+# a few seconds.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+
+files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|vue|json|css)$')
+[ -z "$files" ] && exit 0
+
+if ! echo "$files" | xargs npx prettier --check; then
+  echo
+  echo "Unformatted files staged. Fix with:"
+  echo "  npm run format"
+  exit 1
+fi

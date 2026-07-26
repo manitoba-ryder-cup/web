@@ -1,4 +1,0 @@
-# Formats and lints staged files before they land, so unformatted code never reaches
-# CI (where `npm run format:check` fails the build). Auto-fixes rather than blocking —
-# anything eslint cannot fix on its own still stops the commit.
-npx lint-staged
