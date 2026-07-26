@@ -3,15 +3,15 @@ import type { MatchResult, MatchPlayer } from '@/api/types'
 // The semantic outcome of a match, derived from the team-id result — never from a
 // parsed display string. Rendering keys off `kind` (big numbers, "TIED", etc.).
 export type MatchOutcome =
-  | { kind: 'all_square' } // in progress and level (incl. no completed holes) → "AS"
-  | { kind: 'in_progress' } // in progress with a side ahead
+  | { kind: 'all_square' } // level (incl. no completed holes) → "AS"
   | { kind: 'tied' } // finished with no winner
-  | { kind: 'up'; lead: number } // won at the last hole → "N up"
+  | { kind: 'up'; lead: number } // a side is N up → "N up" — in progress, or won at the last hole
   | { kind: 'margin'; lead: number; holesRemaining: number } // decided early → "N & M"
 
 export function matchOutcome(m: MatchResult): MatchOutcome {
-  // A match with no lead (nobody's won a net hole yet, including not-started) is all square.
-  if (!m.finished) return m.lead > 0 ? { kind: 'in_progress' } : { kind: 'all_square' }
+  // A live match reads as its running state, exactly like the scorecard's per-hole status:
+  // "N up" for whoever's ahead, "AS" when nobody's won a net hole yet (incl. not-started).
+  if (!m.finished) return m.lead > 0 ? { kind: 'up', lead: m.lead } : { kind: 'all_square' }
   if (!m.winner_team_id) return { kind: 'tied' }
   return m.holes_remaining > 0 ? { kind: 'margin', lead: m.lead, holesRemaining: m.holes_remaining } : { kind: 'up', lead: m.lead }
 }
@@ -23,8 +23,6 @@ export function resultText(m: MatchResult): string {
   switch (o.kind) {
     case 'all_square':
       return 'AS'
-    case 'in_progress':
-      return 'In progress'
     case 'tied':
       return 'Tied'
     case 'up':

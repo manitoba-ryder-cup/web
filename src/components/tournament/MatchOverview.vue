@@ -26,10 +26,12 @@ const rightPlayers = computed(() => (right.value?.players.length ? right.value.p
 const leftBorder = computed(() => `border-l-[5px] ${colorFor(left.value?.team_id ?? props.teams[0]?.id).border}`)
 const rightBorder = computed(() => `border-r-[5px] ${colorFor(right.value?.team_id ?? props.teams[1]?.id).border}`)
 
-const winnerTextClass = computed(() => {
-  // No winner (tied or still in progress) reads softer than a coloured win.
-  if (!props.match.finished || !props.match.winner_team_id) return 'text-mrc-muted'
-  return colorFor(props.match.winner_team_id).text
+// The team to emphasise: the winner once finished, the current leader while live — the big
+// status reads "3 UP" in that side's colour. All square (or tied) has neither side ahead
+// and reads softer than a coloured lead.
+const strongTextClass = computed(() => {
+  const id = props.match.finished ? props.match.winner_team_id : props.match.leader_team_id
+  return id ? colorFor(id).text : 'text-mrc-muted'
 })
 
 function holeClass(hole: number): string {
@@ -48,7 +50,7 @@ function holeClass(hole: number): string {
     <div class="flex border-b border-mrc-line">
       <TeamNames :players="leftPlayers" align="left" :border-class="leftBorder" />
       <div class="flex w-1/5 items-center justify-center text-center">
-        <MatchDetails :match="match" :text-class="winnerTextClass" />
+        <MatchDetails :match="match" :text-class="strongTextClass" />
       </div>
       <TeamNames :players="rightPlayers" align="right" :border-class="rightBorder" />
     </div>

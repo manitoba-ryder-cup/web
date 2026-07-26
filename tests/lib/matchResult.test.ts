@@ -25,9 +25,10 @@ describe('matchOutcome', () => {
       kind: 'all_square',
     })
   })
-  it('is in progress when unfinished with a side ahead', () => {
+  it('is the running lead when unfinished with a side ahead', () => {
     expect(matchOutcome(match({ finished: false, winner_team_id: null, lead: 2 }))).toEqual({
-      kind: 'in_progress',
+      kind: 'up',
+      lead: 2,
     })
   })
   it('is tied when finished with no winner', () => {
@@ -58,8 +59,8 @@ describe('resultText', () => {
   it('renders "AS" when in progress and all square (no lead / no completed holes)', () => {
     expect(resultText(match({ finished: false, winner_team_id: null, lead: 0 }))).toBe('AS')
   })
-  it('renders "In progress" when not finished but a side is ahead', () => {
-    expect(resultText(match({ finished: false, winner_team_id: null, lead: 2 }))).toBe('In progress')
+  it('renders the running lead when not finished but a side is ahead', () => {
+    expect(resultText(match({ finished: false, winner_team_id: null, lead: 2 }))).toBe('2 up')
   })
 })
 

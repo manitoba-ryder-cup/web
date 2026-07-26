@@ -63,7 +63,20 @@ describe('MatchResultsSection', () => {
     expect(w.text()).toContain('UP') // m2 → "2 up"
     const singles = w.findAll('button').find((b) => b.text() === 'Singles')!
     await singles.trigger('click')
-    expect(w.text()).toContain('In progress')
+    // A live match reads as its running state ("3 UP"), never a placeholder word.
+    expect(w.text()).toContain('3')
+    expect(w.text()).toContain('UP')
+    expect(w.text()).not.toContain('In progress')
+  })
+
+  it("colours a live match's status in the leader's colour", async () => {
+    const w = mountIt()
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Singles')!
+      .trigger('click')
+    // m3 is unfinished, but t-red leads it — the running status carries red, not grey.
+    expect(w.html()).toContain('text-mrc-red-team')
   })
 
   it("colours the result in the winning team's colour", () => {
