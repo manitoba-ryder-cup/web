@@ -1,0 +1,6 @@
+# Bulk reformats that should not show up in `git blame`.
+# Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: format with prettier
+d6d12dfe7390512017751ad52b4da0447e32263f
