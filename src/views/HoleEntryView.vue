@@ -53,13 +53,16 @@ const buttonLabel = computed(() => {
   return last ? 'Save & Finish' : 'Save & Next Hole'
 })
 
+// Both return the pending navigation: saveAndNext awaits it so the button stays disabled
+// until the route has actually changed. Re-enabling mid-transition let a second tap fire
+// goNext() on a match the save had just finished, landing hole 16 in behind the scorecard.
 function goToScorecard() {
-  router.push({ name: 'match', params: { tournamentId: props.tournamentId, matchId: props.matchId } })
+  return router.push({ name: 'match', params: { tournamentId: props.tournamentId, matchId: props.matchId } })
 }
 function goNext() {
   const n = holeNumber.value
-  if (n < 18) router.push({ name: 'hole', params: { tournamentId: props.tournamentId, matchId: props.matchId, hole: n + 1 } })
-  else goToScorecard()
+  if (n >= 18) return goToScorecard()
+  return router.push({ name: 'hole', params: { tournamentId: props.tournamentId, matchId: props.matchId, hole: n + 1 } })
 }
 async function saveAndNext() {
   if (readonly.value) return goNext()
@@ -78,10 +81,10 @@ async function saveAndNext() {
     if (status.finished) {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
-      goToScorecard()
+      await goToScorecard()
       return
     }
-    goNext()
+    await goNext()
   } catch (err) {
     // 409 means the match was already over — a tab that went stale before this hole.
     if (err instanceof ApiError && err.status === 409) {

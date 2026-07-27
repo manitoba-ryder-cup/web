@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import { ApiError, type MatchResult, type MatchStatus } from '@/api/types'
@@ -73,6 +73,8 @@ describe('HoleEntryView saving', () => {
     toasts.length = 0
     match.finished = false
   })
+  // Spies here stub the router; a leaked one silently redirects the next test.
+  afterEach(() => vi.restoreAllMocks())
 
   it('walks to the next hole while the match is still live', async () => {
     submitScore.mockResolvedValue(open)
@@ -126,6 +128,20 @@ describe('HoleEntryView saving', () => {
     await flushPromises()
 
     expect(toasts).toHaveLength(0)
+  })
+
+  it('stays disabled until the navigation lands', async () => {
+    // The button re-enabling mid-transition let a second tap fire goNext() on a match the
+    // save had just finished, pushing hole 16 in behind the scorecard.
+    submitScore.mockResolvedValue(closedOut)
+    const w = await openHole('15')
+    const push = vi.spyOn(router, 'push').mockReturnValue(new Promise(() => {})) // never lands
+
+    await saveButton(w).trigger('click')
+    await flushPromises()
+
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 
   it('reports a 409 and locks the wheels instead of a bare save error', async () => {
