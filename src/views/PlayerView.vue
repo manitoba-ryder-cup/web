@@ -14,7 +14,7 @@ const props = defineProps<{ id: string }>()
 // One useAsync over both fetches so the page has a single loading/error state. Career
 // profile (record + cups) comes from the player; the per-event history — including each
 // year's flight and scouting report — from its own endpoint.
-const { data, error, loading } = useAsync(async () => {
+const { data, error, loading, retry } = useAsync(async () => {
   const [player, history] = await Promise.all([scorecardApi.getPlayer(props.id), scorecardApi.getPlayerTournaments(props.id)])
   return { player, history }
 })
@@ -54,7 +54,7 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
       </div>
     </template>
 
-    <AsyncState :loading="loading" :error="error">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
       <template v-if="player">
         <BaseCard v-if="history.length" class="mt-6">
           <SectionHeader>

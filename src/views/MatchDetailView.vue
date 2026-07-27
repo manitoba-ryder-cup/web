@@ -17,10 +17,14 @@ const auth = useAuthStore()
 
 // Polls, so a spectator watching the round sees it move. Par is non-fatal here — the
 // card renders without it.
-const { error, loading, teams, results, holeStates, holes, match, left, right } = useMatchContext(props.tournamentId, props.matchId, {
-  intervalMs: 20000,
-  parOptional: true,
-})
+const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+  props.tournamentId,
+  props.matchId,
+  {
+    intervalMs: 20000,
+    parOptional: true,
+  },
+)
 const holeInfo = computed(() => new Map(holes.value.map((h) => [h.number, h])))
 const leftTeam = computed(() => teams.value.find((t) => t.id === left.value?.team_id) ?? null)
 const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.team_id) ?? null)
@@ -36,7 +40,7 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
     <template #top>
       <ScoreBar v-if="teams.length >= 2" :results="results" :teams="teams" />
     </template>
-    <AsyncState :loading="loading" :error="error">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
       <template v-if="match && leftTeam && rightTeam">
         <!-- The leaderboard row you tapped, reused as this page's heading: it names both
              sides AND states the result at a fixed position. The Match column and the Tot

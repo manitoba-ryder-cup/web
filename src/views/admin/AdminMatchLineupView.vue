@@ -13,7 +13,7 @@ import XIcon from '@/components/icons/XIcon.vue'
 
 const props = defineProps<{ id: string; matchId: string }>()
 
-const { data, error, loading, refresh } = useAsync(async () => {
+const { data, error, loading, refresh, retry } = useAsync(async () => {
   const [matches, teams, roster] = await Promise.all([
     scorecardApi.getTournamentResults(props.id),
     scorecardApi.getTournamentTeams(props.id),
@@ -84,7 +84,7 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
 </script>
 <template>
   <PageLayout title="Match Lineup" image="/img/oceanside.webp">
-    <AsyncState :loading="loading" :error="error">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
       <template v-if="match">
         <p class="mb-4 text-center text-mrc-muted">
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>

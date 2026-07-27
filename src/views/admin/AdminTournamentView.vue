@@ -21,7 +21,7 @@ const props = defineProps<{ id: string }>()
 
 // Results carry each match's sides + tee time (for the list); match-formats map a format
 // name to its id (for creating); courses feed the add-match picker.
-const { data, error, loading, refresh } = useAsync(async () => {
+const { data, error, loading, refresh, retry } = useAsync(async () => {
   const [tournament, matches, matchFormats, courses] = await Promise.all([
     scorecardApi.getTournament(props.id),
     scorecardApi.getTournamentResults(props.id),
@@ -130,7 +130,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
 </script>
 <template>
   <PageLayout :title="tournament?.name ?? 'Setup'" image="/img/oceanside.webp">
-    <AsyncState :loading="loading" :error="error">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
       <RouterLink :to="{ name: 'admin-teams', params: { id } }" class="block transition hover:shadow-lg">
         <BaseCard>
           <div class="flex items-center justify-between">

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import AsyncState from '@/components/base/AsyncState.vue'
 
@@ -14,6 +14,22 @@ describe('AsyncState', () => {
     expect(w.text()).toContain('nope')
     expect(w.find('.loaded').exists()).toBe(false)
   })
+  it('offers a retry when one is given', async () => {
+    const retry = vi.fn()
+    const w = mount(AsyncState, { props: { loading: false, error: 'nope', retry }, slots })
+
+    await w.get('button').trigger('click')
+
+    expect(retry).toHaveBeenCalledOnce()
+  })
+
+  it('has no retry button when no retry is given', () => {
+    // Most views load once and have nothing to re-run; a dead button would be worse.
+    const w = mount(AsyncState, { props: { loading: false, error: 'nope' }, slots })
+
+    expect(w.find('button').exists()).toBe(false)
+  })
+
   it('shows empty text when empty', () => {
     const w = mount(AsyncState, { props: { loading: false, error: '', empty: true, emptyText: 'None' }, slots })
     expect(w.text()).toContain('None')

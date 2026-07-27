@@ -12,7 +12,7 @@ import PlayerCard from '@/components/player/PlayerCard.vue'
 // Two tabs, like the old app: the current tournament's drafted roster (with tiers) and
 // every player who's ever taken part. The roster's tier is per-tournament, so it only
 // appears on the first tab.
-const { data, error, loading } = useAsync(async () => {
+const { data, error, loading, retry } = useAsync(async () => {
   const [tournaments, all] = await Promise.all([scorecardApi.listTournaments(), scorecardApi.listPlayers()])
   const current = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))[0] ?? null
   const roster = current ? await scorecardApi.getTournamentPlayers(current.id) : []
@@ -31,7 +31,7 @@ const allPlayers = computed(() => [...(data.value?.all ?? [])].sort(byName))
 </script>
 <template>
   <PageLayout title="Players" image="/img/mountain-green.webp">
-    <AsyncState :loading="loading" :error="error">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
       <!-- Full-bleed so the tab bar spans the content column edge to edge (like the
            tournament page); flush-top drops the gap above it, and the card grid is
            re-padded back inside. -->

@@ -29,15 +29,23 @@ export function useAsync<T>(fetcher: () => Promise<T>, options: UseAsyncOptions 
     }
   }
 
-  onMounted(async () => {
+  // The visible load: shows the spinner and reports failure. Also what a user-triggered
+  // retry runs, so a request that dropped on a bad connection is one tap from recovering
+  // instead of needing the page reloaded.
+  async function load() {
+    loading.value = true
     try {
       data.value = await fetcher()
+      error.value = ''
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Something went wrong'
+      // Never empty: an empty error renders as a loaded page with nothing in it.
+      error.value = (e instanceof Error && e.message) || 'Something went wrong'
     } finally {
       loading.value = false
     }
-  })
+  }
+
+  onMounted(load)
 
   if (options.intervalMs) {
     let timer: ReturnType<typeof setInterval> | null = null
@@ -68,5 +76,5 @@ export function useAsync<T>(fetcher: () => Promise<T>, options: UseAsyncOptions 
     })
   }
 
-  return { data, error, loading, refresh }
+  return { data, error, loading, refresh, retry: load }
 }

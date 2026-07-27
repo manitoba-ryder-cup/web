@@ -19,7 +19,7 @@ const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
 // Loads once — walking to the next hole only re-derives from what is already here.
-const { error, loading, teams, results, holeStates, holes, match, left, right } = useMatchContext(props.tournamentId, props.matchId)
+const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(props.tournamentId, props.matchId)
 const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
 // A finished match is read-only (the write flow only makes sense for a live round). The
 // loaded result is a snapshot from mount, so a save that ends the match sets this too —
@@ -97,7 +97,7 @@ async function saveAndNext() {
 </script>
 <template>
   <PageLayout>
-    <AsyncState :loading="loading" :error="error">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
       <template v-if="match && holeInfo">
         <!-- Sticky context: the match summary, with the hole details on one line below it. -->
         <div class="sticky top-0 z-10 -mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 pb-3 shadow">

@@ -16,7 +16,7 @@ interface Options {
 // holes and tee set, and the match resolved out of the results with its two sides ordered.
 // Both match views need exactly this, and the same four requests in flight at once.
 export function useMatchContext(tournamentId: string, matchId: string, { intervalMs, parOptional = false }: Options = {}) {
-  const { data, error, loading, refresh } = useAsync(
+  const { data, error, loading, refresh, retry } = useAsync(
     async () => {
       const holes = scorecardApi.getMatchHoles(matchId)
       const [teams, results, holeStates, tee] = await Promise.all([
@@ -42,5 +42,5 @@ export function useMatchContext(tournamentId: string, matchId: string, { interva
     () => teams.value,
   )
 
-  return { error, loading, refresh, teams, results, holeStates, holes, match, left, right }
+  return { error, loading, refresh, retry, teams, results, holeStates, holes, match, left, right }
 }

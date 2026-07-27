@@ -11,7 +11,7 @@ import TeamAssignRow from '@/components/admin/TeamAssignRow.vue'
 
 const props = defineProps<{ id: string }>()
 
-const { data, error, loading, refresh } = useAsync(async () => {
+const { data, error, loading, refresh, retry } = useAsync(async () => {
   const [roster, teams] = await Promise.all([scorecardApi.getTournamentPlayers(props.id), scorecardApi.getTournamentTeams(props.id)])
   return { roster, teams }
 })
@@ -108,7 +108,7 @@ const chips = computed<{ key: Filter; label: string; n: number }[]>(() => [
 </script>
 <template>
   <PageLayout title="Assign Teams" image="/img/oceanside.webp">
-    <AsyncState :loading="loading" :error="error">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
       <!-- Filter chips double as a live tally so you can see who's left to place. -->
       <div class="mb-3 flex flex-wrap gap-2">
         <button

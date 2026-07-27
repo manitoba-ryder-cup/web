@@ -12,7 +12,7 @@ import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue
 
 const props = defineProps<{ id: string }>()
 // Poll so the standings + results stay live during a round without a manual refresh.
-const { data, error, loading } = useAsync(
+const { data, error, loading, retry } = useAsync(
   async () => {
     const [tournament, teams, results] = await Promise.all([
       scorecardApi.getTournament(props.id),
@@ -42,7 +42,7 @@ const hasCaptains = computed(() => !!(teams.value[0]?.captain && teams.value[1]?
     <template #top>
       <ScoreBar v-if="teams.length >= 2" :results="results" :teams="teams" />
     </template>
-    <AsyncState :loading="loading" :error="error">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
       <template v-if="tournament">
         <FullBleed flush-top v-if="results.length">
           <MatchResultsSection :matches="results" :teams="teams" :tournament-id="id" />

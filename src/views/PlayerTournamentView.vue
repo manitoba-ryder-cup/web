@@ -17,7 +17,7 @@ const props = defineProps<{ id: string; tournamentId: string }>()
 // One event, seen through one player: their scouting report + flight for the cup, and the
 // matches they actually played. Results carry each match's lineup (by player id), so we
 // filter to this player; teams/roster give colour and the per-tournament write-up.
-const { data, error, loading } = useAsync(async () => {
+const { data, error, loading, retry } = useAsync(async () => {
   const [player, tournament, teams, results, roster] = await Promise.all([
     scorecardApi.getPlayer(props.id),
     scorecardApi.getTournament(props.tournamentId),
@@ -68,7 +68,7 @@ const record = computed(() => {
 </script>
 <template>
   <PageLayout>
-    <AsyncState :loading="loading" :error="error">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
       <template v-if="player && tournament">
         <!-- Compact header: the player scoped to this one cup. The event line links back up
              to the full leaderboard, so nothing is a dead end. -->
