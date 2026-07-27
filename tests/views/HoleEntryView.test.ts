@@ -33,12 +33,13 @@ vi.mock('@/composables/useToast', () => ({
 }))
 
 const submitScore = vi.fn()
+const getMatchScores = vi.fn(() => Promise.resolve([]))
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
     getTournamentResults: vi.fn(() => Promise.resolve([match])),
     getMatchHoles: vi.fn(() => Promise.resolve(holes)),
-    getMatchScores: vi.fn(() => Promise.resolve([])),
+    getMatchScores: () => getMatchScores(),
     submitHoleScores: (...args: unknown[]) => submitScore(...args),
   },
 }))
@@ -70,6 +71,7 @@ async function openHole(hole = '15') {
 describe('HoleEntryView saving', () => {
   beforeEach(() => {
     submitScore.mockReset()
+    getMatchScores.mockClear()
     toasts.length = 0
     match.finished = false
   })
@@ -104,6 +106,19 @@ describe('HoleEntryView saving', () => {
         { team_id: 'red', player_id: 'p2', strokes: 4 },
       ],
     })
+  })
+
+  it('refetches the match after a save, so the next hole is not built from a stale snapshot', async () => {
+    // The page loads once. Without a refetch the scores just written are invisible to it:
+    // revisiting the hole shows par again, and saving from there overwrites them.
+    submitScore.mockResolvedValue(open)
+    const w = await openHole('15')
+    expect(getMatchScores).toHaveBeenCalledTimes(1)
+
+    await saveButton(w).trigger('click')
+    await flushPromises()
+
+    expect(getMatchScores).toHaveBeenCalledTimes(2)
   })
 
   it('goes to the scorecard when the hole closes the match out', async () => {

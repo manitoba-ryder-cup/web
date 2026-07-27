@@ -19,7 +19,10 @@ const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
 // Loads once — walking to the next hole only re-derives from what is already here.
-const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(props.tournamentId, props.matchId)
+const { error, loading, retry, refresh, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+  props.tournamentId,
+  props.matchId,
+)
 const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
 // A finished match is read-only (the write flow only makes sense for a live round). The
 // loaded result is a snapshot from mount, so a save that ends the match sets this too —
@@ -84,6 +87,10 @@ async function saveAndNext() {
       await goToScorecard()
       return
     }
+    // The page loads once, so without this the scores just written stay invisible to it:
+    // the next hole's running totals would omit them, and coming back to this hole would
+    // show par again — and saving from there would overwrite what was just recorded.
+    await refresh()
     await goNext()
   } catch (err) {
     // 409 means the match was already over — a tab that went stale before this hole.
