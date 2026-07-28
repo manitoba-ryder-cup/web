@@ -9,6 +9,7 @@ const cup: Tournament = {
   start_date: '2026-09-18',
   end_date: '2026-09-19',
   location: 'Buffalo Point, Manitoba, Canada',
+  time_zone: 'America/Winnipeg',
 }
 const at = (iso: string) => new Date(iso)
 

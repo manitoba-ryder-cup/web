@@ -12,7 +12,7 @@ import { formatTeeTime as fmtTime, teeDayLabel as dayLabel, teeDayKey as dayKeyO
 // each match only needs its tee time. Every match shows its status — a finished result, a
 // live state (with a dot), or just its time before it starts.
 // `flat` drops the outer border/rounding for embedding inside a SectionCard.
-const props = defineProps<{ matches: MatchResult[]; teams: TournamentTeam[]; tournamentId: string; flat?: boolean }>()
+const props = defineProps<{ matches: MatchResult[]; teams: TournamentTeam[]; tournamentId: string; timeZone?: string; flat?: boolean }>()
 
 const teamById = computed(() => new Map(props.teams.map((t) => [t.id, t])))
 function teamMeta(teamId: string | null | undefined) {
@@ -53,7 +53,7 @@ function rowOf(m: MatchResult): Row {
       dot: teamMeta(s.team_id).cssVar,
       dim: decided && s.team_id !== strongId,
     })),
-    time: fmtTime(m.tee_time),
+    time: fmtTime(m.tee_time, props.timeZone),
     status,
   }
 }
@@ -69,10 +69,10 @@ interface Session {
 const sessions = computed<Session[]>(() => {
   const byKey = new Map<string, Session>()
   for (const m of props.matches) {
-    const key = `${dayKeyOf(m.tee_time)}|${m.format_name}`
+    const key = `${dayKeyOf(m.tee_time, props.timeZone)}|${m.format_name}`
     let s = byKey.get(key)
     if (!s) {
-      s = { key, day: dayLabel(m.tee_time), format: m.format_name, rows: [] }
+      s = { key, day: dayLabel(m.tee_time, props.timeZone), format: m.format_name, rows: [] }
       byKey.set(key, s)
     }
     s.rows.push(rowOf(m))

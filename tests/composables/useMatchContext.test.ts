@@ -28,7 +28,14 @@ const teams = [
 const holes = [{ number: 1, par: 4, hdcp: 1, yards: 400 }]
 const holeStates = [{ hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }]
 
-const cup = { id: 't1', name: 'Manitoba Ryder Cup', start_date: '2026-09-18', end_date: '2026-09-19', location: 'Buffalo Point' }
+const cup = {
+  id: 't1',
+  name: 'Manitoba Ryder Cup',
+  start_date: '2026-09-18',
+  end_date: '2026-09-19',
+  location: 'Buffalo Point',
+  time_zone: 'America/Winnipeg',
+}
 const getMatchHoles = vi.fn()
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {

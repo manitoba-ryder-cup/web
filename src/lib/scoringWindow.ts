@@ -1,14 +1,14 @@
 import type { Tournament } from '@/api/types'
-import { EVENT_TZ } from '@/lib/teeTime'
+import { DEFAULT_EVENT_TZ } from '@/lib/teeTime'
 
 // Today where the golf is played, as YYYY-MM-DD — directly comparable to the tournament's
 // dates, which are plain calendar dates and so mean nothing without a zone. Read as UTC
 // the final day would end at 19:00 local, cutting off a last group that tees off in the
 // afternoon and finishes past midnight UTC. The server applies the same rule in the same
 // zone.
-function todayAtTheCup(now: Date): string {
+function todayAtTheCup(now: Date, tz: string): string {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: EVENT_TZ,
+    timeZone: tz,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -19,6 +19,6 @@ function todayAtTheCup(now: Date): string {
 // tied to a tee time, which moves for weather and isn't stored as a dependable instant.
 export function scoringOpen(tournament: Tournament | null, now: Date = new Date()): boolean {
   if (!tournament) return false
-  const today = todayAtTheCup(now)
+  const today = todayAtTheCup(now, tournament.time_zone || DEFAULT_EVENT_TZ)
   return today >= tournament.start_date && today <= tournament.end_date
 }

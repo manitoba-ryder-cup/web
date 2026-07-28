@@ -21,6 +21,10 @@ export interface Tournament {
   start_date: string
   end_date: string
   location: string
+  // Where the cup is played, as an IANA name. start_date/end_date are calendar dates and
+  // tee times are UTC instants; both are read against this, so the app shows the event's
+  // own wall clock rather than the viewer's.
+  time_zone: string
 }
 export interface MatchFormat {
   id: string
