@@ -6,3 +6,6 @@ dist
 dev/keys
 # design/spec docs are kept local, not committed
 docs/superpowers
+
+# Written by dev/bootstrap.sh — the tenant heimdall minted for this environment.
+.env
