@@ -41,7 +41,7 @@ async function onSubmit() {
        min-height fills the viewport under the 4rem header. -->
   <div
     class="flex min-h-[calc(100vh-4rem)] justify-center bg-cover bg-center px-4"
-    :style="{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('/img/empty-course.webp')` }"
+    :style="{ backgroundImage: `url('/img/empty-course.webp')` }"
   >
     <div class="mt-16 w-full max-w-sm">
       <h1 class="mb-10 text-center text-white">Welcome Back</h1>
@@ -49,7 +49,7 @@ async function onSubmit() {
       <BaseInput v-model="email" type="email" placeholder="Email Address" class="mb-6" />
       <BaseInput v-model="password" type="password" placeholder="Password" @keyup.enter="onSubmit" />
       <RouterLink :to="{ name: 'forgot-password' }" class="block">
-        <div class="mb-10 mr-1 mt-2 flex justify-end text-sm text-mrc-accent-soft underline hover:text-white">Forgot your password?</div>
+        <div class="mb-10 mr-1 mt-2 flex justify-end text-sm text-mrc-accent underline hover:text-white">Forgot your password?</div>
       </RouterLink>
       <BaseButton :loading="loading" class="w-full py-4" @click="onSubmit">
         {{ loading ? 'Logging In' : 'Login' }}
