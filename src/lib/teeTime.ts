@@ -1,23 +1,27 @@
-// Tee times are stored as UTC instants and shown in the viewer's own zone — Intl uses it
-// by default, so these helpers just format. Entering a tee time is the other direction
-// and does need a zone: see eventInputToUtc, which takes the course's.
+// Tee times are stored as UTC instants and shown in the viewer's own zone and locale —
+// Intl uses both by default, so the display helpers just format. `locale` is a test
+// seam; production callers omit it. Entering a tee time is the other direction and does
+// need a zone: see eventInputToUtc, which takes the course's.
 
-// Time of day, e.g. "9:10 AM".
-export function formatTeeTime(iso: string): string {
-  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
+// Time of day, e.g. "9:10 AM" — or 09:10 where the locale keeps a 24-hour clock.
+export function formatTeeTime(iso: string, locale?: string): string {
+  return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
 }
 
 // Day label, e.g. "Fri, Sep 18".
-export function teeDayLabel(iso: string): string {
-  return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso))
+export function teeDayLabel(iso: string, locale?: string): string {
+  return new Intl.DateTimeFormat(locale, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso))
 }
 
-// Date key for grouping, in the viewer's zone so it matches the times shown beside it.
+// Grouping key, not display — so the locale IS pinned, to the one that spells a date
+// YYYY-MM-DD and therefore sorts. The viewer's zone still decides which day an instant
+// falls on, which is what keeps a row under the heading it belongs to.
 export function teeDayKey(iso: string): string {
   return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
 }
 
-// Break a UTC instant into its wall-clock parts at the given course.
+// Break a UTC instant into its wall-clock parts at the given course. Pinned like
+// teeDayKey: these parts are reassembled into a datetime-local value, not shown.
 function eventParts(d: Date, tz: string): Record<string, string> {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: tz,
