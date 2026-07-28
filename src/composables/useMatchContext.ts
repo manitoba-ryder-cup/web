@@ -14,25 +14,22 @@ interface Options {
 
 // Everything a single match needs: the tournament's teams and results, the match's played
 // holes and tee set, and the match resolved out of the results with its two sides ordered.
-// Both match views need exactly this, and the same four requests in flight at once.
+// Both match views need exactly this, and the same requests in flight at once.
 export function useMatchContext(tournamentId: string, matchId: string, { intervalMs, parOptional = false }: Options = {}) {
   const { data, error, loading, refresh, retry } = useAsync(
     async () => {
       const holes = scorecardApi.getMatchHoles(matchId)
-      const [tournament, teams, results, holeStates, tee] = await Promise.all([
-        scorecardApi.getTournament(tournamentId),
+      const [teams, results, holeStates, tee] = await Promise.all([
         scorecardApi.getTournamentTeams(tournamentId),
         scorecardApi.getTournamentResults(tournamentId),
         scorecardApi.getMatchScores(matchId),
         parOptional ? holes.catch(() => []) : holes,
       ])
-      return { tournament, teams, results, holeStates, holes: tee }
+      return { teams, results, holeStates, holes: tee }
     },
     intervalMs ? { intervalMs } : {},
   )
 
-  // The event itself, for its dates — a match is only scoreable on one of them.
-  const tournament = computed(() => data.value?.tournament ?? null)
   const teams = computed(() => data.value?.teams ?? [])
   const results = computed(() => data.value?.results ?? [])
   // holeStates is the per-hole match state (who's up); holes is the tee set's par/yardage.
@@ -45,5 +42,5 @@ export function useMatchContext(tournamentId: string, matchId: string, { interva
     () => teams.value,
   )
 
-  return { error, loading, refresh, retry, tournament, teams, results, holeStates, holes, match, left, right }
+  return { error, loading, refresh, retry, teams, results, holeStates, holes, match, left, right }
 }

@@ -7,6 +7,7 @@ import { useMatchContext } from '@/composables/useMatchContext'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
 import { matchCompleteMessage } from '@/lib/matchResult'
 import { hasStarted, scoringOpen } from '@/lib/scoringWindow'
+import { formatTeeTime, teeDayLabel } from '@/lib/teeTime'
 import { toast } from '@/composables/useToast'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -20,17 +21,17 @@ const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
 // Loads once — walking to the next hole only re-derives from what is already here.
-const { error, loading, retry, refresh, tournament, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+const { error, loading, retry, refresh, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   props.tournamentId,
   props.matchId,
 )
-// Before the cup there is nothing to show and nothing to record, so the wheels aren't
-// offered — the server refuses the write too. After it there is everything to show: a
-// played match still reads, it just reads read-only.
-const started = computed(() => hasStarted(tournament.value))
-// Read-only outside the cup's days as well as once the match is done, matching the
-// server: a score entered for last year's tournament would be refused.
-const scoreable = computed(() => scoringOpen(tournament.value))
+// Before a match tees off there is nothing to show and nothing to record, so the wheels
+// aren't offered — the server refuses the write too. Afterwards there is everything to
+// show: a played match still reads, it just reads read-only.
+const started = computed(() => hasStarted(match.value))
+// Read-only outside the match's scoring window as well as once it is decided, matching
+// the server: a score entered for last year's match would be refused.
+const scoreable = computed(() => scoringOpen(match.value))
 const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
 // A finished match is read-only (the write flow only makes sense for a live round). The
 // loaded result is a snapshot from mount, so a save that ends the match sets this too —
@@ -123,7 +124,9 @@ async function saveAndNext() {
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
-        <p class="mt-6 text-mrc-muted">This match hasn't started yet.</p>
+        <p class="mt-6 text-mrc-muted">
+          This match hasn't started yet — it tees off {{ teeDayLabel(match.tee_time) }} at {{ formatTeeTime(match.tee_time) }}.
+        </p>
         <RouterLink
           :to="{ name: 'match', params: { tournamentId, matchId } }"
           class="mt-6 inline-flex items-center justify-center rounded bg-mrc-accent px-6 py-2 font-semibold text-white shadow-md transition hover:bg-mrc-accent-dark"

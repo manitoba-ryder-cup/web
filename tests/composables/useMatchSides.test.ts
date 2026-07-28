@@ -19,7 +19,7 @@ function match(): MatchResult {
       { team_id: 'z-blue', players: [{ player_id: 'p2', first_name: 'B', last_name: 'Two' }] },
     ],
     hole_results: [],
-    tee_time: null,
+    tee_time: '2026-09-18T13:00:00Z',
     course_name: 'GC',
   }
 }

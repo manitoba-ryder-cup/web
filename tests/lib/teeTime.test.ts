@@ -10,15 +10,11 @@ describe('showing a tee time', () => {
     expect(formatTeeTime(instant)).toBe(asViewer)
   })
 
-  it('says TBD rather than nothing when a match is unscheduled', () => {
-    expect(teeDayLabel(null)).toBe('TBD')
-    expect(formatTeeTime(null)).toBe('')
-    expect(teeDayKey(null)).toBe('')
-  })
-
   it('groups by the same day it displays, so a row cannot land under the wrong header', () => {
     const viewerDay = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(instant))
     expect(teeDayKey(instant)).toBe(viewerDay)
+    const asViewer = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(instant))
+    expect(teeDayLabel(instant)).toBe(asViewer)
   })
 })
 

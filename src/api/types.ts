@@ -48,15 +48,16 @@ export interface Match {
   course_id: string
   tee_color_id: string
   match_format_id: string
-  tee_time: string | null
+  tee_time: string // RFC3339 (UTC)
   handicapped: boolean
 }
-// Body for creating a match. tee_time is RFC3339 (UTC) or null (unscheduled).
+// Body for creating a match. tee_time is RFC3339 (UTC), and required: it is the instant
+// a match's scoring window opens and closes around.
 export interface CreateMatchBody {
   course_id: string
   tee_color_id: string
   match_format_id: string
-  tee_time: string | null
+  tee_time: string
   handicapped: boolean
 }
 export interface PlayerSummary {
@@ -141,7 +142,7 @@ export interface MatchResult extends MatchStatus {
   // Per played hole (in order): winning team's id, or null for a halved hole.
   // Length = holes played; holes beyond the length are unplayed.
   hole_results: (string | null)[]
-  tee_time: string | null // RFC3339 (UTC), null if unscheduled
+  tee_time: string // RFC3339 (UTC) — the instant the scoring window is measured from
   course_name: string
 }
 

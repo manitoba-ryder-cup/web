@@ -14,15 +14,12 @@ import XIcon from '@/components/icons/XIcon.vue'
 const props = defineProps<{ id: string; matchId: string }>()
 
 const { data, error, loading, refresh, retry } = useAsync(async () => {
-  // The tournament comes along for its timezone: a tee time is a UTC instant and only
-  // reads as a wall clock in the zone the cup is played in.
-  const [tournament, matches, teams, roster] = await Promise.all([
-    scorecardApi.getTournament(props.id),
+  const [matches, teams, roster] = await Promise.all([
     scorecardApi.getTournamentResults(props.id),
     scorecardApi.getTournamentTeams(props.id),
     scorecardApi.getTournamentPlayers(props.id),
   ])
-  return { tournament, matches, teams, roster }
+  return { matches, teams, roster }
 })
 
 const matches = computed(() => data.value?.matches ?? [])
@@ -91,7 +88,7 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
       <template v-if="match">
         <p class="mb-4 text-center text-mrc-muted">
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
-          <template v-if="formatTeeTime(match.tee_time)"> · {{ formatTeeTime(match.tee_time) }}</template>
+          · {{ formatTeeTime(match.tee_time) }}
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
         <div class="grid gap-4 md:grid-cols-2" :class="isBusy() ? 'pointer-events-none opacity-60' : ''">

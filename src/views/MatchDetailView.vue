@@ -18,7 +18,7 @@ const auth = useAuthStore()
 
 // Polls, so a spectator watching the round sees it move. Par is non-fatal here — the
 // card renders without it.
-const { error, loading, retry, tournament, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   props.tournamentId,
   props.matchId,
   {
@@ -63,7 +63,7 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
           :result-label="match.finished ? resultText(match) : undefined"
           :tournament-id="tournamentId"
           :match-id="matchId"
-          :tappable="hasStarted(tournament)"
+          :tappable="hasStarted(match)"
         />
       </template>
       <!-- The match exists on the schedule but has no lineup yet — show its context and say
@@ -72,7 +72,7 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
       <div v-else-if="match" class="mx-auto mt-6 max-w-2xl text-center">
         <p class="text-mrc-muted">
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
-          <template v-if="formatTeeTime(match.tee_time)"> · {{ formatTeeTime(match.tee_time) }}</template>
+          · {{ formatTeeTime(match.tee_time) }}
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
         <p class="mt-6 text-mrc-muted">The lineup for this match hasn't been set yet.</p>

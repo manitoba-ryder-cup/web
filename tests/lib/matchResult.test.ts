@@ -21,7 +21,7 @@ function match(overrides: Partial<MatchResult> = {}): MatchResult {
     holes_remaining: 2,
     sides: [],
     hole_results: [],
-    tee_time: null,
+    tee_time: '2026-09-18T13:00:00Z',
     course_name: 'Test GC',
     ...overrides,
   }

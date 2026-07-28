@@ -18,7 +18,7 @@ const match: MatchResult = {
     { team_id: 'blue', players: [{ player_id: 'p1', first_name: 'Justin', last_name: 'Rabe' }] },
   ],
   hole_results: [],
-  tee_time: null,
+  tee_time: '2026-09-18T13:00:00Z',
   course_name: 'Clear Lake',
 }
 const teams = [
@@ -28,18 +28,9 @@ const teams = [
 const holes = [{ number: 1, par: 4, hdcp: 1, yards: 400 }]
 const holeStates = [{ hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }]
 
-const cup = {
-  id: 't1',
-  name: 'Manitoba Ryder Cup',
-  start_date: '2026-09-18',
-  end_date: '2026-09-19',
-  location: 'Buffalo Point',
-  time_zone: 'America/Winnipeg',
-}
 const getMatchHoles = vi.fn()
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
-    getTournament: vi.fn(() => Promise.resolve(cup)),
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
     getTournamentResults: vi.fn(() => Promise.resolve([match, { ...match, match_id: 'other' }])),
     getMatchScores: vi.fn(() => Promise.resolve(holeStates)),
@@ -68,7 +59,6 @@ describe('useMatchContext', () => {
     expect(w.vm.match?.match_id).toBe('m1')
     expect(w.vm.left?.team_id).toBe('blue')
     expect(w.vm.right?.team_id).toBe('red')
-    expect(w.vm.tournament).toEqual(cup)
     expect(w.vm.holes).toEqual(holes)
     expect(w.vm.holeStates).toEqual(holeStates)
     expect(w.vm.error).toBe('')

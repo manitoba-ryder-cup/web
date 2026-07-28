@@ -94,13 +94,12 @@ const teeOffAt = computed<number | null>(() => {
   if (typeof route.query.days === 'string' && Number.isFinite(override)) {
     return previewBase + override * 86_400_000
   }
-  const times = results.value
-    .map((m) => m.tee_time)
-    .filter((t): t is string => !!t)
-    .map((t) => new Date(t).getTime())
+  const times = results.value.map((m) => new Date(m.tee_time).getTime())
   if (times.length) return Math.min(...times)
+  // No schedule yet: aim at the start date read as a local midnight, matching formatDate —
+  // as UTC it lands in the evening of the day before for anyone west of Greenwich.
   const iso = tournament.value?.start_date
-  return iso ? new Date(`${iso}T00:00:00Z`).getTime() : null
+  return iso ? new Date(`${iso}T00:00:00`).getTime() : null
 })
 
 const { segments } = useCountdown(teeOffAt)

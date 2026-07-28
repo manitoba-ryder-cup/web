@@ -9,6 +9,13 @@ const teams = [
   { id: 'blue', color: 'Blue', captain: null, points: 0 },
   { id: 'red', color: 'Red', captain: null, points: 0 },
 ]
+// The scoring window runs from 2h before the tee time to 12h after, so a match's own tee
+// time is what puts it in the future, under way, or long over.
+const hoursFromNow = (h: number) => new Date(Date.now() + h * 3600000).toISOString()
+const teeingOffNow = hoursFromNow(0)
+const teeingOffIn60Days = hoursFromNow(24 * 60)
+const playedLastYear = hoursFromNow(-24 * 365)
+
 const withLineup: MatchResult = {
   match_id: 'm1',
   format_name: 'Singles',
@@ -22,22 +29,15 @@ const withLineup: MatchResult = {
     { team_id: 'red', players: [{ player_id: 'p2', first_name: 'Harbs', last_name: 'Benning' }] },
   ],
   hole_results: [],
-  tee_time: null,
+  tee_time: teeingOffNow,
   course_name: 'Clear Lake',
 }
 // A match on the schedule whose lineup hasn't been picked yet.
 const noLineup: MatchResult = { ...withLineup, sides: [] }
 
-const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10)
-const liveCup = { id: 't1', name: 'Manitoba Ryder Cup', start_date: day(-1), end_date: day(1), location: 'Buffalo Point' }
-const futureCup = { ...liveCup, start_date: day(60), end_date: day(61) }
-const pastCup = { ...liveCup, start_date: day(-400), end_date: day(-399) }
-const tournament = vi.fn(() => liveCup)
-
 const match = vi.fn(() => withLineup)
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
-    getTournament: () => Promise.resolve(tournament()),
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
     getTournamentResults: vi.fn(() => Promise.resolve([match()])),
     getMatchHoles: vi.fn(() => Promise.resolve([])),
@@ -88,8 +88,8 @@ describe('MatchDetailView', () => {
 
   it('does not make holes tappable before the cup is played', async () => {
     // The entry page would only turn them straight back — it refuses to score a match
-    // whose tournament has not started.
-    tournament.mockReturnValue(futureCup)
+    // that has not teed off.
+    match.mockReturnValue({ ...withLineup, tee_time: teeingOffIn60Days })
 
     const w = await open()
     await w.get('tbody tr').trigger('click')
@@ -100,7 +100,7 @@ describe('MatchDetailView', () => {
   })
 
   it('taps a hole through to its scores once the cup is under way', async () => {
-    tournament.mockReturnValue(liveCup)
+    match.mockReturnValue({ ...withLineup, tee_time: teeingOffNow })
 
     const w = await open()
     await w.get('tbody tr').trigger('click')
@@ -111,7 +111,7 @@ describe('MatchDetailView', () => {
 
   it('keeps a played cup tappable, so its holes can still be read', async () => {
     // Scoring is shut for last year's cup, but every hole of it has something to show.
-    tournament.mockReturnValue(pastCup)
+    match.mockReturnValue({ ...withLineup, tee_time: playedLastYear })
 
     const w = await open()
     await w.get('tbody tr').trigger('click')

@@ -7,6 +7,13 @@ const teams = [
   { id: 'blue', color: 'Blue', captain: null, points: 0 },
   { id: 'red', color: 'Red', captain: null, points: 0 },
 ]
+// The scoring window runs from 2h before the tee time to 12h after, so a match's own tee
+// time is what puts it in the future, under way, or long over.
+const hoursFromNow = (h: number) => new Date(Date.now() + h * 3600000).toISOString()
+const teeingOffNow = hoursFromNow(0)
+const teeingOffIn60Days = hoursFromNow(24 * 60)
+const playedLastYear = hoursFromNow(-24 * 365)
+
 const match: MatchResult = {
   match_id: 'm1',
   format_name: 'Singles',
@@ -20,7 +27,7 @@ const match: MatchResult = {
     { team_id: 'red', players: [{ player_id: 'p2', first_name: 'Harbs', last_name: 'Benning' }] },
   ],
   hole_results: [],
-  tee_time: null,
+  tee_time: teeingOffNow,
   course_name: 'Clear Lake',
 }
 const holes = Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, hdcp: i + 1, yards: 400 }))
@@ -32,18 +39,10 @@ vi.mock('@/composables/useToast', () => ({
   toast: { success: (m: string) => toasts.push(m), error: (m: string) => toasts.push(m) },
 }))
 
-// A cup in progress: scores are only accepted on a tournament's own days.
-const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10)
-const liveCup = { id: 't1', name: 'Manitoba Ryder Cup', start_date: day(-1), end_date: day(1), location: 'Buffalo Point' }
-const futureCup = { ...liveCup, start_date: day(60), end_date: day(61) }
-const pastCup = { ...liveCup, start_date: day(-400), end_date: day(-399) }
-const tournament = vi.fn(() => liveCup)
-
 const submitScore = vi.fn()
 const getMatchScores = vi.fn(() => Promise.resolve([]))
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
-    getTournament: () => Promise.resolve(tournament()),
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
     getTournamentResults: vi.fn(() => Promise.resolve([match])),
     getMatchHoles: vi.fn(() => Promise.resolve(holes)),
@@ -78,7 +77,7 @@ async function openHole(hole = '15') {
 
 describe('HoleEntryView saving', () => {
   beforeEach(() => {
-    tournament.mockReturnValue(liveCup)
+    match.tee_time = teeingOffNow
     submitScore.mockReset()
     getMatchScores.mockClear()
     toasts.length = 0
@@ -88,9 +87,9 @@ describe('HoleEntryView saving', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('refuses to offer wheels before the cup is played', async () => {
-    // A tournament months out is only ever being poked at; the server refuses the write
-    // too, so offering the wheels would only produce an error on save.
-    tournament.mockReturnValue(futureCup)
+    // A match months out is only ever being poked at; the server refuses the write too,
+    // so offering the wheels would only produce an error on save.
+    match.tee_time = teeingOffIn60Days
 
     const w = await openHole('1')
 
@@ -101,7 +100,7 @@ describe('HoleEntryView saving', () => {
   it('still shows a played cup, read-only rather than "not started"', async () => {
     // Scoring is shut for last year's cup the same as for one months away, but they are
     // opposite situations to a reader: one has every score, the other has none.
-    tournament.mockReturnValue(pastCup)
+    match.tee_time = playedLastYear
 
     const w = await openHole('5')
 

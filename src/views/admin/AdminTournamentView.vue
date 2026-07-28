@@ -45,7 +45,7 @@ const formats = computed(() => {
   return seen
 })
 const byFormat = computed(() => {
-  const rank = (m: MatchResult) => m.tee_time ?? '~' // unscheduled sorts last
+  const rank = (m: MatchResult) => m.tee_time
   const map: Record<string, MatchResult[]> = {}
   for (const f of formats.value) {
     map[f] = matches.value.filter((m) => m.format_name === f).sort((a, b) => rank(a).localeCompare(rank(b)))
@@ -89,9 +89,8 @@ async function openForm(format: string) {
   // the tournament's first morning when the round is empty.
   const latest = siblings
     .map((m) => m.tee_time)
-    .filter(Boolean)
     .sort()
-    .pop() as string | undefined
+    .pop()
   form.teeTime = latest
     ? utcToEventInput(new Date(new Date(latest).getTime() + 10 * 60000).toISOString(), selectedCourseZone.value)
     : `${tournament.value?.start_date ?? ''}T08:00`
@@ -105,8 +104,8 @@ async function openForm(format: string) {
 
 async function submit(format: string) {
   const formatId = matchFormats.value.find((f) => f.name === format)?.id
-  if (!formatId || !form.courseId || !form.teeColorId) {
-    formError.value = 'Pick a course and tee.'
+  if (!formatId || !form.courseId || !form.teeColorId || !form.teeTime) {
+    formError.value = 'Pick a course, tee and tee time.'
     return
   }
   creating.value = true
@@ -116,7 +115,7 @@ async function submit(format: string) {
       course_id: form.courseId,
       tee_color_id: form.teeColorId,
       match_format_id: formatId,
-      tee_time: form.teeTime ? eventInputToUtc(form.teeTime, selectedCourseZone.value) : null,
+      tee_time: eventInputToUtc(form.teeTime, selectedCourseZone.value),
       handicapped: form.handicapped,
     })
     adding.value = null
@@ -161,7 +160,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                   class="group flex items-center justify-between border-b border-mrc-line px-4 py-3 transition last:border-b-0 hover:bg-mrc-panel"
                 >
                   <div class="min-w-0">
-                    <p class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time) || 'Tee time TBD' }}</p>
+                    <p class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time) }}</p>
                     <p class="truncate text-sm text-mrc-muted">{{ pairing(m.sides) }}</p>
                   </div>
                   <ChevronRightIcon class="shrink-0 text-mrc-faint transition group-hover:text-mrc-accent" />
@@ -195,13 +194,15 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                 </div>
                 <div>
                   <BaseLabel>Tee time</BaseLabel>
-                  <input type="datetime-local" v-model="form.teeTime" :class="fieldClass" />
+                  <input type="datetime-local" v-model="form.teeTime" required :class="fieldClass" />
                 </div>
                 <label class="flex items-center gap-2 text-sm text-mrc-charcoal">
                   <input type="checkbox" v-model="form.handicapped" class="[color-scheme:light]" /> Handicapped (net scoring)
                 </label>
                 <div class="flex gap-2 pt-1">
-                  <BaseButton :loading="creating" :disabled="!form.teeColorId" @click="submit(tab)">Create match</BaseButton>
+                  <BaseButton :loading="creating" :disabled="!form.teeColorId || !form.teeTime" @click="submit(tab)"
+                    >Create match</BaseButton
+                  >
                   <BaseButton variant="secondary" @click="adding = null">Cancel</BaseButton>
                 </div>
               </div>

@@ -22,7 +22,7 @@ function match(o: Partial<MatchResult> = {}): MatchResult {
       { team_id: 't-red', players: [{ player_id: 'r1', first_name: 'Amy', last_name: 'Smith' }] },
     ],
     hole_results: [],
-    tee_time: null,
+    tee_time: '2026-09-18T13:00:00Z',
     course_name: 'Test GC',
     ...o,
   }

@@ -1,62 +1,62 @@
 import { describe, it, expect } from 'vitest'
 import { hasStarted, scoringOpen } from '@/lib/scoringWindow'
-import type { Tournament } from '@/api/types'
+import type { MatchResult } from '@/api/types'
 
-// The 2026 cup: two days at Buffalo Point, last group off at 15:50 local.
-const cup: Tournament = {
-  id: 't1',
-  name: 'Manitoba Ryder Cup',
-  start_date: '2026-09-18',
-  end_date: '2026-09-19',
-  location: 'Buffalo Point, Manitoba, Canada',
-}
-const at = (iso: string) => new Date(iso)
+// The window is measured from the tee time, so these need no timezone: every case below
+// holds identically for a viewer in Winnipeg, Phoenix or Auckland.
+const teeOff = new Date('2026-09-18T13:00:00Z')
+const match = { tee_time: teeOff.toISOString() } as MatchResult
+const at = (hours: number) => new Date(teeOff.getTime() + hours * 3600000)
 
 describe('hasStarted', () => {
-  // Distinct from scoringOpen, which is shut both before a cup and after it. Those are
-  // opposites to a reader: one has nothing yet, the other has everything.
-  it('is false before the cup', () => {
-    expect(hasStarted(cup, at('2026-09-18T04:00:00Z'))).toBe(false) // 11pm local the 17th
+  it('is false while the match is still ahead', () => {
+    expect(hasStarted(match, at(-24 * 60))).toBe(false)
+    expect(hasStarted(match, at(-3))).toBe(false)
   })
 
-  it('is true once it is under way', () => {
-    expect(hasStarted(cup, at('2026-09-18T13:00:00Z'))).toBe(true)
+  it('is true from the moment scoring opens', () => {
+    expect(hasStarted(match, at(-2))).toBe(true)
+    expect(hasStarted(match, at(0))).toBe(true)
   })
 
-  it('stays true forever after — a played cup is history, not a fixture', () => {
-    expect(hasStarted(cup, at('2027-06-01T12:00:00Z'))).toBe(true)
-    expect(scoringOpen(cup, at('2027-06-01T12:00:00Z'))).toBe(false)
+  it('stays true forever after — a played match is history, not a fixture', () => {
+    // The distinction scoringOpen cannot make on its own: shut here and shut months
+    // early read the same, but they are opposites to someone looking at the page.
+    expect(hasStarted(match, at(24 * 365))).toBe(true)
+    expect(scoringOpen(match, at(24 * 365))).toBe(false)
   })
 
-  it('is false when the tournament is unknown', () => {
-    expect(hasStarted(null, at('2026-09-18T13:00:00Z'))).toBe(false)
+  it('is false when the match is unknown', () => {
+    expect(hasStarted(null, at(0))).toBe(false)
   })
 })
 
 describe('scoringOpen', () => {
-  it('is shut months before the cup', () => {
-    expect(scoringOpen(cup, at('2026-03-01T12:00:00Z'))).toBe(false)
+  it('is shut before the window opens', () => {
+    expect(scoringOpen(match, at(-24 * 60))).toBe(false)
+    expect(scoringOpen(match, at(-3))).toBe(false)
   })
 
-  it('is shut the evening before', () => {
-    expect(scoringOpen(cup, at('2026-09-18T04:00:00Z'))).toBe(false) // 11pm local the 17th
+  it('is open across the round and the evening after it', () => {
+    expect(scoringOpen(match, at(-2))).toBe(true) // warming up
+    expect(scoringOpen(match, at(5))).toBe(true) // a slow round
+    expect(scoringOpen(match, at(11))).toBe(true) // corrections that evening
+    expect(scoringOpen(match, at(12))).toBe(true) // the last moment
   })
 
-  it('is open on each day of the cup', () => {
-    expect(scoringOpen(cup, at('2026-09-18T13:00:00Z'))).toBe(true)
-    expect(scoringOpen(cup, at('2026-09-19T15:00:00Z'))).toBe(true)
+  it('is shut once the window closes', () => {
+    expect(scoringOpen(match, at(13))).toBe(false)
+    expect(scoringOpen(match, at(24 * 365))).toBe(false)
   })
 
-  it('is still open for the last group after midnight UTC', () => {
-    // Reading the dates as UTC would refuse their closing holes.
-    expect(scoringOpen(cup, at('2026-09-20T01:20:00Z'))).toBe(true)
+  it('tracks each match separately, so one group cannot be scored from another', () => {
+    // The tournament-wide window this replaced let Sunday's matches be scored on Saturday.
+    const tomorrow = { tee_time: new Date(teeOff.getTime() + 20 * 3600000).toISOString() } as MatchResult
+    expect(scoringOpen(match, at(0))).toBe(true)
+    expect(scoringOpen(tomorrow, at(0))).toBe(false)
   })
 
-  it('is shut the morning after', () => {
-    expect(scoringOpen(cup, at('2026-09-20T14:00:00Z'))).toBe(false)
-  })
-
-  it('is shut when the tournament is unknown', () => {
-    expect(scoringOpen(null, at('2026-09-18T13:00:00Z'))).toBe(false)
+  it('is shut when the match is unknown', () => {
+    expect(scoringOpen(null, at(0))).toBe(false)
   })
 })

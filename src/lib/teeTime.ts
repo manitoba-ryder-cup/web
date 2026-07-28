@@ -2,21 +2,18 @@
 // by default, so these helpers just format. Entering a tee time is the other direction
 // and does need a zone: see eventInputToUtc, which takes the course's.
 
-// Time of day, e.g. "9:10 AM". Empty string when unscheduled.
-export function formatTeeTime(iso: string | null): string {
-  if (!iso) return ''
+// Time of day, e.g. "9:10 AM".
+export function formatTeeTime(iso: string): string {
   return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
 }
 
-// Day label, e.g. "Fri, Sep 18". "TBD" when unscheduled.
-export function teeDayLabel(iso: string | null): string {
-  if (!iso) return 'TBD'
+// Day label, e.g. "Fri, Sep 18".
+export function teeDayLabel(iso: string): string {
   return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso))
 }
 
 // Date key for grouping, in the viewer's zone so it matches the times shown beside it.
-export function teeDayKey(iso: string | null): string {
-  if (!iso) return ''
+export function teeDayKey(iso: string): string {
   return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
 }
 
