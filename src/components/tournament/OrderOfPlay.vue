@@ -84,7 +84,7 @@ const sessions = computed<Session[]>(() => {
   <div :class="flat ? '' : 'overflow-hidden rounded-md border border-mrc-line bg-white'">
     <div v-for="s in sessions" :key="s.key" class="border-t border-mrc-line first:border-t-0">
       <!-- Session header: day on the left, format on the right. -->
-      <div class="flex items-baseline justify-between bg-mrc-panel px-3 py-1.5 text-xs uppercase tracking-wide text-mrc-charcoal">
+      <div class="flex items-baseline justify-between bg-mrc-panel px-3 py-1.5 text-sm uppercase tracking-wide text-mrc-charcoal">
         <span class="font-semibold">{{ s.day }}</span>
         <span class="font-semibold">{{ s.format }}</span>
       </div>
@@ -95,14 +95,9 @@ const sessions = computed<Session[]>(() => {
           :to="{ name: 'match', params: { tournamentId, matchId: r.id } }"
           class="flex items-center gap-3 px-3 py-3 transition hover:bg-mrc-panel"
         >
-          <div class="w-14 shrink-0 text-xs text-mrc-muted">{{ r.time }}</div>
+          <div class="w-14 shrink-0 text-sm text-mrc-muted">{{ r.time }}</div>
           <div class="min-w-0 flex-1 space-y-0.5 leading-tight">
-            <p
-              v-for="(side, i) in r.sides"
-              :key="i"
-              class="flex items-center gap-2 text-sm"
-              :class="side.dim ? 'text-mrc-muted' : 'text-mrc-ink'"
-            >
+            <p v-for="(side, i) in r.sides" :key="i" class="flex items-center gap-2" :class="side.dim ? 'text-mrc-muted' : 'text-mrc-ink'">
               <span class="inline-block h-2 w-2 shrink-0 rounded-full" :style="{ background: side.dot }" />
               <span class="min-w-0 truncate">{{ side.name }}</span>
             </p>

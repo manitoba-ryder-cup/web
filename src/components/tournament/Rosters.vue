@@ -17,7 +17,9 @@ function roster(teamId: string): TournamentPlayer[] {
   <div class="grid grid-cols-2 gap-x-4">
     <div v-for="team in teams" :key="team.id">
       <!-- Team header: the captain, who identifies the team. -->
-      <div class="mb-1 truncate border-b border-mrc-muted pb-1 text-center font-display font-bold uppercase tracking-wide text-mrc-muted">
+      <div
+        class="mb-1 truncate border-b border-mrc-muted pb-1 text-center font-display font-bold text-lg uppercase tracking-wide text-mrc-muted"
+      >
         Team {{ team.captain?.last_name }}
       </div>
       <ul class="divide-y divide-mrc-line">
