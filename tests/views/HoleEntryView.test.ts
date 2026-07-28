@@ -32,10 +32,17 @@ vi.mock('@/composables/useToast', () => ({
   toast: { success: (m: string) => toasts.push(m), error: (m: string) => toasts.push(m) },
 }))
 
+// A cup in progress: scores are only accepted on a tournament's own days.
+const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10)
+const liveCup = { id: 't1', name: 'Manitoba Ryder Cup', start_date: day(-1), end_date: day(1), location: 'Buffalo Point' }
+const futureCup = { ...liveCup, start_date: day(60), end_date: day(61) }
+const tournament = vi.fn(() => liveCup)
+
 const submitScore = vi.fn()
 const getMatchScores = vi.fn(() => Promise.resolve([]))
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
+    getTournament: () => Promise.resolve(tournament()),
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
     getTournamentResults: vi.fn(() => Promise.resolve([match])),
     getMatchHoles: vi.fn(() => Promise.resolve(holes)),
@@ -70,6 +77,7 @@ async function openHole(hole = '15') {
 
 describe('HoleEntryView saving', () => {
   beforeEach(() => {
+    tournament.mockReturnValue(liveCup)
     submitScore.mockReset()
     getMatchScores.mockClear()
     toasts.length = 0
@@ -77,6 +85,17 @@ describe('HoleEntryView saving', () => {
   })
   // Spies here stub the router; a leaked one silently redirects the next test.
   afterEach(() => vi.restoreAllMocks())
+
+  it('refuses to offer wheels before the cup is played', async () => {
+    // A tournament months out is only ever being poked at; the server refuses the write
+    // too, so offering the wheels would only produce an error on save.
+    tournament.mockReturnValue(futureCup)
+
+    const w = await openHole('1')
+
+    expect(w.text()).toContain("hasn't started yet")
+    expect(w.find('[data-tile]').exists()).toBe(false)
+  })
 
   it('walks to the next hole while the match is still live', async () => {
     submitScore.mockResolvedValue(open)

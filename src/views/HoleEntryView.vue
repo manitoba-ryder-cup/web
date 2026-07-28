@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { ApiError, type MatchSide } from '@/api/types'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
 import { matchCompleteMessage } from '@/lib/matchResult'
+import { scoringOpen } from '@/lib/scoringWindow'
 import { toast } from '@/composables/useToast'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -19,10 +20,13 @@ const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
 // Loads once — walking to the next hole only re-derives from what is already here.
-const { error, loading, retry, refresh, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+const { error, loading, retry, refresh, tournament, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   props.tournamentId,
   props.matchId,
 )
+// Scores belong to the days the cup is played. Before then a match is only ever being
+// poked at, so the wheels aren't offered at all — the server refuses the write too.
+const started = computed(() => scoringOpen(tournament.value))
 const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
 // A finished match is read-only (the write flow only makes sense for a live round). The
 // loaded result is a snapshot from mount, so a save that ends the match sets this too —
@@ -108,7 +112,22 @@ async function saveAndNext() {
 <template>
   <PageLayout>
     <AsyncState :loading="loading" :error="error" :retry="retry">
-      <template v-if="match && holeInfo">
+      <!-- Before the cup, say so rather than offering wheels the server would refuse.
+           The match's own page still shows its tee time, format and lineup. -->
+      <div v-if="match && !started" class="mx-auto mt-6 max-w-2xl text-center">
+        <p class="text-mrc-muted">
+          <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
+          <template v-if="match.course_name"> · {{ match.course_name }}</template>
+        </p>
+        <p class="mt-6 text-mrc-muted">This match hasn't started yet — scores can be entered on the day it's played.</p>
+        <RouterLink
+          :to="{ name: 'match', params: { tournamentId, matchId } }"
+          class="mt-6 inline-flex items-center justify-center rounded bg-mrc-accent px-6 py-2 font-semibold text-white shadow-md transition hover:bg-mrc-accent-dark"
+        >
+          Back to Scorecard
+        </RouterLink>
+      </div>
+      <template v-else-if="match && holeInfo">
         <!-- Sticky context: the match summary, with the hole details on one line below it. -->
         <div class="sticky top-0 z-10 -mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 pb-3 shadow">
           <!-- Overall event standing stays in view while you enter this hole's scores. -->

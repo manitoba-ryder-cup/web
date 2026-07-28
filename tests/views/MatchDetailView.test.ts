@@ -31,6 +31,7 @@ const noLineup: MatchResult = { ...withLineup, sides: [] }
 const match = vi.fn(() => withLineup)
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
+    getTournament: vi.fn(() => Promise.resolve({ id: 't1', name: 'Cup', start_date: '2026-09-18', end_date: '2026-09-19', location: 'X' })),
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
     getTournamentResults: vi.fn(() => Promise.resolve([match()])),
     getMatchHoles: vi.fn(() => Promise.resolve([])),

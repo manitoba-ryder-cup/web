@@ -19,17 +19,20 @@ export function useMatchContext(tournamentId: string, matchId: string, { interva
   const { data, error, loading, refresh, retry } = useAsync(
     async () => {
       const holes = scorecardApi.getMatchHoles(matchId)
-      const [teams, results, holeStates, tee] = await Promise.all([
+      const [tournament, teams, results, holeStates, tee] = await Promise.all([
+        scorecardApi.getTournament(tournamentId),
         scorecardApi.getTournamentTeams(tournamentId),
         scorecardApi.getTournamentResults(tournamentId),
         scorecardApi.getMatchScores(matchId),
         parOptional ? holes.catch(() => []) : holes,
       ])
-      return { teams, results, holeStates, holes: tee }
+      return { tournament, teams, results, holeStates, holes: tee }
     },
     intervalMs ? { intervalMs } : {},
   )
 
+  // The event itself, for its dates — a match is only scoreable on one of them.
+  const tournament = computed(() => data.value?.tournament ?? null)
   const teams = computed(() => data.value?.teams ?? [])
   const results = computed(() => data.value?.results ?? [])
   // holeStates is the per-hole match state (who's up); holes is the tee set's par/yardage.
@@ -42,5 +45,5 @@ export function useMatchContext(tournamentId: string, matchId: string, { interva
     () => teams.value,
   )
 
-  return { error, loading, refresh, retry, teams, results, holeStates, holes, match, left, right }
+  return { error, loading, refresh, retry, tournament, teams, results, holeStates, holes, match, left, right }
 }
