@@ -1,76 +1,39 @@
 import { describe, it, expect } from 'vitest'
 import { formatTeeTime, teeDayLabel, teeDayKey, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 
-// Tee times are UTC instants shown in the event's zone (America/Winnipeg). The zone is
-// CDT (UTC−5) in summer and CST (UTC−6) in winter, so every conversion is checked on
-// both sides of DST — the offset changing is exactly what these helpers must get right.
+const instant = '2026-09-18T13:00:00Z' // 08:00 at a Manitoba course
 
-describe('formatTeeTime', () => {
-  it('is empty when unscheduled', () => {
-    expect(formatTeeTime(null)).toBe('')
+describe('showing a tee time', () => {
+  it('renders in the viewer’s own zone', () => {
+    const viewer = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const asViewer = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: viewer }).format(new Date(instant))
+    expect(formatTeeTime(instant)).toBe(asViewer)
   })
 
-  it('renders a summer (CDT, UTC−5) instant in event time', () => {
-    // 14:10Z − 5h = 9:10 AM in Winnipeg.
-    expect(formatTeeTime('2026-09-18T14:10:00Z')).toBe('9:10 AM')
-  })
-
-  it('renders a winter (CST, UTC−6) instant in event time', () => {
-    // 15:10Z − 6h = 9:10 AM in Winnipeg — same wall-clock, different UTC than summer.
-    expect(formatTeeTime('2026-01-15T15:10:00Z')).toBe('9:10 AM')
-  })
-})
-
-describe('teeDayLabel', () => {
-  it('is TBD when unscheduled', () => {
+  it('says TBD rather than nothing when a match is unscheduled', () => {
     expect(teeDayLabel(null)).toBe('TBD')
-  })
-
-  it('labels the event-local day', () => {
-    expect(teeDayLabel('2026-09-18T14:10:00Z')).toBe('Fri, Sep 18')
-  })
-
-  it('uses the event-local day, not the UTC day, at a day boundary', () => {
-    // 02:00Z Sep 19 is 9:00 PM Sep 18 in Winnipeg — the label follows the local day.
-    expect(teeDayLabel('2026-09-19T02:00:00Z')).toBe('Fri, Sep 18')
-  })
-})
-
-describe('teeDayKey', () => {
-  it('is empty when unscheduled', () => {
+    expect(formatTeeTime(null)).toBe('')
     expect(teeDayKey(null)).toBe('')
   })
 
-  it('groups by the event-local date, not the UTC date', () => {
-    // Same instant as above: UTC date is the 19th, event date is the 18th.
-    expect(teeDayKey('2026-09-19T02:00:00Z')).toBe('2026-09-18')
+  it('groups by the same day it displays, so a row cannot land under the wrong header', () => {
+    const viewerDay = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(instant))
+    expect(teeDayKey(instant)).toBe(viewerDay)
   })
 })
 
-describe('utcToEventInput', () => {
-  it('converts a summer instant to a datetime-local value', () => {
-    expect(utcToEventInput('2026-09-18T14:10:00Z')).toBe('2026-09-18T09:10')
+describe('entering a tee time', () => {
+  // The other direction, and the only one that needs a zone: an admin types the wall
+  // clock off the tee sheet and the course says what instant that was.
+  it('reads the typed wall clock at the course', () => {
+    expect(eventInputToUtc('2026-09-18T08:00', 'America/Winnipeg')).toBe('2026-09-18T13:00:00.000Z')
+    expect(eventInputToUtc('2026-09-18T08:00', 'America/Phoenix')).toBe('2026-09-18T15:00:00.000Z')
   })
 
-  it('converts a winter instant to a datetime-local value', () => {
-    expect(utcToEventInput('2026-01-15T15:10:00Z')).toBe('2026-01-15T09:10')
-  })
-})
-
-describe('eventInputToUtc', () => {
-  it('reads a summer wall-clock value as CDT (UTC−5)', () => {
-    expect(eventInputToUtc('2026-09-18T09:10')).toBe('2026-09-18T14:10:00.000Z')
-  })
-
-  it('reads a winter wall-clock value as CST (UTC−6)', () => {
-    expect(eventInputToUtc('2026-01-15T09:10')).toBe('2026-01-15T15:10:00.000Z')
-  })
-})
-
-describe('round trip', () => {
-  it('utcToEventInput ∘ eventInputToUtc is identity across DST', () => {
-    for (const wall of ['2026-09-18T09:10', '2026-01-15T09:10', '2026-07-24T18:45']) {
-      expect(utcToEventInput(eventInputToUtc(wall))).toBe(wall)
+  it('round-trips whatever the course’s zone is', () => {
+    const wall = '2026-09-18T08:00'
+    for (const tz of ['America/Winnipeg', 'America/Phoenix', 'Pacific/Auckland']) {
+      expect(utcToEventInput(eventInputToUtc(wall, tz), tz)).toBe(wall)
     }
   })
 })

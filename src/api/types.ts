@@ -21,10 +21,6 @@ export interface Tournament {
   start_date: string
   end_date: string
   location: string
-  // Where the cup is played, as an IANA name. start_date/end_date are calendar dates and
-  // tee times are UTC instants; both are read against this, so the app shows the event's
-  // own wall clock rather than the viewer's.
-  time_zone: string
 }
 export interface MatchFormat {
   id: string
@@ -33,6 +29,10 @@ export interface MatchFormat {
 export interface Course {
   id: string
   name: string
+  // Where the course is, as an IANA name. Used when entering a tee time — the wall clock
+  // off the tee sheet is converted against it. Times are displayed in the viewer's zone,
+  // so nothing reads this back to render.
+  time_zone: string
 }
 // A course's configured tee set, colour name resolved — a valid (course, tee) option.
 export interface TeeSetSummary {

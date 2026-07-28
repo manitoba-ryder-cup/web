@@ -169,14 +169,14 @@ const { segments } = useCountdown(teeOffAt)
             <PlayerField :players="players" />
           </SectionCard>
           <SectionCard v-if="hasSchedule" title="Order of Play">
-            <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" :time-zone="tournament?.time_zone" />
+            <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
           </SectionCard>
           <p v-if="tbdNote" class="py-2 text-center text-sm font-medium uppercase tracking-wide text-mrc-muted">{{ tbdNote }}</p>
         </template>
 
         <!-- Live / finished: the order of play. -->
         <SectionCard v-else-if="results.length" title="Order of Play">
-          <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" :time-zone="tournament?.time_zone" />
+          <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
         </SectionCard>
       </div>
     </ContentContainer>

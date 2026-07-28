@@ -66,6 +66,9 @@ const creating = ref(false)
 const formError = ref('')
 const courseTees = ref<TeeSetSummary[]>([])
 const form = reactive({ courseId: '', teeColorId: '', teeTime: '', handicapped: false })
+// A tee time is typed as the wall clock the tee sheet says; the course it is played at is
+// what turns that into an instant.
+const selectedCourseZone = computed(() => courses.value.find((c) => c.id === form.courseId)?.time_zone ?? 'America/Winnipeg')
 
 async function loadTees() {
   form.teeColorId = ''
@@ -90,7 +93,7 @@ async function openForm(format: string) {
     .sort()
     .pop() as string | undefined
   form.teeTime = latest
-    ? utcToEventInput(new Date(new Date(latest).getTime() + 10 * 60000).toISOString(), tournament.value?.time_zone)
+    ? utcToEventInput(new Date(new Date(latest).getTime() + 10 * 60000).toISOString(), selectedCourseZone.value)
     : `${tournament.value?.start_date ?? ''}T08:00`
   // Default the course to the one this round already uses (matched by name), else the first.
   const usedName = siblings.find((m) => m.course_name)?.course_name
@@ -113,7 +116,7 @@ async function submit(format: string) {
       course_id: form.courseId,
       tee_color_id: form.teeColorId,
       match_format_id: formatId,
-      tee_time: form.teeTime ? eventInputToUtc(form.teeTime, tournament.value?.time_zone) : null,
+      tee_time: form.teeTime ? eventInputToUtc(form.teeTime, selectedCourseZone.value) : null,
       handicapped: form.handicapped,
     })
     adding.value = null
@@ -158,7 +161,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                   class="group flex items-center justify-between border-b border-mrc-line px-4 py-3 transition last:border-b-0 hover:bg-mrc-panel"
                 >
                   <div class="min-w-0">
-                    <p class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time, tournament?.time_zone) || 'Tee time TBD' }}</p>
+                    <p class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time) || 'Tee time TBD' }}</p>
                     <p class="truncate text-sm text-mrc-muted">{{ pairing(m.sides) }}</p>
                   </div>
                   <ChevronRightIcon class="shrink-0 text-mrc-faint transition group-hover:text-mrc-accent" />

@@ -91,9 +91,7 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
       <template v-if="match">
         <p class="mb-4 text-center text-mrc-muted">
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
-          <template v-if="formatTeeTime(match.tee_time, data?.tournament?.time_zone)">
-            · {{ formatTeeTime(match.tee_time, data?.tournament?.time_zone) }}</template
-          >
+          <template v-if="formatTeeTime(match.tee_time)"> · {{ formatTeeTime(match.tee_time) }}</template>
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
         <div class="grid gap-4 md:grid-cols-2" :class="isBusy() ? 'pointer-events-none opacity-60' : ''">
