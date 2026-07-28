@@ -118,7 +118,7 @@ const { segments } = useCountdown(teeOffAt)
         <!-- Upcoming: the matchup (once captains are set) + countdown, not a 0–0 score. -->
         <template v-if="phase === 'upcoming'">
           <CaptainMatchup v-if="showMatchup" :teams="teams" size="lg" class="mt-5" />
-          <h1 v-else-if="tournament" class="mt-4 font-display text-4xl font-bold md:text-5xl">{{ tournament.name }}</h1>
+          <h1 v-else-if="tournament" class="mt-4 md:text-5xl">{{ tournament.name }}</h1>
           <div v-if="segments" class="mt-7">
             <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-white/60">Tees off in</p>
             <div class="flex items-start justify-center gap-5 tabular-nums sm:gap-7">
@@ -153,7 +153,7 @@ const { segments } = useCountdown(teeOffAt)
           </RouterLink>
         </template>
 
-        <h1 v-else-if="!loading" class="font-display text-4xl font-bold">Manitoba Ryder Cup</h1>
+        <h1 v-else-if="!loading">Manitoba Ryder Cup</h1>
       </div>
     </section>
 

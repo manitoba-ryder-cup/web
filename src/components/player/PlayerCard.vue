@@ -29,9 +29,9 @@ const fullName = computed(() => `${props.firstName} ${props.lastName}`)
       <PlayerAvatar :photo-path="photoPath" :alt="fullName" size="card" />
       <div class="flex min-w-0 flex-1 flex-col justify-center p-4">
         <TierBadge v-if="tier" :tier="tier" class="mb-1.5 self-start">{{ tier }}</TierBadge>
-        <h4 class="truncate font-display text-2xl font-semibold text-mrc-ink transition group-hover:text-mrc-accent">
+        <h3 class="truncate transition group-hover:text-mrc-accent">
           {{ fullName }}
-        </h4>
+        </h3>
         <p class="mt-0.5 text-sm tabular-nums text-mrc-muted">
           {{ record.wins }}–{{ record.losses }}–{{ record.ties
           }}<template v-if="cups > 0"> · {{ cups }} {{ cups === 1 ? 'CUP' : 'CUPS' }}</template>
