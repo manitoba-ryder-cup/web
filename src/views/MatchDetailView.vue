@@ -49,13 +49,6 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
              Width-matched to the card below. -->
         <div class="mx-auto mb-4 max-w-2xl">
           <MatchSummary :match="match" :teams="teams" />
-          <div v-if="auth.isAuthenticated" class="mt-2 text-right">
-            <RouterLink
-              :to="{ name: 'admin-lineup', params: { id: tournamentId, matchId } }"
-              class="text-sm font-semibold text-mrc-accent hover:underline"
-              >Set lineup →</RouterLink
-            >
-          </div>
         </div>
         <MatchScorecard
           :hole-states="holeStates"
