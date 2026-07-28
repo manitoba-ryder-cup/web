@@ -1,16 +1,14 @@
 import type { Tournament } from '@/api/types'
-
-// Where the cup is played. A tournament's start and end are calendar dates, and a
-// calendar date only means anything somewhere: read as UTC, the final day ends at 19:00
-// local and cuts off the last group mid-round, because an afternoon tee time in Manitoba
-// finishes after midnight UTC. The server applies the same rule in the same zone.
-const EVENT_TIME_ZONE = 'America/Winnipeg'
+import { EVENT_TZ } from '@/lib/teeTime'
 
 // Today where the golf is played, as YYYY-MM-DD — directly comparable to the tournament's
-// dates, which are plain calendar dates on the wire.
+// dates, which are plain calendar dates and so mean nothing without a zone. Read as UTC
+// the final day would end at 19:00 local, cutting off a last group that tees off in the
+// afternoon and finishes past midnight UTC. The server applies the same rule in the same
+// zone.
 function todayAtTheCup(now: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: EVENT_TIME_ZONE,
+    timeZone: EVENT_TZ,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
