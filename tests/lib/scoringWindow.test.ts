@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { scoringOpen } from '@/lib/scoringWindow'
+import { hasStarted, scoringOpen } from '@/lib/scoringWindow'
 import type { Tournament } from '@/api/types'
 
 // The 2026 cup: two days at Buffalo Point, last group off at 15:50 local.
@@ -11,6 +11,27 @@ const cup: Tournament = {
   location: 'Buffalo Point, Manitoba, Canada',
 }
 const at = (iso: string) => new Date(iso)
+
+describe('hasStarted', () => {
+  // Distinct from scoringOpen, which is shut both before a cup and after it. Those are
+  // opposites to a reader: one has nothing yet, the other has everything.
+  it('is false before the cup', () => {
+    expect(hasStarted(cup, at('2026-09-18T04:00:00Z'))).toBe(false) // 11pm local the 17th
+  })
+
+  it('is true once it is under way', () => {
+    expect(hasStarted(cup, at('2026-09-18T13:00:00Z'))).toBe(true)
+  })
+
+  it('stays true forever after — a played cup is history, not a fixture', () => {
+    expect(hasStarted(cup, at('2027-06-01T12:00:00Z'))).toBe(true)
+    expect(scoringOpen(cup, at('2027-06-01T12:00:00Z'))).toBe(false)
+  })
+
+  it('is false when the tournament is unknown', () => {
+    expect(hasStarted(null, at('2026-09-18T13:00:00Z'))).toBe(false)
+  })
+})
 
 describe('scoringOpen', () => {
   it('is shut months before the cup', () => {

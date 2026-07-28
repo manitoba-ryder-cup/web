@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { playerInitials, resultText } from '@/lib/matchResult'
 import { formatTeeTime } from '@/lib/teeTime'
+import { hasStarted } from '@/lib/scoringWindow'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
@@ -17,7 +18,7 @@ const auth = useAuthStore()
 
 // Polls, so a spectator watching the round sees it move. Par is non-fatal here — the
 // card renders without it.
-const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+const { error, loading, retry, tournament, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   props.tournamentId,
   props.matchId,
   {
@@ -62,6 +63,7 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
           :result-label="match.finished ? resultText(match) : undefined"
           :tournament-id="tournamentId"
           :match-id="matchId"
+          :tappable="hasStarted(tournament)"
         />
       </template>
       <!-- The match exists on the schedule but has no lineup yet — show its context and say

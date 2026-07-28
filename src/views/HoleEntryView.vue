@@ -6,7 +6,7 @@ import { ApiError, type MatchSide } from '@/api/types'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
 import { matchCompleteMessage } from '@/lib/matchResult'
-import { scoringOpen } from '@/lib/scoringWindow'
+import { hasStarted, scoringOpen } from '@/lib/scoringWindow'
 import { toast } from '@/composables/useToast'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -24,15 +24,19 @@ const { error, loading, retry, refresh, tournament, teams, results, holeStates, 
   props.tournamentId,
   props.matchId,
 )
-// Scores belong to the days the cup is played. Before then a match is only ever being
-// poked at, so the wheels aren't offered at all — the server refuses the write too.
-const started = computed(() => scoringOpen(tournament.value))
+// Before the cup there is nothing to show and nothing to record, so the wheels aren't
+// offered — the server refuses the write too. After it there is everything to show: a
+// played match still reads, it just reads read-only.
+const started = computed(() => hasStarted(tournament.value))
+// Read-only outside the cup's days as well as once the match is done, matching the
+// server: a score entered for last year's tournament would be refused.
+const scoreable = computed(() => scoringOpen(tournament.value))
 const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
 // A finished match is read-only (the write flow only makes sense for a live round). The
 // loaded result is a snapshot from mount, so a save that ends the match sets this too —
 // otherwise walking to the next hole would still offer an editable wheel.
 const finishedByWrite = ref(false)
-const readonly = computed(() => finishedByWrite.value || (match.value?.finished ?? false))
+const readonly = computed(() => finishedByWrite.value || !scoreable.value || (match.value?.finished ?? false))
 
 // Singles/Fourball record a score per player; one-ball formats (Alt Shot/Scramble/Scotch)
 // record one score per team (player_id null).
@@ -119,7 +123,7 @@ async function saveAndNext() {
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
-        <p class="mt-6 text-mrc-muted">This match hasn't started yet — scores can be entered on the day it's played.</p>
+        <p class="mt-6 text-mrc-muted">This match hasn't started yet.</p>
         <RouterLink
           :to="{ name: 'match', params: { tournamentId, matchId } }"
           class="mt-6 inline-flex items-center justify-center rounded bg-mrc-accent px-6 py-2 font-semibold text-white shadow-md transition hover:bg-mrc-accent-dark"

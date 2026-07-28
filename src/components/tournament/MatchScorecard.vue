@@ -24,6 +24,9 @@ const props = defineProps<{
   holeInfo?: Map<number, Hole>
   tournamentId: string
   matchId: string
+  // Whether a hole taps through to its entry page. False before the cup is played, when
+  // that page would only turn you straight back.
+  tappable?: boolean
 }>()
 
 const router = useRouter()
@@ -131,9 +134,25 @@ function open(hole: number) {
         </tr>
       </thead>
       <tbody>
-        <ScorecardRow v-for="r in front" :key="r.hole" :row="r" :left-meta="leftMeta" :right-meta="rightMeta" @open="open" />
+        <ScorecardRow
+          v-for="r in front"
+          :key="r.hole"
+          :row="r"
+          :left-meta="leftMeta"
+          :right-meta="rightMeta"
+          :tappable="tappable !== false"
+          @open="open"
+        />
         <ScorecardSummaryRow label="Out" :yards="out.yards" :left="out.left" :right="out.right" :par="out.par" />
-        <ScorecardRow v-for="r in back" :key="r.hole" :row="r" :left-meta="leftMeta" :right-meta="rightMeta" @open="open" />
+        <ScorecardRow
+          v-for="r in back"
+          :key="r.hole"
+          :row="r"
+          :left-meta="leftMeta"
+          :right-meta="rightMeta"
+          :tappable="tappable !== false"
+          @open="open"
+        />
         <ScorecardSummaryRow label="In" :yards="inc.yards" :left="inc.left" :right="inc.right" :par="inc.par" />
         <ScorecardSummaryRow
           label="Tot"

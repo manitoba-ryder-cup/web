@@ -36,6 +36,7 @@ vi.mock('@/composables/useToast', () => ({
 const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10)
 const liveCup = { id: 't1', name: 'Manitoba Ryder Cup', start_date: day(-1), end_date: day(1), location: 'Buffalo Point' }
 const futureCup = { ...liveCup, start_date: day(60), end_date: day(61) }
+const pastCup = { ...liveCup, start_date: day(-400), end_date: day(-399) }
 const tournament = vi.fn(() => liveCup)
 
 const submitScore = vi.fn()
@@ -95,6 +96,18 @@ describe('HoleEntryView saving', () => {
 
     expect(w.text()).toContain("hasn't started yet")
     expect(w.find('[data-tile]').exists()).toBe(false)
+  })
+
+  it('still shows a played cup, read-only rather than "not started"', async () => {
+    // Scoring is shut for last year's cup the same as for one months away, but they are
+    // opposite situations to a reader: one has every score, the other has none.
+    tournament.mockReturnValue(pastCup)
+
+    const w = await openHole('5')
+
+    expect(w.text()).not.toContain("hasn't started yet")
+    expect(w.find('[data-tile]').exists()).toBe(true)
+    expect(saveButton(w).text()).not.toContain('Save')
   })
 
   it('walks to the next hole while the match is still live', async () => {

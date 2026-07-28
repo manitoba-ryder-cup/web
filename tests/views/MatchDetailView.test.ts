@@ -28,19 +28,16 @@ const withLineup: MatchResult = {
 // A match on the schedule whose lineup hasn't been picked yet.
 const noLineup: MatchResult = { ...withLineup, sides: [] }
 
+const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10)
+const liveCup = { id: 't1', name: 'Manitoba Ryder Cup', start_date: day(-1), end_date: day(1), location: 'Buffalo Point' }
+const futureCup = { ...liveCup, start_date: day(60), end_date: day(61) }
+const pastCup = { ...liveCup, start_date: day(-400), end_date: day(-399) }
+const tournament = vi.fn(() => liveCup)
+
 const match = vi.fn(() => withLineup)
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
-    getTournament: vi.fn(() =>
-      Promise.resolve({
-        id: 't1',
-        name: 'Cup',
-        start_date: '2026-09-18',
-        end_date: '2026-09-19',
-        location: 'X',
-        time_zone: 'America/Winnipeg',
-      }),
-    ),
+    getTournament: () => Promise.resolve(tournament()),
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
     getTournamentResults: vi.fn(() => Promise.resolve([match()])),
     getMatchHoles: vi.fn(() => Promise.resolve([])),
@@ -53,8 +50,8 @@ import MatchDetailView from '@/views/MatchDetailView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/t/:id/m/:matchId', name: 'match', component: { template: '<div/>' } },
-    { path: '/t/:id/m/:matchId/h/:hole', name: 'hole', component: { template: '<div/>' } },
+    { path: '/t/:tournamentId/m/:matchId', name: 'match', component: { template: '<div/>' } },
+    { path: '/t/:tournamentId/m/:matchId/h/:hole', name: 'hole', component: { template: '<div/>' } },
     { path: '/admin/t/:id/m/:matchId', name: 'admin-lineup', component: { template: '<div/>' } },
   ],
 })
@@ -87,6 +84,40 @@ describe('MatchDetailView', () => {
 
     expect(w.text()).toContain("lineup for this match hasn't been set")
     expect(w.find('a[href="/admin/t/t1/m/m1"]').exists()).toBe(true)
+  })
+
+  it('does not make holes tappable before the cup is played', async () => {
+    // The entry page would only turn them straight back — it refuses to score a match
+    // whose tournament has not started.
+    tournament.mockReturnValue(futureCup)
+
+    const w = await open()
+    await w.get('tbody tr').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('match')
+    expect(w.get('tbody tr').classes()).not.toContain('cursor-pointer')
+  })
+
+  it('taps a hole through to its scores once the cup is under way', async () => {
+    tournament.mockReturnValue(liveCup)
+
+    const w = await open()
+    await w.get('tbody tr').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('hole')
+  })
+
+  it('keeps a played cup tappable, so its holes can still be read', async () => {
+    // Scoring is shut for last year's cup, but every hole of it has something to show.
+    tournament.mockReturnValue(pastCup)
+
+    const w = await open()
+    await w.get('tbody tr').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('hole')
   })
 
   it('never offers it to a logged-out viewer', async () => {
