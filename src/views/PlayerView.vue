@@ -4,7 +4,6 @@ import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
-import BaseCard from '@/components/base/BaseCard.vue'
 import SectionHeader from '@/components/typography/SectionHeader.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import PlayerTournamentRow from '@/components/player/PlayerTournamentRow.vue'
@@ -56,7 +55,7 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
 
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template v-if="player">
-        <BaseCard v-if="history.length" class="mt-6">
+        <section v-if="history.length" class="mt-2">
           <SectionHeader>
             Tournament History
             <template #subheader>{{ cupsPlayed }} played · {{ cupsWon }} won</template>
@@ -64,7 +63,7 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
           <div class="mt-2">
             <PlayerTournamentRow v-for="h in history" :key="h.tournament_id" :entry="h" :player-id="id" />
           </div>
-        </BaseCard>
+        </section>
         <p v-else class="mt-6 text-center text-mrc-muted">{{ fullName }} hasn't played in a cup yet.</p>
       </template>
     </AsyncState>

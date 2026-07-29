@@ -8,6 +8,10 @@ import TierBadge from '@/components/base/TierBadge.vue'
 // A photo-forward player card: square headshot, then career form (W-L-T · cups). tier is
 // shown only where a player has one (the current roster) — it's per-tournament, so the
 // all-players listing omits it.
+//
+// tournamentId follows the same rule, and sends the card to that cup's page rather than
+// the career profile: a card already showing this year's flight should open this year's
+// scouting report, not make you go the long way round. The profile is one back-link away.
 const props = defineProps<{
   id: string
   firstName: string
@@ -16,19 +20,25 @@ const props = defineProps<{
   record: PlayerRecord
   cups: number
   tier?: string
+  tournamentId?: string
 }>()
 
 const fullName = computed(() => `${props.firstName} ${props.lastName}`)
+const to = computed(() =>
+  props.tournamentId
+    ? { name: 'player-tournament', params: { id: props.id, tournamentId: props.tournamentId } }
+    : { name: 'player', params: { id: props.id } },
+)
 </script>
 <template>
   <RouterLink
-    :to="{ name: 'player', params: { id } }"
+    :to="to"
     class="group block overflow-hidden rounded-md border border-mrc-line bg-mrc-surface shadow transition hover:shadow-lg"
   >
     <div class="flex items-stretch">
       <PlayerAvatar :photo-path="photoPath" :alt="fullName" size="card" />
       <div class="flex min-w-0 flex-1 flex-col justify-center p-4">
-        <TierBadge v-if="tier" :tier="tier" class="mb-1.5 self-start">{{ tier }}</TierBadge>
+        <TierBadge :tier="tier" class="mb-1.5 self-start" />
         <h3 class="truncate transition group-hover:text-mrc-accent">
           {{ fullName }}
         </h3>

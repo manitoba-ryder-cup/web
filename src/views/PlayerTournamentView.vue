@@ -5,8 +5,8 @@ import { scorecardApi } from '@/api/scorecard'
 import type { MatchResult } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import PageLayout from '@/components/layout/PageLayout.vue'
+import ContentContainer from '@/components/layout/ContentContainer.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
-import BaseCard from '@/components/base/BaseCard.vue'
 import SectionHeader from '@/components/typography/SectionHeader.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import TierBadge from '@/components/base/TierBadge.vue'
@@ -68,38 +68,56 @@ const record = computed(() => {
 </script>
 <template>
   <PageLayout>
-    <AsyncState :loading="loading" :error="error" :retry="retry">
-      <template v-if="player && tournament">
-        <!-- Compact header: the player scoped to this one cup. The event line links back up
-             to the full leaderboard, so nothing is a dead end. -->
-        <div class="mt-6 flex items-center gap-4">
-          <PlayerAvatar :photo-path="player.photo_path" :alt="fullName" size="lg" />
-          <div class="min-w-0">
-            <h2 class="truncate">{{ fullName }}</h2>
-            <RouterLink
-              :to="{ name: 'tournament', params: { id: tournamentId } }"
-              class="text-mrc-muted transition hover:text-mrc-accent hover:underline"
-            >
-              {{ year }}<template v-if="teamName"> · {{ teamName }}</template>
-            </RouterLink>
-            <p class="truncate text-sm text-mrc-muted">{{ tournament.location }}</p>
-            <div class="mt-2 flex flex-wrap items-center gap-3">
-              <TierBadge v-if="entry?.tier" :tier="entry.tier">{{ entry.tier }} flight</TierBadge>
-              <span class="text-sm tabular-nums text-mrc-muted">Record {{ record.wins }}–{{ record.losses }}–{{ record.ties }}</span>
+    <!-- The header goes in #top, which sits outside the page's content container, so its
+         rule runs the full width of the screen instead of stopping at the text. A
+         container inside keeps the header itself aligned with the content below it. -->
+    <template #top>
+      <div v-if="player && tournament" class="border-b border-mrc-line">
+        <ContentContainer>
+          <!-- The player scoped to this one cup. The event line links back up to the full
+               leaderboard, so nothing is a dead end. -->
+          <div class="flex items-center gap-4 py-6">
+            <PlayerAvatar :photo-path="player.photo_path" :alt="fullName" size="lg" />
+            <div class="min-w-0">
+              <h2 class="truncate">{{ fullName }}</h2>
+              <RouterLink
+                :to="{ name: 'tournament', params: { id: tournamentId } }"
+                class="text-mrc-muted transition hover:text-mrc-accent hover:underline"
+              >
+                {{ year }}<template v-if="teamName"> · {{ teamName }}</template>
+              </RouterLink>
+              <p class="truncate text-sm text-mrc-muted">{{ tournament.location }}</p>
+              <div class="mt-2 flex flex-wrap items-center gap-3">
+                <TierBadge :tier="entry?.tier" />
+                <span class="text-sm tabular-nums text-mrc-muted">Record {{ record.wins }}–{{ record.losses }}–{{ record.ties }}</span>
+              </div>
             </div>
           </div>
-        </div>
+        </ContentContainer>
+      </div>
+    </template>
 
-        <BaseCard v-if="entry?.biography" class="mt-6">
+    <AsyncState :loading="loading" :error="error" :retry="retry">
+      <template v-if="player && tournament">
+        <!-- Straight onto the page rather than into a card: this is the page's content, not
+             a widget on it, and a border around an essay reads as a pull-quote. Its own
+             measure too, because the page container runs to 1024px and prose stops being
+             readable somewhere around 75 characters a line.
+             whitespace-pre-line because these are written in paragraphs, and collapsing
+             them loses every beat the author put in. -->
+        <section class="mt-6">
           <SectionHeader>Scouting Report</SectionHeader>
-          <p class="mt-3 leading-relaxed text-mrc-charcoal">{{ entry.biography }}</p>
-        </BaseCard>
+          <p v-if="entry?.biography" class="mt-3 max-w-prose whitespace-pre-line leading-relaxed text-mrc-charcoal">
+            {{ entry.biography }}
+          </p>
+          <p v-else class="mt-3 text-mrc-muted">No scouting report was written for {{ fullName }} this year.</p>
+        </section>
 
         <section class="mt-8">
           <SectionHeader>Matches</SectionHeader>
           <div class="mt-4">
             <div v-for="m in matches" :key="m.match_id">
-              <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-mrc-muted">{{ m.format_name }}</p>
+              <p class="text-center mb-1 text-xs font-semibold uppercase tracking-widest text-mrc-muted">{{ m.format_name }}</p>
               <RouterLink :to="{ name: 'match', params: { tournamentId, matchId: m.match_id } }" class="block">
                 <MatchOverview :match="m" :teams="teams" />
               </RouterLink>

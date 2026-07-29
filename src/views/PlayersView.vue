@@ -16,8 +16,12 @@ const { data, error, loading, retry } = useAsync(async () => {
   const [tournaments, all] = await Promise.all([scorecardApi.listTournaments(), scorecardApi.listPlayers()])
   const current = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))[0] ?? null
   const roster = current ? await scorecardApi.getTournamentPlayers(current.id) : []
-  return { roster, all }
+  return { roster, all, currentId: current?.id ?? '' }
 })
+
+// Roster cards open the player at this cup — the tab is about this cup, and so is the
+// tier each card shows.
+const currentId = computed(() => data.value?.currentId ?? '')
 
 // Roster reads by flight: tier first (gold at the top), then surname within a flight.
 const TIER_RANK: Record<string, number> = { gold: 0, silver: 1, black: 2, blue: 3, white: 4 }
@@ -52,6 +56,7 @@ const allPlayers = computed(() => [...(data.value?.all ?? [])].sort(byName))
                     :record="p.record"
                     :cups="p.cups_won"
                     :tier="p.tier"
+                    :tournament-id="currentId"
                   />
                 </CardGrid>
               </template>
