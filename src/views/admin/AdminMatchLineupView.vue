@@ -7,6 +7,7 @@ import { formatTeeTime } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import TierDot from '@/components/base/TierDot.vue'
+import CapsLabel from '@/components/typography/CapsLabel.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import XIcon from '@/components/icons/XIcon.vue'
@@ -120,7 +121,7 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
 
             <!-- Add from this team's drafted players, until the slots are full. -->
             <template v-if="panel.assigned.length < slots">
-              <p class="mt-4 text-sm font-semibold uppercase text-mrc-muted">Add a player</p>
+              <CapsLabel size="sm" class="mt-4 text-mrc-muted">Add a player</CapsLabel>
               <div class="mt-3 flex flex-wrap gap-2">
                 <button
                   v-for="p in panel.available"

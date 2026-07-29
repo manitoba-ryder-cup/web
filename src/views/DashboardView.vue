@@ -9,6 +9,7 @@ import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
 import { tournamentEyebrow } from '@/lib/tournament'
 import ContentContainer from '@/components/layout/ContentContainer.vue'
+import CapsLabel from '@/components/typography/CapsLabel.vue'
 import SectionCard from '@/components/layout/SectionCard.vue'
 import OrderOfPlay from '@/components/tournament/OrderOfPlay.vue'
 import Rosters from '@/components/tournament/Rosters.vue'
@@ -113,18 +114,18 @@ const { segments } = useCountdown(teeOffAt)
       <img src="/img/crowd.webp" alt="" fetchpriority="high" class="absolute inset-0 h-full w-full object-cover" />
       <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/60 to-black/80" />
       <div class="relative w-full max-w-2xl">
-        <p v-if="heroEyebrow" class="text-sm font-semibold uppercase tracking-widest text-white/80">{{ heroEyebrow }}</p>
+        <CapsLabel v-if="heroEyebrow" size="sm" class="text-white/80">{{ heroEyebrow }}</CapsLabel>
 
         <!-- Upcoming: the matchup (once captains are set) + countdown, not a 0–0 score. -->
         <template v-if="phase === 'upcoming'">
           <CaptainMatchup v-if="showMatchup" :teams="teams" size="lg" class="mt-5" />
           <h1 v-else-if="tournament" class="mt-4 md:text-5xl">{{ tournament.name }}</h1>
           <div v-if="segments" class="mt-7">
-            <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-white/60">Tees off in</p>
+            <CapsLabel class="mb-3 text-white/60">Tees off in</CapsLabel>
             <div class="flex items-start justify-center gap-5 tabular-nums sm:gap-7">
               <div v-for="seg in segments" :key="seg.label" class="flex flex-col items-center">
                 <span class="font-body text-5xl font-bold leading-none md:text-6xl">{{ seg.text }}</span>
-                <span class="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/60">{{ seg.label }}</span>
+                <CapsLabel class="mt-1.5 text-white/60">{{ seg.label }}</CapsLabel>
               </div>
             </div>
           </div>
@@ -170,7 +171,7 @@ const { segments } = useCountdown(teeOffAt)
           <SectionCard v-if="hasSchedule" title="Order of Play">
             <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
           </SectionCard>
-          <p v-if="tbdNote" class="py-2 text-center text-sm font-medium uppercase tracking-wide text-mrc-muted">{{ tbdNote }}</p>
+          <CapsLabel v-if="tbdNote" size="sm" class="py-2 text-center text-mrc-muted">{{ tbdNote }}</CapsLabel>
         </template>
 
         <!-- Live / finished: the order of play. -->

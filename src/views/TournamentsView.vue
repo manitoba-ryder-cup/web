@@ -4,6 +4,7 @@ import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import CardGrid from '@/components/layout/CardGrid.vue'
+import CapsLabel from '@/components/typography/CapsLabel.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import TournamentCard from '@/components/tournament/TournamentCard.vue'
 
@@ -28,7 +29,7 @@ const run = computed(() => {
 <template>
   <PageLayout title="History" image="/img/oceanside.webp">
     <div class="mx-auto mb-8 max-w-2xl text-center">
-      <p v-if="run" class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-mrc-muted tabular-nums">{{ run }}</p>
+      <CapsLabel v-if="run" class="mb-2 tabular-nums text-mrc-muted">{{ run }}</CapsLabel>
       <h2 class="mb-4">An Event Like No Other</h2>
       <p class="text-mrc-muted">
         The Manitoba Ryder Cup has become one of the province's greatest sporting events. Every year, a handful of

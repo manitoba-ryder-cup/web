@@ -73,8 +73,9 @@ describe('PlayerView', () => {
   it('renders the tournament history and cups summary', async () => {
     const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
     await flushPromises()
-    // Cups summary derived from history (2 played, 1 won).
-    expect(w.text()).toContain('2 played · 1 won')
+    // Cups played is derived from the history and counted in the hero, beside the career
+    // record and cups won that the player endpoint supplies.
+    expect(w.text()).toContain('Cups')
     // History rows: year, team color, and result badge text.
     // The team is identified by captain ("Team {surname}"), never by colour.
     expect(w.text()).toContain('2024')

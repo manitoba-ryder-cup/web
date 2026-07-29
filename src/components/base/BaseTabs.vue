@@ -7,9 +7,11 @@ import { useRoute, useRouter } from 'vue-router'
 // the caller renders only the active panel.
 //
 // The active tab is mirrored in the URL hash (e.g. #alt-shot) so a refresh or a shared
-// link reopens the same tab. The hash is a single slot, so a page should render at most
-// one tab bar; two would fight over it (add a namespaced key here if that ever comes up).
-const props = defineProps<{ tabs: string[] }>()
+// link reopens the same tab. The hash is a single slot, so a page can have one owner of
+// it: syncHash: false leaves the tab in local state, for a page that already spends its
+// hash on something else (the player profile keeps the open cup there, which is what the
+// roster links to).
+const props = withDefaults(defineProps<{ tabs: string[]; syncHash?: boolean }>(), { syncHash: true })
 
 const route = useRoute()
 const router = useRouter()
@@ -27,20 +29,23 @@ function indexFromHash(): number {
   return i >= 0 ? i : 0
 }
 
-const active = ref(indexFromHash())
+const active = ref(props.syncHash ? indexFromHash() : 0)
 
-// Reflect the active tab in the hash (replace, not push — refresh restores the tab without
-// piling up history entries). No scrollBehavior is configured, so this won't jump the page.
-watch(active, (i) => {
-  const target = `#${slugs.value[i]}`
-  if (route.hash !== target) router.replace({ path: route.path, query: route.query, hash: target })
-})
+if (props.syncHash) {
+  // Reflect the active tab in the hash (replace, not push — refresh restores the tab
+  // without piling up history entries). No scrollBehavior is configured, so this won't
+  // jump the page.
+  watch(active, (i) => {
+    const target = `#${slugs.value[i]}`
+    if (route.hash !== target) router.replace({ path: route.path, query: route.query, hash: target })
+  })
 
-// Follow the hash the other way too (back/forward, or a pasted link once tabs are known).
-watch([() => route.hash, slugs], () => {
-  const i = indexFromHash()
-  if (i !== active.value) active.value = i
-})
+  // Follow the hash the other way too (back/forward, or a pasted link once tabs are known).
+  watch([() => route.hash, slugs], () => {
+    const i = indexFromHash()
+    if (i !== active.value) active.value = i
+  })
+}
 
 // Keep the active index valid if the tab list shrinks/changes.
 watch(

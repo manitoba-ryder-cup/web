@@ -6,7 +6,7 @@ defineProps<{ title: string; padded?: boolean }>()
 <template>
   <section class="overflow-hidden rounded-md border border-mrc-line bg-white">
     <!-- h6: the band is a small label, and the level carries the size. -->
-    <h6 class="bg-mrc-muted py-2.5 text-center uppercase tracking-[0.2em] text-white">
+    <h6 class="bg-mrc-muted py-2.5 text-center uppercase tracking-widest text-white">
       {{ title }}
     </h6>
     <div :class="padded ? 'p-4' : ''"><slot /></div>
