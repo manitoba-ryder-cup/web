@@ -120,6 +120,21 @@ export interface PlayerStats {
   opponents: PairRecord[]
   points: number
   cups_played: number
+  // How they fare when a match goes the distance against when it is closed out early. A
+  // halved match can only be in last_hole, since a half requires playing the 18th.
+  last_hole: PlayerRecord
+  decided_early: PlayerRecord
+  // The heaviest result each way; null for a player who has never won, or never lost.
+  best_win: NotableMatch | null
+  heaviest_loss: NotableMatch | null
+}
+// One match worth naming. lead/holes_remaining are the raw margin rather than a rendered
+// "9 & 7", so it formats through resultText like every other match.
+export interface NotableMatch {
+  year: string
+  lead: number
+  holes_remaining: number
+  opponents: string
 }
 export interface PlayerTournamentHistory {
   tournament_id: string

@@ -21,6 +21,10 @@ vi.mock('@/api/scorecard', () => ({
       opponents: [{ player_id: 'p4', first_name: 'Nick', last_name: 'Milnes', matches: 4, record: { wins: 1, losses: 3, ties: 0 } }],
       points: 3,
       cups_played: 2,
+      last_hole: { wins: 1, losses: 1, ties: 0 },
+      decided_early: { wins: 2, losses: 0, ties: 0 },
+      best_win: { year: '2019', lead: 9, holes_remaining: 7, opponents: 'Phin' },
+      heaviest_loss: { year: '2017', lead: 5, holes_remaining: 0, opponents: 'Macaulay / Ray' },
     }),
     getTournamentResults: vi.fn().mockResolvedValue([]),
     getTournamentTeams: vi.fn().mockResolvedValue([]),
@@ -165,6 +169,29 @@ describe('PlayerView stats tab', () => {
     await flushPromises()
     expect(w.text()).toContain('Cam Macaulay') // paired 3 times
     expect(w.text()).not.toContain('One Off') // paired once
+  })
+
+  it('splits matches that went the distance from ones closed out early', async () => {
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Stats')!
+      .trigger('click')
+    await flushPromises()
+    await w
+      .findAll('button[aria-expanded]')
+      .find((b) => b.text().includes('Under pressure'))!
+      .trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('Went to the 18th')
+    expect(w.text()).toContain('1–1–0')
+    expect(w.text()).toContain('2–0–0')
+
+    // Margins render through resultText, so they read as they do on a scorecard: a match
+    // with holes left is "9 & 7", one settled on the last green is "5 up".
+    expect(w.text()).toContain('9 & 7 over Phin')
+    expect(w.text()).toContain('5 up to Macaulay / Ray')
   })
 
   it('opens one stats section at a time, so the page stays scannable', async () => {

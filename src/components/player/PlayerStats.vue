@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import type { PairRecord, PlayerStats } from '@/api/types'
+import type { NotableMatch, PairRecord, PlayerStats } from '@/api/types'
+import { resultText } from '@/lib/matchResult'
 import BaseAccordion from '@/components/base/BaseAccordion.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 
@@ -24,6 +25,12 @@ const repeatedTeammates = computed(() => props.stats.teammates.filter((t) => t.m
 const frequentOpponents = computed(() => props.stats.opponents.filter((o) => o.matches >= REPEATED))
 
 const name = (p: PairRecord) => `${p.first_name} ${p.last_name}`.replace(/\s+/g, ' ')
+
+// Through resultText, so a margin here reads exactly as it does on a scorecard — "9 & 7",
+// or "1 up" for one settled on the last green. winner_team_id only has to be non-null for
+// the finished branch; which side won is already implied by the row it sits on.
+const margin = (m: NotableMatch) =>
+  resultText({ finished: true, winner_team_id: 'them', leader_team_id: 'them', lead: m.lead, holes_remaining: m.holes_remaining })
 
 // Sections fold away, one open at a time, because the lists are long before any of the
 // stats still to come are added. Local state rather than useHashAccordion: this page
@@ -62,6 +69,37 @@ const toggle = (id: string) => (openSection.value = openSection.value === id ? '
           <div v-for="f in stats.by_format" :key="f.format_name" class="flex items-center justify-between py-2">
             <span>{{ f.format_name }}</span>
             <span class="tabular-nums text-mrc-muted">{{ wlt(f.record) }}</span>
+          </div>
+        </div>
+      </BaseAccordion>
+
+      <BaseAccordion :open="openSection === 'clutch'" item-id="clutch" @toggle="toggle('clutch')">
+        <template #header>
+          <h5 class="uppercase tracking-wide">Under pressure</h5>
+          <p class="truncate text-sm text-mrc-muted">Matches that went the distance against ones closed out early</p>
+        </template>
+        <div class="divide-y divide-mrc-line">
+          <div class="flex items-center justify-between py-2">
+            <span>Went to the 18th</span>
+            <span class="tabular-nums text-mrc-muted">{{ wlt(stats.last_hole) }}</span>
+          </div>
+          <div class="flex items-center justify-between py-2">
+            <span>Closed out early</span>
+            <span class="tabular-nums text-mrc-muted">{{ wlt(stats.decided_early) }}</span>
+          </div>
+          <div v-if="stats.best_win" class="flex items-center justify-between gap-3 py-2">
+            <span class="shrink-0">Biggest win</span>
+            <span class="truncate text-right text-mrc-muted">
+              <span class="tabular-nums">{{ margin(stats.best_win) }}</span> over {{ stats.best_win.opponents }} ·
+              <span class="tabular-nums">{{ stats.best_win.year }}</span>
+            </span>
+          </div>
+          <div v-if="stats.heaviest_loss" class="flex items-center justify-between gap-3 py-2">
+            <span class="shrink-0">Heaviest defeat</span>
+            <span class="truncate text-right text-mrc-muted">
+              <span class="tabular-nums">{{ margin(stats.heaviest_loss) }}</span> to {{ stats.heaviest_loss.opponents }} ·
+              <span class="tabular-nums">{{ stats.heaviest_loss.year }}</span>
+            </span>
           </div>
         </div>
       </BaseAccordion>
