@@ -24,7 +24,7 @@ const REPEATED = 2
 const repeatedTeammates = computed(() => props.stats.teammates.filter((t) => t.matches >= REPEATED))
 const frequentOpponents = computed(() => props.stats.opponents.filter((o) => o.matches >= REPEATED))
 
-const name = (p: PairRecord) => `${p.first_name} ${p.last_name}`.replace(/\s+/g, ' ')
+const name = (p: PairRecord) => `${p.first_name} ${p.last_name}`
 
 // Through resultText, so a margin here reads exactly as it does on a scorecard — "9 & 7",
 // or "1 up" for one settled on the last green. winner_team_id only has to be non-null for
