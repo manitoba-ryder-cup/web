@@ -157,7 +157,39 @@ describe('PlayerView stats tab', () => {
       .find((b) => b.text() === 'Stats')!
       .trigger('click')
     await flushPromises()
+    // Sections are folded, so open Partners before reading it.
+    await w
+      .findAll('button[aria-expanded]')
+      .find((b) => b.text().includes('Partners'))!
+      .trigger('click')
+    await flushPromises()
     expect(w.text()).toContain('Cam Macaulay') // paired 3 times
     expect(w.text()).not.toContain('One Off') // paired once
+  })
+
+  it('opens one stats section at a time, so the page stays scannable', async () => {
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Stats')!
+      .trigger('click')
+    await flushPromises()
+
+    const sections = () => w.findAll('button[aria-expanded]')
+    // By format leads, so the tab never opens on an empty page.
+    expect(
+      sections()
+        .find((b) => b.text().includes('By format'))!
+        .attributes('aria-expanded'),
+    ).toBe('true')
+
+    await sections()
+      .find((b) => b.text().includes('Opponents'))!
+      .trigger('click')
+    await flushPromises()
+    const open = sections().filter((b) => b.attributes('aria-expanded') === 'true')
+    expect(open).toHaveLength(1)
+    expect(open[0].text()).toContain('Opponents')
   })
 })

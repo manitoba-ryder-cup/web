@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { PairRecord, PlayerStats } from '@/api/types'
+import BaseAccordion from '@/components/base/BaseAccordion.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 
 // A career read three ways: what they play well, who they play well with, and who they
@@ -23,9 +24,15 @@ const repeatedTeammates = computed(() => props.stats.teammates.filter((t) => t.m
 const frequentOpponents = computed(() => props.stats.opponents.filter((o) => o.matches >= REPEATED))
 
 const name = (p: PairRecord) => `${p.first_name} ${p.last_name}`.replace(/\s+/g, ' ')
+
+// Sections fold away, one open at a time, because the lists are long before any of the
+// stats still to come are added. Local state rather than useHashAccordion: this page
+// already spends its hash on the open cup, and a stats section isn't worth linking to.
+const openSection = ref('formats')
+const toggle = (id: string) => (openSection.value = openSection.value === id ? '' : id)
 </script>
 <template>
-  <div class="space-y-8">
+  <div class="space-y-6">
     <!-- The headline pair, in the same divided strip the hero uses for the career line:
          two numbers on their own read as unfinished, and the profile already has a
          vocabulary for "a few key figures side by side" one screen up. -->
@@ -45,51 +52,60 @@ const name = (p: PairRecord) => `${p.first_name} ${p.last_name}`.replace(/\s+/g,
       </div>
     </div>
 
-    <section v-if="stats.by_format.length">
-      <h5 class="uppercase tracking-wide">By format</h5>
-      <div class="mt-2 divide-y divide-mrc-line border-y border-mrc-line">
-        <div v-for="f in stats.by_format" :key="f.format_name" class="flex items-center justify-between py-2">
-          <span>{{ f.format_name }}</span>
-          <span class="tabular-nums text-mrc-muted">{{ wlt(f.record) }}</span>
+    <div v-if="stats.by_format.length">
+      <BaseAccordion :open="openSection === 'formats'" item-id="formats" @toggle="toggle('formats')">
+        <template #header>
+          <h5 class="uppercase tracking-wide">By format</h5>
+          <p class="truncate text-sm text-mrc-muted">Record in each format played</p>
+        </template>
+        <div class="divide-y divide-mrc-line">
+          <div v-for="f in stats.by_format" :key="f.format_name" class="flex items-center justify-between py-2">
+            <span>{{ f.format_name }}</span>
+            <span class="tabular-nums text-mrc-muted">{{ wlt(f.record) }}</span>
+          </div>
         </div>
-      </div>
-    </section>
+      </BaseAccordion>
 
-    <section v-if="repeatedTeammates.length">
-      <h5 class="uppercase tracking-wide">Partners</h5>
-      <p class="mt-1 text-sm text-mrc-muted">Pairings played more than once, most-paired first.</p>
-      <div class="mt-2 divide-y divide-mrc-line border-y border-mrc-line">
-        <RouterLink
-          v-for="t in repeatedTeammates"
-          :key="t.player_id"
-          :to="{ name: 'player', params: { id: t.player_id } }"
-          class="flex items-center justify-between py-2 transition hover:text-mrc-accent"
-        >
-          <span class="truncate">{{ name(t) }}</span>
-          <span class="shrink-0 pl-3 tabular-nums text-mrc-muted">
-            <span class="text-mrc-faint">{{ t.matches }} together</span> · {{ wlt(t.record) }}
-          </span>
-        </RouterLink>
-      </div>
-    </section>
+      <BaseAccordion v-if="repeatedTeammates.length" :open="openSection === 'partners'" item-id="partners" @toggle="toggle('partners')">
+        <template #header>
+          <h5 class="uppercase tracking-wide">Partners</h5>
+          <p class="truncate text-sm text-mrc-muted">Played together more than once, most-paired first</p>
+        </template>
+        <div class="divide-y divide-mrc-line">
+          <RouterLink
+            v-for="t in repeatedTeammates"
+            :key="t.player_id"
+            :to="{ name: 'player', params: { id: t.player_id } }"
+            class="flex items-center justify-between py-2 transition hover:text-mrc-accent"
+          >
+            <span class="truncate">{{ name(t) }}</span>
+            <span class="shrink-0 pl-3 tabular-nums text-mrc-muted">
+              <span class="text-mrc-faint">{{ t.matches }} together</span> · {{ wlt(t.record) }}
+            </span>
+          </RouterLink>
+        </div>
+      </BaseAccordion>
 
-    <section v-if="frequentOpponents.length">
-      <h5 class="uppercase tracking-wide">Opponents</h5>
-      <p class="mt-1 text-sm text-mrc-muted">Faced more than once, most-played first.</p>
-      <div class="mt-2 divide-y divide-mrc-line border-y border-mrc-line">
-        <RouterLink
-          v-for="o in frequentOpponents"
-          :key="o.player_id"
-          :to="{ name: 'player', params: { id: o.player_id } }"
-          class="flex items-center justify-between py-2 transition hover:text-mrc-accent"
-        >
-          <span class="truncate">{{ name(o) }}</span>
-          <span class="shrink-0 pl-3 tabular-nums text-mrc-muted">
-            <span class="text-mrc-faint">{{ o.matches }} faced</span> · {{ wlt(o.record) }}
-          </span>
-        </RouterLink>
-      </div>
-    </section>
+      <BaseAccordion v-if="frequentOpponents.length" :open="openSection === 'opponents'" item-id="opponents" @toggle="toggle('opponents')">
+        <template #header>
+          <h5 class="uppercase tracking-wide">Opponents</h5>
+          <p class="truncate text-sm text-mrc-muted">Faced more than once, most-played first</p>
+        </template>
+        <div class="divide-y divide-mrc-line">
+          <RouterLink
+            v-for="o in frequentOpponents"
+            :key="o.player_id"
+            :to="{ name: 'player', params: { id: o.player_id } }"
+            class="flex items-center justify-between py-2 transition hover:text-mrc-accent"
+          >
+            <span class="truncate">{{ name(o) }}</span>
+            <span class="shrink-0 pl-3 tabular-nums text-mrc-muted">
+              <span class="text-mrc-faint">{{ o.matches }} faced</span> · {{ wlt(o.record) }}
+            </span>
+          </RouterLink>
+        </div>
+      </BaseAccordion>
+    </div>
 
     <p v-if="!stats.by_format.length" class="text-mrc-muted">{{ playerName }} hasn't finished a match yet.</p>
   </div>
