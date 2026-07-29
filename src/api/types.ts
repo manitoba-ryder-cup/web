@@ -96,6 +96,31 @@ export interface TournamentPlayer {
   record: PlayerRecord // all-time W-L-T
   cups_won: number // tournaments the player's team has won
 }
+// A player's W-L-T in one match format.
+export interface FormatRecord {
+  format_name: string
+  record: PlayerRecord
+}
+// A player's W-L-T alongside or against one other player. `matches` doubles as the
+// repeat-pairing signal: captains reuse partnerships, and the count says whether it has
+// been working.
+export interface PairRecord {
+  player_id: string
+  first_name: string
+  last_name: string
+  matches: number
+  record: PlayerRecord
+}
+// A career split the ways a captain and a player each read it. `points` is the cup's own
+// currency (a win is 1, a half is ½) reported next to the cups it was earned over, so the
+// rate is ours to compute and round.
+export interface PlayerStats {
+  by_format: FormatRecord[]
+  teammates: PairRecord[]
+  opponents: PairRecord[]
+  points: number
+  cups_played: number
+}
 export interface PlayerTournamentHistory {
   tournament_id: string
   name: string

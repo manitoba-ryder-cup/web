@@ -12,6 +12,16 @@ vi.mock('@/api/scorecard', () => ({
       photo_path: '',
       record: { wins: 5, losses: 2, ties: 1 },
     }),
+    getPlayerStats: vi.fn().mockResolvedValue({
+      by_format: [{ format_name: 'Singles', record: { wins: 3, losses: 1, ties: 0 } }],
+      teammates: [
+        { player_id: 'p2', first_name: 'Cam', last_name: 'Macaulay', matches: 3, record: { wins: 2, losses: 1, ties: 0 } },
+        { player_id: 'p3', first_name: 'One', last_name: 'Off', matches: 1, record: { wins: 1, losses: 0, ties: 0 } },
+      ],
+      opponents: [{ player_id: 'p4', first_name: 'Nick', last_name: 'Milnes', matches: 4, record: { wins: 1, losses: 3, ties: 0 } }],
+      points: 3,
+      cups_played: 2,
+    }),
     getTournamentResults: vi.fn().mockResolvedValue([]),
     getTournamentTeams: vi.fn().mockResolvedValue([]),
     getPlayerTournaments: vi.fn().mockResolvedValue([
@@ -117,5 +127,37 @@ describe('PlayerView', () => {
     await row().trigger('click')
     await flushPromises()
     expect(row().attributes('aria-expanded')).toBe('false')
+  })
+})
+
+describe('PlayerView stats tab', () => {
+  beforeEach(async () => {
+    router.push('/players/p1')
+    await router.isReady()
+  })
+
+  it('reports points as a rate, since everyone plays every format', async () => {
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Stats')!
+      .trigger('click')
+    await flushPromises()
+    // 3 points over 2 cups. The career total is shown beside it, not instead of it.
+    expect(w.text()).toContain('1.50')
+    expect(w.text()).toContain('Points per cup')
+  })
+
+  it('leaves out pairings played only once — one match is a coin toss, not a record', async () => {
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Stats')!
+      .trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('Cam Macaulay') // paired 3 times
+    expect(w.text()).not.toContain('One Off') // paired once
   })
 })

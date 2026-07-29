@@ -10,6 +10,7 @@ import FullBleed from '@/components/layout/FullBleed.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 import PlayerTournamentRow from '@/components/player/PlayerTournamentRow.vue'
+import PlayerStats from '@/components/player/PlayerStats.vue'
 
 const props = defineProps<{ id: string }>()
 
@@ -17,12 +18,17 @@ const props = defineProps<{ id: string }>()
 // profile (record + cups) comes from the player; the per-event history — including each
 // year's flight and scouting report — from its own endpoint.
 const { data, error, loading, retry } = useAsync(async () => {
-  const [player, history] = await Promise.all([scorecardApi.getPlayer(props.id), scorecardApi.getPlayerTournaments(props.id)])
-  return { player, history }
+  const [player, history, stats] = await Promise.all([
+    scorecardApi.getPlayer(props.id),
+    scorecardApi.getPlayerTournaments(props.id),
+    scorecardApi.getPlayerStats(props.id),
+  ])
+  return { player, history, stats }
 })
 
 const player = computed(() => data.value?.player ?? null)
 const history = computed(() => data.value?.history ?? [])
+const stats = computed(() => data.value?.stats ?? null)
 const fullName = computed(() => (player.value ? `${player.value.first_name} ${player.value.last_name}` : ''))
 const cupsPlayed = computed(() => history.value.length)
 
@@ -45,20 +51,26 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
         <div class="relative mx-auto flex max-w-3xl flex-col items-center px-4 py-8 text-center md:max-w-4xl md:py-12 lg:max-w-5xl">
           <PlayerAvatar :photo-path="player.photo_path" :alt="fullName" size="hero" />
           <h1 class="mt-4 text-white">{{ fullName }}</h1>
-          <div class="mt-5 inline-flex divide-x divide-white/15 overflow-hidden rounded-sm bg-black/25 ring-1 ring-white/15">
-            <div class="px-5 py-2 text-center">
+          <!-- Proportional tracks rather than a width per cell: the outer two are equal to
+               each other by definition, and the record gets half again as much room because
+               it carries the longest string. A ratio states that relationship; three
+               hand-picked widths only happen to produce it. -->
+          <div
+            class="mt-5 inline-grid grid-cols-[1fr_1.5fr_1fr] divide-x divide-white/15 overflow-hidden rounded-sm bg-black/25 ring-1 ring-white/15"
+          >
+            <div class="px-4 py-2 text-center">
+              <div class="text-lg font-semibold tabular-nums">{{ cupsPlayed }}</div>
+              <CapsLabel class="text-white/60">{{ cupsPlayed === 1 ? 'Event' : 'Events' }}</CapsLabel>
+            </div>
+            <div class="px-4 py-2 text-center">
               <div class="text-lg font-semibold tabular-nums">
                 {{ player.record.wins }}–{{ player.record.losses }}–{{ player.record.ties }}
               </div>
               <CapsLabel class="text-white/60">Record</CapsLabel>
             </div>
-            <div class="px-5 py-2 text-center">
-              <div class="text-lg font-semibold tabular-nums">{{ cupsPlayed }}</div>
-              <CapsLabel class="text-white/60">{{ cupsPlayed === 1 ? 'Cup' : 'Cups' }}</CapsLabel>
-            </div>
-            <div class="px-5 py-2 text-center">
+            <div class="px-4 py-2 text-center">
               <div class="text-lg font-semibold tabular-nums">{{ player.cups_won }}</div>
-              <CapsLabel class="text-white/60">{{ player.cups_won === 1 ? 'Cup Won' : 'Cups Won' }}</CapsLabel>
+              <CapsLabel class="text-white/60">{{ player.cups_won === 1 ? 'Cup' : 'Cups' }}</CapsLabel>
             </div>
           </div>
         </div>
@@ -76,6 +88,7 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
                 <!-- One row open at a time: an expanded cup runs to a screenful, so
                      letting several stack would bury the list it makes browsable. -->
                 <template v-if="index === 0">
+                  <div class="-mt-4"></div>
                   <PlayerTournamentRow
                     v-for="h in history"
                     :key="h.tournament_id"
@@ -85,7 +98,7 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
                     @toggle="toggle(h.tournament_id)"
                   />
                 </template>
-                <p v-else class="text-center text-mrc-muted">Stats are still to come.</p>
+                <PlayerStats v-else-if="stats" :stats="stats" :player-name="fullName" />
               </div>
             </template>
           </BaseTabs>

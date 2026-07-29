@@ -9,6 +9,7 @@ import type {
   MatchResult,
   MatchStatus,
   PlayerProfile,
+  PlayerStats,
   PlayerTournamentHistory,
   ScoreSubmission,
   TeeSetSummary,
@@ -54,6 +55,7 @@ export const scorecardApi = {
   listPlayers: () => sc().get<PlayerProfile[]>('/v1/players'),
   getPlayer: (id: string) => sc().get<PlayerProfile>(`/v1/players/${id}`),
   getPlayerTournaments: (id: string) => sc().get<PlayerTournamentHistory[]>(`/v1/players/${id}/tournaments`),
+  getPlayerStats: (id: string) => sc().get<PlayerStats>(`/v1/players/${id}/stats`),
 
   // --- Admin writes (tournaments:write scope) ---
   // Draft an entered player onto a team, or undraft them (undraft cascades them out of
