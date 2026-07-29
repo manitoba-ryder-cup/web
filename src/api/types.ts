@@ -106,6 +106,9 @@ export interface PlayerTournamentHistory {
   captain_last_name: string
   result: 'won' | 'lost' | 'tied' | 'in_progress'
   record: PlayerRecord
+  // Per tournament, not per player: a flight and a write-up describe one cup.
+  tier: string
+  biography: string
 }
 export interface TournamentTeam {
   id: string

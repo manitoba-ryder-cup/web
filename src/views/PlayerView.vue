@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -23,6 +24,41 @@ const history = computed(() => data.value?.history ?? [])
 const fullName = computed(() => (player.value ? `${player.value.first_name} ${player.value.last_name}` : ''))
 const cupsPlayed = computed(() => history.value.length)
 const cupsWon = computed(() => history.value.filter((h) => h.result === 'won').length)
+
+const openId = ref('')
+
+// The open cup lives in the hash, so a cup is linkable — the roster sends you straight to
+// this player's current one, and a shared link opens where the sender left it.
+//
+// Keyed by tournament id, not year. There has been exactly one cup a year since 2008, but
+// nothing enforces it: tournaments are unique on (name, start_date, end_date), so a second
+// cup in a year is legal. Keyed by year, that would silently resolve to whichever came
+// first and leave the other unreachable. The player id in the path is already a uuid, so a
+// readable hash was buying very little.
+const route = useRoute()
+const router = useRouter()
+
+watch(
+  [history, () => route.hash],
+  async () => {
+    const id = route.hash.replace('#', '')
+    const entry = id ? history.value.find((h) => h.tournament_id === id) : null
+    if (!entry || openId.value === entry.tournament_id) return
+    openId.value = entry.tournament_id
+    // Arriving on a deep link, the cup can be far down an eighteen-row list.
+    await nextTick()
+    document.getElementById(`cup-${entry.tournament_id}`)?.scrollIntoView({ block: 'start' })
+  },
+  { immediate: true },
+)
+
+function toggle(entry: { tournament_id: string }) {
+  const nowOpen = openId.value !== entry.tournament_id
+  openId.value = nowOpen ? entry.tournament_id : ''
+  // replace, not push: opening cups shouldn't fill the back button with steps through one
+  // player's career.
+  router.replace({ hash: nowOpen ? `#${entry.tournament_id}` : '' })
+}
 
 const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)), url('/img/mountain-green.webp')`)
 </script>
@@ -60,8 +96,17 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
             Tournament History
             <template #subheader>{{ cupsPlayed }} played · {{ cupsWon }} won</template>
           </SectionHeader>
+          <!-- One row open at a time: an expanded cup runs to a screenful, so letting
+               several stack would bury the list it is supposed to make browsable. -->
           <div class="mt-2">
-            <PlayerTournamentRow v-for="h in history" :key="h.tournament_id" :entry="h" :player-id="id" />
+            <PlayerTournamentRow
+              v-for="h in history"
+              :key="h.tournament_id"
+              :entry="h"
+              :player-id="id"
+              :open="openId === h.tournament_id"
+              @toggle="toggle(h)"
+            />
           </div>
         </section>
         <p v-else class="mt-6 text-center text-mrc-muted">{{ fullName }} hasn't played in a cup yet.</p>

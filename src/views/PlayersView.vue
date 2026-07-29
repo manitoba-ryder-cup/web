@@ -19,8 +19,8 @@ const { data, error, loading, retry } = useAsync(async () => {
   return { roster, all, currentId: current?.id ?? '' }
 })
 
-// Roster cards open the player at this cup — the tab is about this cup, and so is the
-// tier each card shows.
+// Roster cards open the player with this cup already expanded — the tab is about this cup,
+// and so is the tier each card shows.
 const currentId = computed(() => data.value?.currentId ?? '')
 
 // Roster reads by flight: tier first (gold at the top), then surname within a flight.

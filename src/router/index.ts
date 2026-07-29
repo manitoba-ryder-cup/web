@@ -45,11 +45,11 @@ const router = createRouter({
       meta: { back: () => ({ to: { name: 'players' }, label: 'Players' }) },
     },
     {
+      // The per-cup page is gone — a player's cups open in place on their profile instead.
+      // Kept as a redirect because this URL was shareable and is what the roster linked to,
+      // and the hash lands on the same cup the old page showed.
       path: '/players/:id/tournaments/:tournamentId',
-      name: 'player-tournament',
-      component: () => import('@/views/PlayerTournamentView.vue'),
-      props: true,
-      meta: { back: (r) => ({ to: { name: 'player', params: { id: r.params.id } }, label: 'Profile' }) },
+      redirect: (to) => ({ name: 'player', params: { id: to.params.id }, hash: `#${to.params.tournamentId}` }),
     },
     // Admin area — assigning players to teams and matches. Gated behind login; the
     // write endpoints additionally require the tournaments:write scope on the token.

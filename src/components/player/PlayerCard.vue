@@ -9,9 +9,9 @@ import TierBadge from '@/components/base/TierBadge.vue'
 // shown only where a player has one (the current roster) — it's per-tournament, so the
 // all-players listing omits it.
 //
-// tournamentId follows the same rule, and sends the card to that cup's page rather than
-// the career profile: a card already showing this year's flight should open this year's
-// scouting report, not make you go the long way round. The profile is one back-link away.
+// tournamentId follows the same rule, and opens the profile with that cup already
+// expanded: a card showing this year's flight should land on this year's write-up rather
+// than make you find it, and the rest of the player's career is right there under it.
 const props = defineProps<{
   id: string
   firstName: string
@@ -24,11 +24,11 @@ const props = defineProps<{
 }>()
 
 const fullName = computed(() => `${props.firstName} ${props.lastName}`)
-const to = computed(() =>
-  props.tournamentId
-    ? { name: 'player-tournament', params: { id: props.id, tournamentId: props.tournamentId } }
-    : { name: 'player', params: { id: props.id } },
-)
+const to = computed(() => ({
+  name: 'player',
+  params: { id: props.id },
+  ...(props.tournamentId ? { hash: `#${props.tournamentId}` } : {}),
+}))
 </script>
 <template>
   <RouterLink

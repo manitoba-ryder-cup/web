@@ -12,6 +12,8 @@ vi.mock('@/api/scorecard', () => ({
       photo_path: '',
       record: { wins: 5, losses: 2, ties: 1 },
     }),
+    getTournamentResults: vi.fn().mockResolvedValue([]),
+    getTournamentTeams: vi.fn().mockResolvedValue([]),
     getPlayerTournaments: vi.fn().mockResolvedValue([
       {
         tournament_id: 't1',
@@ -23,6 +25,8 @@ vi.mock('@/api/scorecard', () => ({
         captain_last_name: 'Macaulay',
         result: 'won',
         record: { wins: 3, losses: 1, ties: 0 },
+        tier: 'gold',
+        biography: 'Jane once holed out from the car park.',
       },
       {
         tournament_id: 't2',
@@ -34,6 +38,8 @@ vi.mock('@/api/scorecard', () => ({
         captain_last_name: 'Milnes',
         result: 'lost',
         record: { wins: 1, losses: 3, ties: 0 },
+        tier: 'blue',
+        biography: '',
       },
     ]),
   },
@@ -46,7 +52,6 @@ const router = createRouter({
   routes: [
     { path: '/players', name: 'players', component: { template: '<div/>' } },
     { path: '/players/:id', name: 'player', component: { template: '<div/>' } },
-    { path: '/players/:id/tournaments/:tournamentId', name: 'player-tournament', component: { template: '<div/>' } },
     { path: '/tournaments/:id', name: 'tournament', component: { template: '<div/>' } },
   ],
 })
@@ -75,17 +80,41 @@ describe('PlayerView', () => {
     expect(w.text()).toContain('2024')
     expect(w.text()).toContain('Team Macaulay')
     expect(w.text()).toContain('Won')
-    expect(w.text()).toContain('Clear Lake')
     expect(w.text()).toContain('2023')
     expect(w.text()).toContain('Team Milnes')
     expect(w.text()).toContain('Lost')
   })
 
-  it('links each history row to its per-tournament page', async () => {
+  it('opens a cup in place, and only one at a time', async () => {
     const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
     await flushPromises()
-    // Rows drill into the player's scouting report for that year, not the tournament page.
-    expect(w.find('a[href="/players/p1/tournaments/t1"]').exists()).toBe(true)
-    expect(w.find('a[href="/players/p1/tournaments/t2"]').exists()).toBe(true)
+    const rows = w.findAll('button[aria-expanded]')
+    expect(rows).toHaveLength(2)
+    expect(rows.every((r) => r.attributes('aria-expanded') === 'false')).toBe(true)
+
+    await rows[0].trigger('click')
+    await flushPromises()
+    expect(w.findAll('button[aria-expanded]')[0].attributes('aria-expanded')).toBe('true')
+    expect(w.text()).toContain('holed out from the car park')
+
+    // Opening another closes the first, so expanded cups can't stack up — and a closed
+    // panel leaves the DOM entirely, so its links can't be tabbed into.
+    await w.findAll('button[aria-expanded]')[1].trigger('click')
+    await flushPromises()
+    expect(w.findAll('button[aria-expanded]').map((r) => r.attributes('aria-expanded'))).toEqual(['false', 'true'])
+    expect(w.text()).not.toContain('holed out from the car park')
+    expect(w.text()).toContain('No biography was written this year.')
+  })
+
+  it('closes an open cup when its own row is tapped again', async () => {
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    const row = () => w.findAll('button[aria-expanded]')[0]
+    await row().trigger('click')
+    await flushPromises()
+    expect(row().attributes('aria-expanded')).toBe('true')
+    await row().trigger('click')
+    await flushPromises()
+    expect(row().attributes('aria-expanded')).toBe('false')
   })
 })
