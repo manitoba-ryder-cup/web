@@ -9,6 +9,10 @@ on:
   push:
     tags: ['v*']
 
+# write, so the run can publish a GitHub release for the tag it just shipped.
+permissions:
+  contents: write
+
 jobs:
   release:
     name: Build & deploy to Cloudflare Pages
@@ -56,3 +60,12 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
           command: deploy
+
+      # A tag deploys but leaves no record of what went out. The notes are generated from
+      # the commits since the previous tag; the annotated tag message becomes the summary
+      # above them. Nothing is attached — the deployment itself lives in Cloudflare, so
+      # there is no artifact here worth keeping.
+      - name: Publish the release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
