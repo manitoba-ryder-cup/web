@@ -17,6 +17,7 @@ import AdminTournamentView from '@/views/admin/AdminTournamentView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: '/admin/:id/players', name: 'admin-roster', component: { template: '<div/>' } },
     { path: '/admin/:id/teams', name: 'admin-teams', component: { template: '<div/>' } },
     { path: '/admin/:id/matches/:matchId', name: 'admin-lineup', component: { template: '<div/>' } },
   ],

@@ -16,6 +16,8 @@ import type {
   TeeSetSummary,
   Tournament,
   TournamentPlayer,
+  EnterTournamentPlayerBody,
+  UpdateTournamentPlayerBody,
   TournamentTeam,
   WinnerResponse,
 } from './types'
@@ -47,6 +49,10 @@ export const scorecardApi = {
   getTournamentWinner: (id: string) => sc().get<WinnerResponse>(`/v1/tournaments/${id}/winner`),
   getTournamentResults: (id: string) => sc().get<MatchResult[]>(`/v1/tournaments/${id}/results`),
   getTournamentPlayers: (id: string) => sc().get<TournamentPlayer[]>(`/v1/tournaments/${id}/players`),
+  enterTournamentPlayer: (tournamentId: string, body: EnterTournamentPlayerBody) =>
+    sc().post<TournamentPlayer>(`/v1/tournaments/${tournamentId}/players`, body),
+  updateTournamentPlayer: (tournamentId: string, playerId: string, body: UpdateTournamentPlayerBody) =>
+    sc().put<TournamentPlayer>(`/v1/tournaments/${tournamentId}/players/${playerId}`, body),
   getMatchScores: (id: string) => sc().get<HoleStatus[]>(`/v1/matches/${id}/scores`),
   getMatchHoles: (id: string) => sc().get<Hole[]>(`/v1/matches/${id}/holes`),
   // Records a hole's scores (scores:write), all in one write. Returns the match's

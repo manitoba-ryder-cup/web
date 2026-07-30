@@ -147,6 +147,20 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
           </FullBleed>
         </div>
       </template>
+      <!-- In the order a cup is actually set up: enter the field, split it into sides,
+           then put the sides into matches. -->
+      <RouterLink :to="{ name: 'admin-roster', params: { id } }" class="mb-3 block transition hover:shadow-lg">
+        <BaseCard>
+          <div class="flex items-center justify-between">
+            <div>
+              <h4>Assign players</h4>
+              <p class="text-sm text-mrc-muted">Enter the field, and set each player's flight, handicap and biography.</p>
+            </div>
+            <ChevronRightIcon class="shrink-0 text-mrc-faint" />
+          </div>
+        </BaseCard>
+      </RouterLink>
+
       <RouterLink :to="{ name: 'admin-teams', params: { id } }" class="block transition hover:shadow-lg">
         <BaseCard>
           <div class="flex items-center justify-between">
