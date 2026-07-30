@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import type { MatchResult, PlayerTournamentHistory, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import TierBadge from '@/components/base/TierBadge.vue'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import BaseAccordion from '@/components/base/BaseAccordion.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
@@ -92,7 +93,13 @@ watch(
         </RouterLink>
       </div>
     </div>
-    <p v-else-if="loadingMatches" class="mt-2 text-sm text-mrc-muted">Loading matches…</p>
+    <div v-else-if="loadingMatches" data-testid="skeleton">
+      <span class="sr-only" role="status">Loading matches…</span>
+      <div v-for="n in 3" :key="n">
+        <SkeletonBlock class="mx-auto mb-1 mt-3 h-3 w-24" />
+        <SkeletonBlock radius="md" class="h-14 w-full" />
+      </div>
+    </div>
     <p v-else class="mt-2 text-sm text-mrc-muted">No matches recorded for this cup.</p>
   </BaseAccordion>
 </template>
