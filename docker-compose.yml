@@ -4,10 +4,13 @@
 # /api/auth -> heimdall and /api/scorecard -> scorecard, so everything is one origin.
 #
 #   ./dev/generate-keys.sh          # once
-#   docker compose up -d --build
-#   ./dev/seed.sh                   # create the dev user + register scorecard scopes
+#   ./dev/bootstrap.sh              # start the stack + create the dev user
 #
-# Supporting files (postgres init, keys, seed) live under ./dev.
+# Don't `docker compose up` this by hand the first time — scorecard needs a tenant id
+# that doesn't exist until heimdall mints it with the first user, so bootstrap.sh starts
+# the services in dependency order and writes .env. See dev/README.md.
+#
+# Supporting files (postgres init, keys, bootstrap) live under ./dev.
 name: mrc-dev
 
 services:
