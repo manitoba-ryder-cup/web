@@ -6,6 +6,7 @@ import PageLayout from '@/components/layout/PageLayout.vue'
 import CardGrid from '@/components/layout/CardGrid.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonGrid from '@/components/skeleton/SkeletonGrid.vue'
 import TournamentCard from '@/components/tournament/TournamentCard.vue'
 
 // Each card shows the final scores, so fetch every tournament's teams (one-time — this
@@ -39,6 +40,9 @@ const run = computed(() => {
       </p>
     </div>
     <AsyncState :loading="loading" :error="error" :retry="retry" :empty="!data?.length" empty-text="No tournaments yet.">
+      <!-- Nine, not eighteen: the page lists roughly eighteen cups, and nine fills the fold
+           on a desktop grid without reserving a screenful of placeholder on a phone. -->
+      <template #loading><SkeletonGrid :cards="9" /></template>
       <CardGrid>
         <TournamentCard v-for="x in data ?? []" :key="x.tournament.id" :tournament="x.tournament" :teams="x.teams" />
       </CardGrid>
