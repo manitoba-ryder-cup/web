@@ -10,6 +10,9 @@ import { formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
+import SkeletonTabs from '@/components/skeleton/SkeletonTabs.vue'
+import SkeletonList from '@/components/skeleton/SkeletonList.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseTabs from '@/components/base/BaseTabs.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -133,6 +136,17 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
 <template>
   <PageLayout :title="tournament?.name ?? 'Setup'" image="/img/oceanside.webp">
     <AsyncState :loading="loading" :error="error" :retry="retry">
+      <template #loading>
+        <!-- The page title is `tournament?.name ?? 'Setup'`, so the header already changes
+             when data lands; a collapsed body would add a second jump underneath it. -->
+        <SkeletonBlock radius="md" class="h-20 w-full" />
+        <div class="mt-8">
+          <FullBleed>
+            <SkeletonTabs />
+            <div class="px-4 pt-6"><SkeletonList :rows="5" /></div>
+          </FullBleed>
+        </div>
+      </template>
       <RouterLink :to="{ name: 'admin-teams', params: { id } }" class="block transition hover:shadow-lg">
         <BaseCard>
           <div class="flex items-center justify-between">
