@@ -67,6 +67,13 @@ const router = createRouter({
       meta: { requiresAuth: true, back: () => ({ to: { name: 'admin' }, label: 'Admin' }) },
     },
     {
+      path: '/admin/tournaments/:id/players',
+      name: 'admin-roster',
+      component: () => import('@/views/admin/AdminRosterView.vue'),
+      props: true,
+      meta: { requiresAuth: true, back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }) },
+    },
+    {
       path: '/admin/tournaments/:id/teams',
       name: 'admin-teams',
       component: () => import('@/views/admin/AdminTeamsView.vue'),

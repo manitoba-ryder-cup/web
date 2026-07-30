@@ -92,6 +92,22 @@ export interface PlayerProfile extends Player {
 }
 // A player's entry in a specific tournament: their team (the draft), tier, and that
 // year's biography (per-tournament, so it isn't overwritten between events).
+// Body for entering a player in a tournament. Attributes default server-side when
+// omitted (tier "white", empty biography, hdcp 0).
+export interface EnterTournamentPlayerBody {
+  player_id: string
+  tier?: string
+  biography?: string
+  hdcp?: number
+}
+// Body for updating a player's entry. Every field is optional and only the ones sent are
+// written, so setting a biography leaves the tier and handicap as they were.
+export interface UpdateTournamentPlayerBody {
+  tier?: string
+  biography?: string
+  hdcp?: number
+}
+
 export interface TournamentPlayer {
   tournament_id: string
   player_id: string
