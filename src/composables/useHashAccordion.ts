@@ -18,9 +18,13 @@ export function useHashAccordion(ids: () => string[]) {
       const id = route.hash.replace('#', '')
       if (!id || openId.value === id || !ids().includes(id)) return
       openId.value = id
-      // On a deep link the row can be far down a long list.
+      // `nearest` rather than `start`: the row is usually the current cup, which sits at
+      // the top of the list, and pinning it to the top of the viewport would push the
+      // player's avatar and record off screen to reveal something already visible. An old
+      // cup reached from a legacy /players/:id/tournaments/:id link is far down and still
+      // gets scrolled to — just by the least amount that brings it into view.
       await nextTick()
-      document.getElementById(`accordion-${id}`)?.scrollIntoView({ block: 'start' })
+      document.getElementById(`accordion-${id}`)?.scrollIntoView({ block: 'nearest' })
     },
     { immediate: true },
   )
