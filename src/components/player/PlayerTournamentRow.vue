@@ -34,6 +34,10 @@ const teams = ref<TournamentTeam[]>([])
 const loadingMatches = ref(false)
 let loaded = false
 
+// immediate, because the row is not always created closed. A deep link resolves the hash
+// before the history renders, so the row's first render already has open=true and there is
+// no false→true transition to watch — the matches would never load, while clicking the
+// same row by hand worked fine.
 watch(
   () => props.open,
   async (isOpen) => {
@@ -54,6 +58,7 @@ watch(
       loadingMatches.value = false
     }
   },
+  { immediate: true },
 )
 </script>
 <template>
