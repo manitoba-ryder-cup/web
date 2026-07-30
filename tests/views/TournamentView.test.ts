@@ -47,6 +47,20 @@ const router = createRouter({
 describe('TournamentView', () => {
   beforeEach(() => vi.clearAllMocks())
 
+  it('holds the standings bar and hero open while loading', async () => {
+    const wrapper = mount(TournamentView, { props: { id: 't1' }, global: { plugins: [router] } })
+
+    // ScoreBar is v-if="teams.length >= 2" and the matchup needs both captains, so both
+    // rendered empty on first load and the page jumped twice as data landed.
+    expect(wrapper.find('[data-testid="scorebar-skeleton"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="skeleton"]').exists()).toBe(true)
+
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="scorebar-skeleton"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Singles')
+  })
+
   it('renders the hero, standings bar, and match-result tabs', async () => {
     const wrapper = mount(TournamentView, { props: { id: 't1' }, global: { plugins: [router] } })
     await flushPromises()
