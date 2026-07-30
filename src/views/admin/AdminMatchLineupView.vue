@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
-import { formatWallClock } from '@/lib/teeTime'
+import { formatCourseTeeTime } from '@/lib/teeTime'
 import { toast } from '@/composables/useToast'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -127,7 +127,7 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
           ·
           <button type="button" data-test="edit-tee-time" class="font-semibold text-mrc-accent hover:underline" @click="openTeeTime">
-            {{ formatWallClock(match.tee_time_local) }}
+            {{ formatCourseTeeTime(match.tee_time, match.tee_time_local) }}
           </button>
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>

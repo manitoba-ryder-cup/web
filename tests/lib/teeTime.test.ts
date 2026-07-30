@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
-import { formatTeeTime, formatWallClock, teeDayLabel, teeDayKey, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
+import {
+  formatTeeTime,
+  formatWallClock,
+  formatCourseTeeTime,
+  teeDayLabel,
+  teeDayKey,
+  utcToEventInput,
+  eventInputToUtc,
+} from '@/lib/teeTime'
 
 const instant = '2026-09-18T13:00:00Z' // 08:00 at a Manitoba course
 
@@ -90,5 +98,21 @@ describe('showing a tee time on an admin page', () => {
     } finally {
       vi.unstubAllEnvs()
     }
+  })
+})
+
+describe('showing a tee time that might predate tee_time_local on the wire', () => {
+  // web and scorecard deploy independently. If web ships first, a live response briefly
+  // carries tee_time without tee_time_local, and formatWallClock(undefined) would build
+  // "undefined:00Z" — Invalid Date, which Intl throws on. formatCourseTeeTime is the
+  // boundary that degrades to the old, pre-course-clock behaviour instead of crashing.
+  const wall = '2026-09-18T08:00' // the course's clock for `instant`
+
+  it('uses the course’s clock when the local value is present', () => {
+    expect(formatCourseTeeTime(instant, wall, 'en-US')).toBe(formatWallClock(wall, 'en-US'))
+  })
+
+  it('falls back to the viewer’s zone, rather than throwing, when it is absent', () => {
+    expect(formatCourseTeeTime(instant, undefined, 'en-US')).toBe(formatTeeTime(instant, 'en-US'))
   })
 })

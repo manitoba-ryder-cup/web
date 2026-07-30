@@ -16,6 +16,18 @@ export function formatWallClock(wall: string, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }).format(new Date(`${wall}:00Z`))
 }
 
+// The course's wall clock, falling back to the viewer's zone if the server hasn't sent
+// one yet. tee_time_local is required in the contract once the API ships this field, but
+// web and scorecard deploy independently — if web goes out first, live responses briefly
+// carry tee_time without it. formatWallClock(undefined) would build "undefined:00Z", which
+// Intl parses as Invalid Date and then rejects with a RangeError, and that throw happens
+// during render with no app-level error boundary — so it takes down the whole admin list,
+// not just the one tee time. Falling back to the spectator formatter degrades to the
+// pre-tee-time-editing behaviour for the length of the deploy window instead.
+export function formatCourseTeeTime(teeTime: string, teeTimeLocal: string | undefined, locale?: string): string {
+  return teeTimeLocal ? formatWallClock(teeTimeLocal, locale) : formatTeeTime(teeTime, locale)
+}
+
 // Day label, e.g. "Fri, Sep 18".
 export function teeDayLabel(iso: string, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso))
