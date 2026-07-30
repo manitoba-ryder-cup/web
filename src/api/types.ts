@@ -186,6 +186,10 @@ export interface MatchResult extends MatchStatus {
   // Length = holes played; holes beyond the length are unplayed.
   hole_results: (string | null)[]
   tee_time: string // RFC3339 (UTC) — the instant the scoring window is measured from
+  // The same instant as the wall clock at the course, for admin entry. Admin pages show the
+  // course's clock so a tee sheet reads the same wherever the admin is; every other view
+  // renders tee_time in the viewer's own zone.
+  tee_time_local: string
   course_name: string
 }
 

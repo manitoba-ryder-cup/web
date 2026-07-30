@@ -8,6 +8,14 @@ export function formatTeeTime(iso: string, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
 }
 
+// Time of day from a wall clock that carries no zone ("2026-09-18T08:00"), as admin pages
+// show it. Intl is pinned to UTC so the digits come back exactly as given, while the locale
+// still decides 12- vs 24-hour. Reading the string in the viewer's zone instead would shift
+// a tee time for anyone away from the course, and an admin edits against the course's clock.
+export function formatWallClock(wall: string, locale?: string): string {
+  return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }).format(new Date(`${wall}:00Z`))
+}
+
 // Day label, e.g. "Fri, Sep 18".
 export function teeDayLabel(iso: string, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso))

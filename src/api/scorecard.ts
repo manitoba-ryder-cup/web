@@ -74,4 +74,7 @@ export const scorecardApi = {
   listCourses: () => sc().get<Course[]>('/v1/courses'),
   getCourseTees: (courseId: string) => sc().get<TeeSetSummary[]>(`/v1/courses/${courseId}/tees`),
   createMatch: (tournamentId: string, body: CreateMatchBody) => sc().post<Match>(`/v1/tournaments/${tournamentId}/matches`, body),
+  // Moves a match's tee time. The body is the wall clock the tee sheet says; the server
+  // reads it at the match's course, so the client never converts between zones.
+  updateMatchTeeTime: (matchId: string, teeTime: string) => sc().put<Match>(`/v1/matches/${matchId}/tee-time`, { tee_time: teeTime }),
 }

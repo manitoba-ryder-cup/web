@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import { ApiError, type MatchResult, type MatchStatus } from '@/api/types'
+import { utcToEventInput } from '@/lib/teeTime'
 
 const teams = [
   { id: 'blue', color: 'Blue', captain: null, points: 0 },
@@ -28,6 +29,7 @@ const match: MatchResult = {
   ],
   hole_results: [],
   tee_time: teeingOffNow,
+  tee_time_local: utcToEventInput(teeingOffNow, 'America/Winnipeg'),
   course_name: 'Clear Lake',
 }
 const holes = Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, hdcp: i + 1, yards: 400 }))
@@ -78,6 +80,7 @@ async function openHole(hole = '15') {
 describe('HoleEntryView saving', () => {
   beforeEach(() => {
     match.tee_time = teeingOffNow
+    match.tee_time_local = utcToEventInput(teeingOffNow, 'America/Winnipeg')
     submitScore.mockReset()
     getMatchScores.mockClear()
     toasts.length = 0
@@ -90,6 +93,7 @@ describe('HoleEntryView saving', () => {
     // A match months out is only ever being poked at; the server refuses the write too,
     // so offering the wheels would only produce an error on save.
     match.tee_time = teeingOffIn60Days
+    match.tee_time_local = utcToEventInput(teeingOffIn60Days, 'America/Winnipeg')
 
     const w = await openHole('1')
 
@@ -101,6 +105,7 @@ describe('HoleEntryView saving', () => {
     // Scoring is shut for last year's cup the same as for one months away, but they are
     // opposite situations to a reader: one has every score, the other has none.
     match.tee_time = playedLastYear
+    match.tee_time_local = utcToEventInput(playedLastYear, 'America/Winnipeg')
 
     const w = await openHole('5')
 

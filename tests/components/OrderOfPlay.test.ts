@@ -29,6 +29,7 @@ function match(o: Partial<MatchResult> = {}): MatchResult {
     ],
     hole_results: [],
     tee_time: '2026-08-01T14:00:00Z',
+    tee_time_local: '2026-08-01T09:00', // same instant, Winnipeg's clock (CDT, UTC-5 in August)
     course_name: 'Test GC',
     ...o,
   }

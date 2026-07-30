@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { MatchResult } from '@/api/types'
+import { utcToEventInput } from '@/lib/teeTime'
 
 const teams = [
   { id: 'blue', color: 'Blue', captain: null, points: 0 },
@@ -30,6 +31,7 @@ const withLineup: MatchResult = {
   ],
   hole_results: [],
   tee_time: teeingOffNow,
+  tee_time_local: utcToEventInput(teeingOffNow, 'America/Winnipeg'),
   course_name: 'Clear Lake',
 }
 // A match on the schedule whose lineup hasn't been picked yet.
@@ -89,7 +91,11 @@ describe('MatchDetailView', () => {
   it('does not make holes tappable before the cup is played', async () => {
     // The entry page would only turn them straight back — it refuses to score a match
     // that has not teed off.
-    match.mockReturnValue({ ...withLineup, tee_time: teeingOffIn60Days })
+    match.mockReturnValue({
+      ...withLineup,
+      tee_time: teeingOffIn60Days,
+      tee_time_local: utcToEventInput(teeingOffIn60Days, 'America/Winnipeg'),
+    })
 
     const w = await open()
     await w.get('tbody tr').trigger('click')
@@ -100,7 +106,7 @@ describe('MatchDetailView', () => {
   })
 
   it('taps a hole through to its scores once the cup is under way', async () => {
-    match.mockReturnValue({ ...withLineup, tee_time: teeingOffNow })
+    match.mockReturnValue({ ...withLineup, tee_time: teeingOffNow, tee_time_local: utcToEventInput(teeingOffNow, 'America/Winnipeg') })
 
     const w = await open()
     await w.get('tbody tr').trigger('click')
@@ -111,7 +117,7 @@ describe('MatchDetailView', () => {
 
   it('keeps a played cup tappable, so its holes can still be read', async () => {
     // Scoring is shut for last year's cup, but every hole of it has something to show.
-    match.mockReturnValue({ ...withLineup, tee_time: playedLastYear })
+    match.mockReturnValue({ ...withLineup, tee_time: playedLastYear, tee_time_local: utcToEventInput(playedLastYear, 'America/Winnipeg') })
 
     const w = await open()
     await w.get('tbody tr').trigger('click')

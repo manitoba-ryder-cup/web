@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatTeeTime, teeDayLabel, teeDayKey, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
+import { formatTeeTime, formatWallClock, teeDayLabel, teeDayKey, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 
 const instant = '2026-09-18T13:00:00Z' // 08:00 at a Manitoba course
 
@@ -43,5 +43,34 @@ describe('entering a tee time', () => {
     for (const tz of ['America/Winnipeg', 'America/Phoenix', 'Pacific/Auckland']) {
       expect(utcToEventInput(eventInputToUtc(wall, tz), tz)).toBe(wall)
     }
+  })
+})
+
+describe('showing a tee time on an admin page', () => {
+  // An admin works a tee sheet, and the tee sheet says 8:00 wherever the admin is sitting.
+  const wall = '2026-09-18T08:00' // the course's clock for the instant above
+
+  it('renders the course’s clock, not the viewer’s', () => {
+    expect(formatWallClock(wall, 'en-US')).toBe('8:00 AM')
+  })
+
+  it('still follows the viewer’s clock convention', () => {
+    // Node's Intl doesn't zero-pad an explicit `hour: 'numeric'` even in a 24-hour
+    // locale (unlike `timeStyle: 'short'`) — same quirk formatTeeTime already lives
+    // with. The assertion here is 24-hour-with-no-AM/PM, not the padding.
+    expect(formatWallClock(wall, 'en-GB')).toBe('8:00')
+  })
+
+  it('does not shift with the reader, unlike the spectator helper', () => {
+    // The point of the pair: same tee time, and only formatTeeTime moves with the viewer.
+    const viewer = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const asViewer = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: viewer }).format(new Date(instant))
+    expect(formatTeeTime(instant, 'en-US')).toBe(asViewer)
+    expect(formatWallClock(wall, 'en-US')).toBe('8:00 AM')
+  })
+
+  it('reads midnight and noon the way a tee sheet does', () => {
+    expect(formatWallClock('2026-09-18T00:00', 'en-US')).toBe('12:00 AM')
+    expect(formatWallClock('2026-09-18T12:00', 'en-US')).toBe('12:00 PM')
   })
 })
