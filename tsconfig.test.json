@@ -10,5 +10,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["tests/**/*.ts", "src/**/*.ts", "src/**/*.vue"]
+  "include": ["tests/**/*.ts", "src/**/*.ts", "src/**/*.vue", "worker/src/proxy.ts"]
 }

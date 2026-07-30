@@ -41,3 +41,29 @@ jobs:
 
       - name: ${{ matrix.name }}
         run: ${{ matrix.run }}
+
+  # The Worker is a separate npm project with its own tsconfig, because it compiles
+  # against @cloudflare/workers-types rather than the DOM. The root `typecheck` covers
+  # worker/src/proxy.ts (the tests import it); this covers the edge wiring in index.ts,
+  # which is the half the root project cannot see.
+  worker:
+    name: Worker types
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: worker
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.json
+        working-directory: worker
