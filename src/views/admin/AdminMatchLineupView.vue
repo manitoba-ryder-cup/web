@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
-import { formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
+import { utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import TierDot from '@/components/base/TierDot.vue'
@@ -94,21 +94,24 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
 const courses = computed(() => data.value?.courses ?? [])
 const courseZone = computed(() => courses.value.find((c) => c.name === match.value?.course_name)?.time_zone ?? 'America/Winnipeg')
 
-const editingTeeTime = ref(false)
+// The stored tee time as the course's wall clock, which is both what the input starts on
+// and what "unchanged" is measured against. Syncing on a watcher rather than initialising
+// once: the match arrives after mount, and the value has to re-settle after each save.
+const storedTeeTime = computed(() => (match.value ? utcToEventInput(match.value.tee_time, courseZone.value) : ''))
 const teeTimeInput = ref('')
+watch(storedTeeTime, (wall) => (teeTimeInput.value = wall), { immediate: true })
 
-function startEditTeeTime() {
-  if (!match.value) return
-  teeTimeInput.value = utcToEventInput(match.value.tee_time, courseZone.value)
-  editingTeeTime.value = true
-}
+const teeTimeChanged = computed(() => !!teeTimeInput.value && teeTimeInput.value !== storedTeeTime.value)
+
+// Same field styling the setup screen uses. [color-scheme:light] keeps the native
+// datetime picker legible against the white field when the OS is in dark mode.
+const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white px-3 py-2 text-mrc-ink shadow-sm [color-scheme:light]'
 
 const saveTeeTime = () =>
   run(
     'tee-time',
     async () => {
       await scorecardApi.updateMatch(props.matchId, { tee_time: eventInputToUtc(teeTimeInput.value, courseZone.value) })
-      editingTeeTime.value = false
       await refresh()
     },
     { error: "Couldn't move that tee time. Please try again." },
@@ -124,35 +127,19 @@ const saveTeeTime = () =>
       <template v-if="match">
         <p class="mb-4 text-center text-mrc-muted">
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
-          ·
-          <button
-            v-if="!editingTeeTime"
-            type="button"
-            class="underline decoration-dotted underline-offset-4 transition hover:text-mrc-accent"
-            @click="startEditTeeTime"
-          >
-            {{ formatTeeTime(match.tee_time) }}
-          </button>
-          <span v-else class="tabular-nums">{{ formatTeeTime(match.tee_time) }}</span>
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
 
-        <!-- Moving a tee time, for the group that went out late. Typed as the wall clock
-             the tee sheet says and read at the course, so an admin entering it from another
+        <!-- The tee time lives here rather than in the header because it is editable: a
+             group goes out late and someone moves it. Typed as the wall clock the tee
+             sheet says and read at the course, so an admin entering it from another
              province still gets the round's own morning. -->
-        <form v-if="editingTeeTime" class="mb-4 flex flex-wrap items-end justify-center gap-2" @submit.prevent="saveTeeTime">
-          <div>
+        <form class="mb-6 flex items-end gap-2" @submit.prevent="saveTeeTime">
+          <div class="flex-1">
             <BaseLabel for="tee-time">Tee time</BaseLabel>
-            <input
-              id="tee-time"
-              v-model="teeTimeInput"
-              type="datetime-local"
-              required
-              class="rounded border border-mrc-line bg-mrc-surface px-3 py-2"
-            />
+            <input id="tee-time" v-model="teeTimeInput" type="datetime-local" required :class="fieldClass" />
           </div>
-          <BaseButton type="submit" :loading="isBusy('tee-time')">Save</BaseButton>
-          <BaseButton type="button" variant="secondary" :disabled="isBusy('tee-time')" @click="editingTeeTime = false">Cancel</BaseButton>
+          <BaseButton type="submit" :loading="isBusy('tee-time')" :disabled="!teeTimeChanged">Save</BaseButton>
         </form>
         <div class="grid gap-4 md:grid-cols-2" :class="isBusy() ? 'pointer-events-none opacity-60' : ''">
           <BaseCard v-for="panel in panels" :key="panel.team.id">

@@ -139,6 +139,22 @@
     color: var(--color-mrc-ink);
   }
 
+  /* The browser's own calendar glyph renders near-black, which reads far heavier than the
+     field it sits in and pulls the eye to the picker rather than the value. Fading it to
+     the border's weight settles it back.
+     0.26 rather than a round number: black at opacity a over white is 255(1-a), and the
+     border (--color-mrc-line-strong) is #bdbdbd = 189, so 1 - 189/255 ≈ 0.26. Both our
+     datetime fields force [color-scheme:light] and sit on white, which is what makes that
+     arithmetic hold. */
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    opacity: 0.26;
+    cursor: pointer;
+  }
+  input[type='datetime-local']:hover::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']:focus::-webkit-calendar-picker-indicator {
+    opacity: 0.6;
+  }
+
   /* Default heading scale: font-display + weight + a size per level, so a bare
      <h1>..<h6> is sized without per-element `text-*` utilities. Add a `text-*` class
      only where a heading intentionally differs from its level's default. */
