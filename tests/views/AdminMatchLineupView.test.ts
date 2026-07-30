@@ -23,7 +23,23 @@ const router = createRouter({
 describe('AdminMatchLineupView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([
+    // The stored tee time is mutable and updateMatch writes to it, so a refetch after
+    // saving returns what was saved — otherwise the view looks permanently unsaved and the
+    // test would be asserting against a server that never persists anything.
+    let storedTeeTime = '2026-07-01T14:00:00Z'
+    vi.mocked(scorecardApi.updateMatch).mockImplementation(async (_id, body) => {
+      if (body.tee_time) storedTeeTime = body.tee_time
+      return {
+        id: 'm1',
+        tournament_id: 't1',
+        course_id: 'c1',
+        tee_color_id: 'tc1',
+        match_format_id: 'f1',
+        tee_time: storedTeeTime,
+        handicapped: false,
+      }
+    })
+    vi.mocked(scorecardApi.getTournamentResults).mockImplementation(async () => [
       {
         match_id: 'm1',
         format_name: 'Singles',
@@ -32,7 +48,7 @@ describe('AdminMatchLineupView', () => {
         leader_team_id: null,
         lead: 0,
         holes_remaining: 18,
-        tee_time: '2026-07-01T14:00:00Z',
+        tee_time: storedTeeTime,
         course_name: 'Elmhurst',
         sides: [],
         hole_results: [],
@@ -49,15 +65,6 @@ describe('AdminMatchLineupView', () => {
       { id: 'c1', name: 'Elmhurst', time_zone: 'America/Winnipeg' },
       { id: 'c2', name: 'Giants Ridge', time_zone: 'America/Chicago' },
     ])
-    vi.mocked(scorecardApi.updateMatch).mockResolvedValue({
-      id: 'm1',
-      tournament_id: 't1',
-      course_id: 'c1',
-      tee_color_id: 'tc1',
-      match_format_id: 'f1',
-      tee_time: '2026-07-01T15:30:00Z',
-      handicapped: false,
-    })
   })
 
   it('shows a skeleton while loading, not "Match not found."', async () => {
@@ -73,23 +80,29 @@ describe('AdminMatchLineupView', () => {
     expect(w.find('[data-testid="skeleton"]').exists()).toBe(false)
     expect(w.text()).toContain('Singles')
   })
-  // The tee time is entered as the wall clock the tee sheet says, read at the course. The
-  // stored instant 14:00Z is 09:00 at Elmhurst (CDT), so that is what the input must show —
-  // not 14:00, and not whatever the admin's own zone makes of it.
-  it('opens the editor on the course wall clock, not UTC', async () => {
-    const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
-    await flushPromises()
 
-    await w.find('button.underline').trigger('click')
+  // The tee time is entered as the wall clock the tee sheet says, read at the course. The
+  // stored instant 14:00Z is 09:00 at Elmhurst (CDT), so that is what the input shows —
+  // not 14:00, and not whatever the admin's own zone makes of it.
+  it('shows the course wall clock, not UTC', async () => {
+    const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
     await flushPromises()
 
     expect((w.find('input[type="datetime-local"]').element as HTMLInputElement).value).toBe('2026-07-01T09:00')
   })
 
+  // The match arrives after mount, so the input has to fill in when it lands rather than
+  // being initialised once from nothing.
+  it('fills the input once the match loads', async () => {
+    const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
+    expect(w.find('input[type="datetime-local"]').exists()).toBe(false)
+
+    await flushPromises()
+    expect((w.find('input[type="datetime-local"]').element as HTMLInputElement).value).toBe('2026-07-01T09:00')
+  })
+
   it('sends the typed wall clock back as an instant at the course', async () => {
     const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
-    await flushPromises()
-    await w.find('button.underline').trigger('click')
     await flushPromises()
 
     await w.find('input[type="datetime-local"]').setValue('2026-07-01T10:30')
@@ -104,42 +117,35 @@ describe('AdminMatchLineupView', () => {
   it('sends nothing but the tee time', async () => {
     const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
     await flushPromises()
-    await w.find('button.underline').trigger('click')
-    await flushPromises()
+    await w.find('input[type="datetime-local"]').setValue('2026-07-01T10:30')
     await w.find('form').trigger('submit')
     await flushPromises()
 
     expect(Object.keys(vi.mocked(scorecardApi.updateMatch).mock.calls[0][1])).toEqual(['tee_time'])
   })
 
-  it('closes the editor and refetches once saved', async () => {
+  const saveButton = (w: ReturnType<typeof mount>) => w.findAll('button').find((b) => b.text() === 'Save')!
+
+  // Nothing to save until something changes — and with the input always on screen, that is
+  // the only thing distinguishing "looking at it" from "moving it".
+  it('enables Save only once the time changes', async () => {
     const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
     await flushPromises()
-    await w.find('button.underline').trigger('click')
-    await flushPromises()
-    expect(w.find('form').exists()).toBe(true)
+    expect(saveButton(w).attributes('disabled')).toBeDefined()
 
+    await w.find('input[type="datetime-local"]').setValue('2026-07-01T10:30')
+    expect(saveButton(w).attributes('disabled')).toBeUndefined()
+  })
+
+  it('refetches and settles back to unchanged after saving', async () => {
+    const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
+    await flushPromises()
+    await w.find('input[type="datetime-local"]').setValue('2026-07-01T10:30')
     await w.find('form').trigger('submit')
     await flushPromises()
 
-    expect(w.find('form').exists()).toBe(false)
     // Once on mount, once after saving.
     expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(2)
-  })
-
-  it('leaves the tee time alone when the edit is cancelled', async () => {
-    const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
-    await flushPromises()
-    await w.find('button.underline').trigger('click')
-    await flushPromises()
-
-    await w
-      .findAll('button')
-      .find((b) => b.text() === 'Cancel')!
-      .trigger('click')
-    await flushPromises()
-
-    expect(w.find('form').exists()).toBe(false)
-    expect(scorecardApi.updateMatch).not.toHaveBeenCalled()
+    expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 })
