@@ -60,13 +60,13 @@ const rightScore = computed(() => splitPoints(right.value?.points))
       <!-- Totals overlaid on the ends; the shadow keeps them legible over any team
            colour (or grey at 0 points). -->
       <div class="absolute inset-0 flex items-center justify-between px-3 font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,.4)]">
-        <div class="flex items-baseline leading-none tracking-tight">
+        <div class="flex items-center gap-1 leading-none tracking-tight">
           <span class="text-6xl">{{ leftScore.whole }}</span>
-          <span v-if="leftScore.half" class="text-3xl md:text-4xl">½</span>
+          <span v-if="leftScore.half" class="text-3xl md:text-4xl mt-1">½</span>
         </div>
-        <div class="flex items-baseline leading-none tracking-tight">
+        <div class="flex items-center gap-1 leading-none tracking-tight">
           <span class="text-6xl">{{ rightScore.whole }}</span>
-          <span v-if="rightScore.half" class="text-3xl md:text-4xl">½</span>
+          <span v-if="rightScore.half" class="text-3xl md:text-4xl mt-1">½</span>
         </div>
       </div>
     </div>
