@@ -11,6 +11,7 @@ import { formatTeeTime, teeDayLabel } from '@/lib/teeTime'
 import { toast } from '@/composables/useToast'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import ScoreWheel from '@/components/tournament/ScoreWheel.vue'
@@ -117,6 +118,27 @@ async function saveAndNext() {
 <template>
   <PageLayout>
     <AsyncState :loading="loading" :error="error" :retry="retry">
+      <template #loading>
+        <!-- This page has no hero, so loading is otherwise a blank screen — and it's the one
+             most likely to be opened on a weak connection, standing on a tee box. Mirrors
+             the real layout: sticky context block, a wheel per player, then Save. Two
+             wheels, not four: the team formats use two, and under-promising closes up
+             rather than leaving a gap. -->
+        <div data-testid="skeleton">
+          <div class="-mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 pb-3 shadow">
+            <SkeletonBlock radius="none" class="h-20 w-full" />
+            <SkeletonBlock radius="md" class="mx-auto mt-3 h-6 w-64" />
+            <SkeletonBlock class="mx-auto mt-3 h-4 w-72" />
+          </div>
+          <div class="-mx-4 mt-6 divide-y divide-mrc-line border-b border-mrc-line">
+            <div v-for="n in 2" :key="n" class="flex items-center justify-between px-4 py-6">
+              <SkeletonBlock class="h-5 w-32" />
+              <SkeletonBlock radius="md" class="h-12 w-40" />
+            </div>
+          </div>
+          <SkeletonBlock radius="md" class="mt-6 h-14 w-full" />
+        </div>
+      </template>
       <!-- Before the cup, say so rather than offering wheels the server would refuse.
            The match's own page still shows its tee time, format and lineup. -->
       <div v-if="match && !started" class="mx-auto mt-6 max-w-2xl text-center">

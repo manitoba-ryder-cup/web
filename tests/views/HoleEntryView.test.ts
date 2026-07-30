@@ -86,6 +86,23 @@ describe('HoleEntryView saving', () => {
   // Spies here stub the router; a leaked one silently redirects the next test.
   afterEach(() => vi.restoreAllMocks())
 
+  it('shows the entry shape while loading rather than an empty screen', async () => {
+    // Deliberately not `openHole()`: it flushes, and this asserts pre-flush.
+    router.push('/t/t1/m/m1/h/15')
+    await router.isReady()
+    const w = mount(HoleEntryView, {
+      props: { tournamentId: 't1', matchId: 'm1', hole: '15' },
+      global: { plugins: [router] },
+    })
+
+    expect(w.find('[data-testid="skeleton"]').exists()).toBe(true)
+    expect(w.text()).not.toContain('Hole not found.')
+
+    await flushPromises()
+
+    expect(w.find('[data-testid="skeleton"]').exists()).toBe(false)
+  })
+
   it('refuses to offer wheels before the cup is played', async () => {
     // A match months out is only ever being poked at; the server refuses the write too,
     // so offering the wheels would only produce an error on save.
