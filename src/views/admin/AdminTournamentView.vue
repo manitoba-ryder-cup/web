@@ -6,7 +6,7 @@ import type { MatchResult, TeeSetSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { toast } from '@/composables/useToast'
 import { playerSurnames } from '@/lib/matchResult'
-import { formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
+import { formatWallClock, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -160,7 +160,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                   class="group flex items-center justify-between border-b border-mrc-line px-4 py-3 transition last:border-b-0 hover:bg-mrc-panel"
                 >
                   <div class="min-w-0">
-                    <p class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time) }}</p>
+                    <p class="font-semibold tabular-nums">{{ formatWallClock(m.tee_time_local) }}</p>
                     <p class="truncate text-sm text-mrc-muted">{{ pairing(m.sides) }}</p>
                   </div>
                   <ChevronRightIcon class="shrink-0 text-mrc-faint transition group-hover:text-mrc-accent" />

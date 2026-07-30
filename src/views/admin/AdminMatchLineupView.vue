@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
-import { formatTeeTime } from '@/lib/teeTime'
+import { formatWallClock } from '@/lib/teeTime'
+import { toast } from '@/composables/useToast'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import TierDot from '@/components/base/TierDot.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import BaseAlert from '@/components/base/BaseAlert.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseLabel from '@/components/base/BaseLabel.vue'
 import XIcon from '@/components/icons/XIcon.vue'
 
 const props = defineProps<{ id: string; matchId: string }>()
@@ -72,6 +77,37 @@ const remove = (playerId: string) =>
     { error: "Couldn't remove that player. Please try again." },
   )
 
+// The tee time is entered as the wall clock the tee sheet says. The server reads it at the
+// match's course, so nothing here converts between zones. Kept out of useBusy: this is a
+// form, and a failure belongs beside the field being retried rather than in a toast that
+// closes it — the same shape as the create-match form on the setup page.
+const editingTeeTime = ref(false)
+const teeTimeInput = ref('')
+const teeTimeError = ref('')
+const savingTeeTime = ref(false)
+
+function openTeeTime() {
+  teeTimeError.value = ''
+  teeTimeInput.value = match.value?.tee_time_local ?? ''
+  editingTeeTime.value = true
+}
+
+async function saveTeeTime() {
+  if (!teeTimeInput.value) return
+  savingTeeTime.value = true
+  teeTimeError.value = ''
+  try {
+    await scorecardApi.updateMatchTeeTime(props.matchId, teeTimeInput.value)
+    editingTeeTime.value = false
+    await refresh()
+    toast.success('Tee time updated')
+  } catch {
+    teeTimeError.value = 'Could not update the tee time. Check it and try again.'
+  } finally {
+    savingTeeTime.value = false
+  }
+}
+
 // Assigned players come from the match sides (no tier); look their flight up on the roster
 // so the swatch shows on both assigned and available pills — handy for keeping a pairing even.
 function tierOf(playerId: string): string {
@@ -89,9 +125,29 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
       <template v-if="match">
         <p class="mb-4 text-center text-mrc-muted">
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
-          · {{ formatTeeTime(match.tee_time) }}
+          ·
+          <button type="button" data-test="edit-tee-time" class="font-semibold text-mrc-accent hover:underline" @click="openTeeTime">
+            {{ formatWallClock(match.tee_time_local) }}
+          </button>
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
+
+        <!-- Course time, always: an admin reads a tee sheet, so the number must not move
+             with where they happen to be sitting. -->
+        <div v-if="editingTeeTime" class="mx-auto mb-6 max-w-sm space-y-3 rounded-md border border-mrc-line bg-mrc-panel p-4">
+          <BaseAlert v-if="teeTimeError" variant="error">{{ teeTimeError }}</BaseAlert>
+          <div>
+            <BaseLabel>Tee time</BaseLabel>
+            <BaseInput type="datetime-local" v-model="teeTimeInput" data-test="tee-time-input" />
+            <p class="mt-1 text-sm text-mrc-muted">Course time — the clock the tee sheet uses.</p>
+          </div>
+          <div class="flex gap-2">
+            <BaseButton :loading="savingTeeTime" :disabled="!teeTimeInput" data-test="save-tee-time" @click="saveTeeTime">
+              Save
+            </BaseButton>
+            <BaseButton variant="secondary" data-test="cancel-tee-time" @click="editingTeeTime = false">Cancel</BaseButton>
+          </div>
+        </div>
         <div class="grid gap-4 md:grid-cols-2" :class="isBusy() ? 'pointer-events-none opacity-60' : ''">
           <BaseCard v-for="panel in panels" :key="panel.team.id">
             <div class="flex items-center gap-2" :class="panel.colors.textStrong">

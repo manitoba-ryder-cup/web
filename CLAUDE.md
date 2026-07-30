@@ -63,8 +63,12 @@ These are load-bearing and easy to break by accident:
   sides and the schema enforces it, so `lib/teamColor.ts` is a lookup, not an extension point.
 - **Points come in halves.** A halved match is ½ a point per side; render via `lib/points.ts`.
 - **A tier is a tee-box colour** (gold, blue, white) — the colour *is* the name. Don't append a noun.
-- **Tee times are UTC instants**, displayed in the viewer's own zone and locale. Going the
-  other way (entering one) needs the course's timezone: `eventInputToUtc` in `lib/teeTime.ts`.
+- **Tee times are UTC instants**, displayed in the viewer's own zone and locale — except on
+  admin pages, which show the course's clock via `tee_time_local` and `formatWallClock`, so a
+  tee sheet reads 8:00 whether the admin is in Winnipeg or Zürich. Entering one needs no
+  conversion here: the field holds the course's wall clock and the API reads it at the course.
+  `eventInputToUtc` in `lib/teeTime.ts` remains for the create-match form, which knows the
+  course it just picked.
 - **`lib/scoringWindow.ts` mirrors a server rule** (`internal/golf/match.go`) and only gates
   the UI; the API decides. If they drift, keep this the *wider* one — permissive costs a
   clean 409, strict silently offers no way to record a legitimate score.
