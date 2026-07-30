@@ -60,6 +60,15 @@ export interface CreateMatchBody {
   tee_time: string
   handicapped: boolean
 }
+// Body for updating a match. Every field is optional and only the ones sent are written,
+// so moving a tee time leaves the course, tee and format as they were.
+export interface UpdateMatchBody {
+  course_id?: string
+  tee_color_id?: string
+  match_format_id?: string
+  tee_time?: string
+  handicapped?: boolean
+}
 export interface PlayerSummary {
   id: string
   first_name: string
