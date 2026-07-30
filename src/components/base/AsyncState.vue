@@ -10,7 +10,9 @@ withDefaults(defineProps<{ loading: boolean; error: string; empty?: boolean; emp
 })
 </script>
 <template>
-  <p v-if="loading" class="text-mrc-muted">Loading…</p>
+  <!-- The `loading` slot lets a view swap in a skeleton without also re-implementing the
+       error/retry half, which is the part worth keeping identical everywhere. -->
+  <slot v-if="loading" name="loading"><p class="text-mrc-muted">Loading…</p></slot>
   <div v-else-if="error">
     <BaseAlert variant="error">{{ error }}</BaseAlert>
     <button

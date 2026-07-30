@@ -9,6 +9,17 @@ describe('AsyncState', () => {
     expect(w.text()).toContain('Loading')
     expect(w.find('.loaded').exists()).toBe(false)
   })
+  it('prefers a given loading slot over the default text', () => {
+    const w = mount(AsyncState, {
+      props: { loading: true, error: '' },
+      slots: { ...slots, loading: '<div class="skeleton" />' },
+    })
+
+    expect(w.find('.skeleton').exists()).toBe(true)
+    expect(w.text()).not.toContain('Loading')
+    expect(w.find('.loaded').exists()).toBe(false)
+  })
+
   it('shows the error over the slot', () => {
     const w = mount(AsyncState, { props: { loading: false, error: 'nope' }, slots })
     expect(w.text()).toContain('nope')
