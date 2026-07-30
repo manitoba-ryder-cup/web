@@ -38,10 +38,21 @@ jobs:
 
       # Uploads dist/ to the direct-upload Pages project. Unlike the GCP deploys, which
       # federate an OIDC token, Cloudflare has no keyless equivalent — hence a stored
-      # token, scoped to Pages:Edit on this project alone.
+      # token, scoped to Pages:Edit and Workers Scripts:Edit on this account alone.
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=mbrc-web --branch=master
+
+      # The Worker ships on the same tag as the SPA it serves: it exists to make the
+      # frontend's relative /api/* calls resolve, so a version of one implies a version of
+      # the other. Its PROXY_SECRET is set out of band and is left untouched by a deploy.
+      - name: Deploy the API proxy Worker
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          command: deploy
