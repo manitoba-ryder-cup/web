@@ -9,6 +9,8 @@ import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
 import { tournamentEyebrow } from '@/lib/tournament'
 import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
+import SkeletonSectionCard from '@/components/skeleton/SkeletonSectionCard.vue'
 import ContentContainer from '@/components/layout/ContentContainer.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 import SectionCard from '@/components/layout/SectionCard.vue'
@@ -119,16 +121,11 @@ const { segments } = useCountdown(teeOffAt)
              what the page is, and it shouldn't collapse and then shove itself back open.
              Deliberately phase-agnostic: a wide bar over a row of three reads as either the
              countdown or the score, which is all we can honestly promise before data lands. -->
-        <div v-if="loading" class="animate-pulse" data-testid="hero-skeleton">
-          <!-- Frosted, and one alpha for every block. Translucent white alone can't work
-               here: the crowd photo swings from bright fairway to dark stands, so any alpha
-               that shows over the grass screams over the stands, and the wide bar spans both
-               — its own tone shifting across its width. The blur flattens what's behind into
-               a single tone, so the blocks read as panels instead of haze on the image. -->
-          <div class="mx-auto h-3 w-32 rounded bg-white/30 backdrop-blur-md" />
-          <div class="mx-auto mt-6 h-9 w-3/4 rounded-md bg-white/30 backdrop-blur-md md:h-11" />
+        <div v-if="loading" data-testid="hero-skeleton">
+          <SkeletonBlock tone="inverse" class="mx-auto h-3 w-32" />
+          <SkeletonBlock tone="inverse" radius="md" class="mx-auto mt-6 h-9 w-3/4 md:h-11" />
           <div class="mt-8 flex items-start justify-center gap-5 sm:gap-7">
-            <div v-for="n in 3" :key="n" class="h-14 w-16 rounded-md bg-white/30 backdrop-blur-md md:h-16 md:w-20" />
+            <SkeletonBlock v-for="n in 3" :key="n" tone="inverse" radius="md" class="h-14 w-16 md:h-16 md:w-20" />
           </div>
         </div>
 
@@ -191,20 +188,7 @@ const { segments } = useCountdown(teeOffAt)
              un-drafted one, and would claim the teams are still to be announced. -->
         <AsyncState :loading="loading" :error="error" :retry="retry">
           <template #loading>
-            <!-- Shaped like the section card that's about to replace it, and borrowing its
-                 real header band rather than a light grey stand-in: the band is certain to
-                 be there and certain to be dark, so faking it pale only buys a lurch when
-                 the card lands. Only the genuinely unknown parts pulse. -->
-            <div class="overflow-hidden rounded-md border border-mrc-line bg-white" data-testid="body-skeleton">
-              <div class="bg-mrc-muted py-2.5">
-                <div class="flex h-6 items-center justify-center">
-                  <div class="h-3.5 w-32 animate-pulse rounded bg-white/40" />
-                </div>
-              </div>
-              <div class="animate-pulse space-y-3 p-4">
-                <div v-for="n in 4" :key="n" class="h-4 rounded bg-mrc-line" />
-              </div>
-            </div>
+            <SkeletonSectionCard data-testid="body-skeleton" />
           </template>
 
           <!-- Pre-event: the drafted teams, or the field before the draft, then the schedule. -->
