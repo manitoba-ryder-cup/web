@@ -39,6 +39,7 @@ empty, suspect the tenant before the code.
 | `src/lib/` | Pure domain functions. No Vue imports, heavily unit-tested — domain rules belong here, not in components |
 | `src/composables/` | Reusable stateful behaviour (`useAsync`, `useToast`, `useMatchContext`, …) |
 | `src/components/base/` | `Base*` primitives + `AsyncState`; the rest of `components/` is grouped by feature |
+| `src/components/skeleton/` | Loading placeholders. `SkeletonBlock` is the atom; the rest compose it. Goes in `AsyncState`'s `#loading` slot |
 | `src/views/` | Route components, all lazy-loaded via dynamic import |
 | `src/stores/` | Pinia. Only `auth.ts` — server state is fetched per view, not centrally cached |
 
@@ -47,6 +48,13 @@ rendered through `<AsyncState>`. Pass `retry` wherever there's something to re-r
 gets used on a phone in a field, and a dropped request should be one tap from recovering.
 `useAsync`'s `intervalMs` polls live views and deliberately keeps stale data on a failed
 poll rather than blanking the page.
+
+Pass a skeleton through `AsyncState`'s `#loading` slot rather than letting a view collapse
+to a line of text — and check whether the view renders anything *outside* `AsyncState`
+that's gated on the same data, because that chrome stays blank no matter what the slot
+contains. Empty-state copy is the related trap: "No tournaments yet.", "Match not found."
+and the dashboard's "to be announced" are all claims about *loaded* data that an unloaded
+page satisfies just as well. Every view test asserts that copy can't leak into the load.
 
 **Auth.** `ApiClient` refreshes and retries exactly once on a 401; `authApi` bypasses
 `ApiClient` on purpose (login has no token, and refresh must not trigger its own
