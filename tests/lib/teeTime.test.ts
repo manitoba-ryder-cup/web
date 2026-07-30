@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { formatTeeTime, formatWallClock, teeDayLabel, teeDayKey, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 
 const instant = '2026-09-18T13:00:00Z' // 08:00 at a Manitoba course
@@ -72,5 +72,23 @@ describe('showing a tee time on an admin page', () => {
   it('reads midnight and noon the way a tee sheet does', () => {
     expect(formatWallClock('2026-09-18T00:00', 'en-US')).toBe('12:00 AM')
     expect(formatWallClock('2026-09-18T12:00', 'en-US')).toBe('12:00 PM')
+  })
+
+  it('still reads 8:00 AM from a host sitting in Auckland', () => {
+    // CI runs on ubuntu-latest with no TZ set, i.e. a UTC host — where the `timeZone: 'UTC'`
+    // pin is invisible, because "pinned to UTC" and "read on a UTC host" produce the same
+    // digits. Losing the pin only breaks on a host somewhere else, so the regression this
+    // guards against (formatWallClock silently drifting to the viewer's zone, the exact bug
+    // the whole design avoids) is unobservable without simulating one. Auckland's offset
+    // (UTC+12/+13) is far enough from UTC that a dropped pin can't coincidentally still
+    // pass. There's no clock/locale seam for "host zone" — process.env.TZ is the host
+    // itself, not a value formatWallClock takes — so this reaches for vi.stubEnv rather
+    // than the injectable-clock convention the rest of the suite uses.
+    vi.stubEnv('TZ', 'Pacific/Auckland')
+    try {
+      expect(formatWallClock(wall, 'en-US')).toBe('8:00 AM')
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })
