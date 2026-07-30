@@ -69,6 +69,23 @@ async function open({ loggedIn = true } = {}) {
 describe('MatchDetailView', () => {
   beforeEach(() => match.mockReturnValue(withLineup))
 
+  it('reserves the standings bar and scorecard while loading', async () => {
+    // Deliberately not the `open()` helper: it flushes, and this asserts pre-flush.
+    setActivePinia(createPinia())
+    router.push('/t/t1/m/m1')
+    await router.isReady()
+    const w = mount(MatchDetailView, { props: { tournamentId: 't1', matchId: 'm1' }, global: { plugins: [router] } })
+
+    expect(w.find('[data-testid="scorebar-skeleton"]').exists()).toBe(true)
+    expect(w.find('[data-testid="skeleton"]').exists()).toBe(true)
+    // "Match not found." is a conclusion about loaded data.
+    expect(w.text()).not.toContain('Match not found.')
+
+    await flushPromises()
+
+    expect(w.find('[data-testid="skeleton"]').exists()).toBe(false)
+  })
+
   it('does not offer to set a lineup that is already set', async () => {
     // The card is the whole point of the page once the lineup exists; an admin editing it
     // goes via the hole they want, not a link that reads as unfinished setup.
