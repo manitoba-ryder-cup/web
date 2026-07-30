@@ -2,6 +2,7 @@ import { ApiClient } from './client'
 import type {
   Course,
   CreateMatchBody,
+  UpdateMatchBody,
   Hole,
   HoleStatus,
   Match,
@@ -74,4 +75,5 @@ export const scorecardApi = {
   listCourses: () => sc().get<Course[]>('/v1/courses'),
   getCourseTees: (courseId: string) => sc().get<TeeSetSummary[]>(`/v1/courses/${courseId}/tees`),
   createMatch: (tournamentId: string, body: CreateMatchBody) => sc().post<Match>(`/v1/tournaments/${tournamentId}/matches`, body),
+  updateMatch: (matchId: string, body: UpdateMatchBody) => sc().put<Match>(`/v1/matches/${matchId}`, body),
 }

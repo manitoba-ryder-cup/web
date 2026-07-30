@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
-import { formatTeeTime } from '@/lib/teeTime'
+import { formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import TierDot from '@/components/base/TierDot.vue'
@@ -13,16 +13,19 @@ import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import SkeletonGrid from '@/components/skeleton/SkeletonGrid.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import XIcon from '@/components/icons/XIcon.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseLabel from '@/components/base/BaseLabel.vue'
 
 const props = defineProps<{ id: string; matchId: string }>()
 
 const { data, error, loading, refresh, retry } = useAsync(async () => {
-  const [matches, teams, roster] = await Promise.all([
+  const [matches, teams, roster, courses] = await Promise.all([
     scorecardApi.getTournamentResults(props.id),
     scorecardApi.getTournamentTeams(props.id),
     scorecardApi.getTournamentPlayers(props.id),
+    scorecardApi.listCourses(),
   ])
-  return { matches, teams, roster }
+  return { matches, teams, roster, courses }
 })
 
 const matches = computed(() => data.value?.matches ?? [])
@@ -84,6 +87,32 @@ function tierOf(playerId: string): string {
 function teamLabel(team: { color: string; captain: { last_name: string } | null }) {
   return team.captain ? `Team ${team.captain.last_name}` : team.color
 }
+
+// A tee time is typed as the wall clock the tee sheet says, so it is read at the course
+// being played rather than wherever the admin happens to be. Courses are unique by name
+// per tenant, which is what makes matching the result's course_name to a course sound.
+const courses = computed(() => data.value?.courses ?? [])
+const courseZone = computed(() => courses.value.find((c) => c.name === match.value?.course_name)?.time_zone ?? 'America/Winnipeg')
+
+const editingTeeTime = ref(false)
+const teeTimeInput = ref('')
+
+function startEditTeeTime() {
+  if (!match.value) return
+  teeTimeInput.value = utcToEventInput(match.value.tee_time, courseZone.value)
+  editingTeeTime.value = true
+}
+
+const saveTeeTime = () =>
+  run(
+    'tee-time',
+    async () => {
+      await scorecardApi.updateMatch(props.matchId, { tee_time: eventInputToUtc(teeTimeInput.value, courseZone.value) })
+      editingTeeTime.value = false
+      await refresh()
+    },
+    { error: "Couldn't move that tee time. Please try again." },
+  )
 </script>
 <template>
   <PageLayout title="Match Lineup" image="/img/oceanside.webp">
@@ -95,9 +124,36 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
       <template v-if="match">
         <p class="mb-4 text-center text-mrc-muted">
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
-          · {{ formatTeeTime(match.tee_time) }}
+          ·
+          <button
+            v-if="!editingTeeTime"
+            type="button"
+            class="underline decoration-dotted underline-offset-4 transition hover:text-mrc-accent"
+            @click="startEditTeeTime"
+          >
+            {{ formatTeeTime(match.tee_time) }}
+          </button>
+          <span v-else class="tabular-nums">{{ formatTeeTime(match.tee_time) }}</span>
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
+
+        <!-- Moving a tee time, for the group that went out late. Typed as the wall clock
+             the tee sheet says and read at the course, so an admin entering it from another
+             province still gets the round's own morning. -->
+        <form v-if="editingTeeTime" class="mb-4 flex flex-wrap items-end justify-center gap-2" @submit.prevent="saveTeeTime">
+          <div>
+            <BaseLabel for="tee-time">Tee time</BaseLabel>
+            <input
+              id="tee-time"
+              v-model="teeTimeInput"
+              type="datetime-local"
+              required
+              class="rounded border border-mrc-line bg-mrc-surface px-3 py-2"
+            />
+          </div>
+          <BaseButton type="submit" :loading="isBusy('tee-time')">Save</BaseButton>
+          <BaseButton type="button" variant="secondary" :disabled="isBusy('tee-time')" @click="editingTeeTime = false">Cancel</BaseButton>
+        </form>
         <div class="grid gap-4 md:grid-cols-2" :class="isBusy() ? 'pointer-events-none opacity-60' : ''">
           <BaseCard v-for="panel in panels" :key="panel.team.id">
             <div class="flex items-center gap-2" :class="panel.colors.textStrong">
