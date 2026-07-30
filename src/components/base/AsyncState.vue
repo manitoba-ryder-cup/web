@@ -10,7 +10,14 @@ withDefaults(defineProps<{ loading: boolean; error: string; empty?: boolean; emp
 })
 </script>
 <template>
-  <p v-if="loading" class="text-mrc-muted">Loading…</p>
+  <!-- The `loading` slot lets a view swap in a skeleton without also re-implementing the
+       error/retry half, which is the part worth keeping identical everywhere. A skeleton is
+       aria-hidden by construction, so the announcement lives here and is never skipped —
+       otherwise swapping one in silently removes the only thing a screen reader is told. -->
+  <template v-if="loading">
+    <span class="sr-only" role="status">Loading…</span>
+    <slot name="loading"><p class="text-mrc-muted" aria-hidden="true">Loading…</p></slot>
+  </template>
   <div v-else-if="error">
     <BaseAlert variant="error">{{ error }}</BaseAlert>
     <button

@@ -5,6 +5,9 @@ import { useAsync } from '@/composables/useAsync'
 import { useHashAccordion } from '@/composables/useHashAccordion'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
+import SkeletonTabs from '@/components/skeleton/SkeletonTabs.vue'
+import SkeletonList from '@/components/skeleton/SkeletonList.vue'
 import BaseTabs from '@/components/base/BaseTabs.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
@@ -46,7 +49,21 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
          only rounder — the headshot as a circular portrait. This is that, over the dark
          mountain band, with the career line set in the scorecard's letterhead idiom. -->
     <template #top>
-      <div v-if="player" class="relative overflow-hidden bg-mrc-ink text-white">
+      <!-- The hero is the page's identity and it's gated on `player`, so without this the
+           profile is a nav bar over white until all three requests land and then the whole
+           thing appears at once. Same band, same avatar size, same three cells — the point
+           is that the band holds its height rather than opening up under the reader. -->
+      <div v-if="loading" data-testid="hero-skeleton" class="relative overflow-hidden bg-mrc-ink text-white">
+        <div class="absolute inset-0 bg-cover bg-center" :style="{ backgroundImage: heroBg }" />
+        <div class="relative mx-auto flex max-w-3xl flex-col items-center px-4 py-8 text-center md:max-w-4xl md:py-12 lg:max-w-5xl">
+          <SkeletonBlock tone="inverse" radius="full" class="h-28 w-28 md:h-36 md:w-36" />
+          <SkeletonBlock tone="inverse" radius="md" class="mt-4 h-9 w-56 md:h-10" />
+          <div class="mt-5 inline-grid grid-cols-[1fr_1.5fr_1fr] gap-px overflow-hidden rounded-sm bg-black/25 ring-1 ring-white/15">
+            <SkeletonBlock v-for="n in 3" :key="n" tone="inverse" radius="none" class="h-14 w-24 md:w-28" />
+          </div>
+        </div>
+      </div>
+      <div v-else-if="player" class="relative overflow-hidden bg-mrc-ink text-white">
         <div class="absolute inset-0 bg-cover bg-center" :style="{ backgroundImage: heroBg }" />
         <div class="relative mx-auto flex max-w-3xl flex-col items-center px-4 py-8 text-center md:max-w-4xl md:py-12 lg:max-w-5xl">
           <PlayerAvatar :photo-path="player.photo_path" :alt="fullName" size="hero" />
@@ -78,6 +95,12 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
     </template>
 
     <AsyncState :loading="loading" :error="error" :retry="retry">
+      <template #loading>
+        <FullBleed flush-top>
+          <SkeletonTabs />
+          <div class="px-4 pt-6"><SkeletonList :rows="6" /></div>
+        </FullBleed>
+      </template>
       <template v-if="player">
         <!-- sync-hash: this page already spends its hash on the open cup, which is what
              the roster links to; a linkable tab isn't worth taking that over. -->

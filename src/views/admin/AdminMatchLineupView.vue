@@ -9,6 +9,8 @@ import PageLayout from '@/components/layout/PageLayout.vue'
 import TierDot from '@/components/base/TierDot.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
+import SkeletonGrid from '@/components/skeleton/SkeletonGrid.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import XIcon from '@/components/icons/XIcon.vue'
 
@@ -86,6 +88,10 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
 <template>
   <PageLayout title="Match Lineup" image="/img/oceanside.webp">
     <AsyncState :loading="loading" :error="error" :retry="retry">
+      <template #loading>
+        <SkeletonBlock class="mx-auto mb-4 h-4 w-72" />
+        <SkeletonGrid :cards="2" />
+      </template>
       <template v-if="match">
         <p class="mb-4 text-center text-mrc-muted">
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>

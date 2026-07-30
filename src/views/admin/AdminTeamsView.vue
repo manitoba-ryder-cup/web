@@ -6,6 +6,8 @@ import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
+import SkeletonList from '@/components/skeleton/SkeletonList.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import TeamAssignRow from '@/components/admin/TeamAssignRow.vue'
 
@@ -109,6 +111,15 @@ const chips = computed<{ key: Filter; label: string; n: number }[]>(() => [
 <template>
   <PageLayout title="Assign Teams" image="/img/oceanside.webp">
     <AsyncState :loading="loading" :error="error" :retry="retry">
+      <template #loading>
+        <!-- Chips and search box included, not just the rows: they sit above the list in the
+             real page, and leaving them out drops the rows by their height when it lands. -->
+        <div class="mb-3 flex flex-wrap gap-2">
+          <SkeletonBlock v-for="n in 4" :key="n" radius="full" class="h-7 w-20" />
+        </div>
+        <SkeletonBlock radius="md" class="mb-4 h-10 w-full" />
+        <SkeletonList :rows="8" />
+      </template>
       <!-- Filter chips double as a live tally so you can see who's left to place. -->
       <div class="mb-3 flex flex-wrap gap-2">
         <button

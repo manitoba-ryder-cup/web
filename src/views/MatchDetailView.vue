@@ -8,6 +8,7 @@ import { formatTeeTime } from '@/lib/teeTime'
 import { hasStarted } from '@/lib/scoringWindow'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import MatchScorecard from '@/components/tournament/MatchScorecard.vue'
@@ -39,9 +40,31 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
   <PageLayout>
     <!-- Overall event standing pinned to the top, so the team battle stays in view. -->
     <template #top>
-      <ScoreBar v-if="teams.length >= 2" :results="results" :teams="teams" />
+      <!-- ScoreBar's own h-20 and white wrapper, so the swap costs no height. -->
+      <div v-if="loading" data-testid="scorebar-skeleton" class="bg-mrc-surface shadow">
+        <SkeletonBlock radius="none" class="h-20 w-full" />
+      </div>
+      <ScoreBar v-else-if="teams.length >= 2" :results="results" :teams="teams" />
     </template>
     <AsyncState :loading="loading" :error="error" :retry="retry">
+      <template #loading>
+        <!-- Hand-built rather than a shared composition: an 18-hole card is a shape nothing
+             else in the app has, and forcing it through SkeletonList would reserve the wrong
+             height on the one page where the card is the whole point. -->
+        <div class="mx-auto mb-4 max-w-2xl">
+          <SkeletonBlock radius="md" class="h-16 w-full" />
+        </div>
+        <div class="overflow-hidden rounded-md border border-mrc-line bg-mrc-surface" data-testid="skeleton">
+          <div class="border-b border-mrc-line px-3 py-2">
+            <SkeletonBlock class="h-4 w-40" />
+          </div>
+          <div v-for="n in 6" :key="n" class="flex gap-2 border-b border-mrc-line px-3 py-2 last:border-b-0">
+            <SkeletonBlock class="h-4 w-10" />
+            <SkeletonBlock class="h-4 flex-1" />
+            <SkeletonBlock class="h-4 w-10" />
+          </div>
+        </div>
+      </template>
       <template v-if="match && leftTeam && rightTeam">
         <!-- The leaderboard row you tapped, reused as this page's heading: it names both
              sides AND states the result at a fixed position. The Match column and the Tot

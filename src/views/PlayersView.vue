@@ -6,6 +6,8 @@ import PageLayout from '@/components/layout/PageLayout.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
 import CardGrid from '@/components/layout/CardGrid.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonTabs from '@/components/skeleton/SkeletonTabs.vue'
+import SkeletonGrid from '@/components/skeleton/SkeletonGrid.vue'
 import BaseTabs from '@/components/base/BaseTabs.vue'
 import PlayerCard from '@/components/player/PlayerCard.vue'
 
@@ -36,6 +38,14 @@ const allPlayers = computed(() => [...(data.value?.all ?? [])].sort(byName))
 <template>
   <PageLayout title="Players" image="/img/mountain-green.webp">
     <AsyncState :loading="loading" :error="error" :retry="retry">
+      <template #loading>
+        <!-- Same full-bleed wrapper and the same pt-6 panel gap BaseTabs uses, so the grid
+             doesn't jump up when the real tab bar takes over. -->
+        <FullBleed flush-top>
+          <SkeletonTabs />
+          <div class="px-4 pt-6"><SkeletonGrid :cards="9" /></div>
+        </FullBleed>
+      </template>
       <!-- Full-bleed so the tab bar spans the content column edge to edge (like the
            tournament page); flush-top drops the gap above it, and the card grid is
            re-padded back inside. -->

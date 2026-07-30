@@ -75,6 +75,21 @@ describe('PlayerView', () => {
     router.push('/players/p1')
     await router.isReady()
   })
+  it('holds the hero open while loading instead of collapsing to a blank page', async () => {
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+
+    // The hero is v-if="player", so before this a loading profile was a nav bar over
+    // nothing — and then the whole page appeared at once.
+    expect(w.find('[data-testid="hero-skeleton"]').exists()).toBe(true)
+    expect(w.find('[data-testid="skeleton"]').exists()).toBe(true)
+
+    await flushPromises()
+
+    expect(w.find('[data-testid="hero-skeleton"]').exists()).toBe(false)
+    expect(w.find('[data-testid="skeleton"]').exists()).toBe(false)
+    expect(w.text()).toContain('Jane Doe')
+  })
+
   it('renders the player name and W-L-T record', async () => {
     const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
     await flushPromises()

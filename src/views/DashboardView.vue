@@ -8,6 +8,9 @@ import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
 import { tournamentEyebrow } from '@/lib/tournament'
+import AsyncState from '@/components/base/AsyncState.vue'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
+import SkeletonSectionCard from '@/components/skeleton/SkeletonSectionCard.vue'
 import ContentContainer from '@/components/layout/ContentContainer.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 import SectionCard from '@/components/layout/SectionCard.vue'
@@ -20,7 +23,7 @@ const route = useRoute()
 
 // The landing adapts to the event's phase: before it (the draft + schedule), during it
 // (the live standing), and after (the final standing). Polls live.
-const { data, loading } = useAsync(
+const { data, error, loading, retry } = useAsync(
   async () => {
     const tournaments = await scorecardApi.listTournaments()
     const tournament = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))[0] ?? null
@@ -114,70 +117,99 @@ const { segments } = useCountdown(teeOffAt)
       <img src="/img/crowd.webp" alt="" fetchpriority="high" class="absolute inset-0 h-full w-full object-cover" />
       <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/60 to-black/80" />
       <div class="relative w-full max-w-2xl">
-        <CapsLabel v-if="heroEyebrow" size="sm" class="text-white/80">{{ heroEyebrow }}</CapsLabel>
+        <!-- Loading: placeholders sized like the centrepiece, not a spinner — the hero is
+             what the page is, and it shouldn't collapse and then shove itself back open.
+             Deliberately phase-agnostic: a wide bar over a row of three reads as either the
+             countdown or the score, which is all we can honestly promise before data lands. -->
+        <div v-if="loading" data-testid="hero-skeleton">
+          <SkeletonBlock tone="inverse" class="mx-auto h-3 w-32" />
+          <SkeletonBlock tone="inverse" radius="md" class="mx-auto mt-6 h-9 w-3/4 md:h-11" />
+          <div class="mt-8 flex items-start justify-center gap-5 sm:gap-7">
+            <SkeletonBlock v-for="n in 3" :key="n" tone="inverse" radius="md" class="h-14 w-16 md:h-16 md:w-20" />
+          </div>
+        </div>
 
-        <!-- Upcoming: the matchup (once captains are set) + countdown, not a 0–0 score. -->
-        <template v-if="phase === 'upcoming'">
-          <CaptainMatchup v-if="showMatchup" :teams="teams" size="lg" class="mt-5" />
-          <h1 v-else-if="tournament" class="mt-4 md:text-5xl">{{ tournament.name }}</h1>
-          <div v-if="segments" class="mt-7">
-            <CapsLabel class="mb-3 text-white/60">Tees off in</CapsLabel>
-            <div class="flex items-start justify-center gap-5 tabular-nums sm:gap-7">
-              <div v-for="seg in segments" :key="seg.label" class="flex flex-col items-center">
-                <span class="font-body text-5xl font-bold leading-none md:text-6xl">{{ seg.text }}</span>
-                <CapsLabel class="mt-1.5 text-white/60">{{ seg.label }}</CapsLabel>
+        <template v-else>
+          <CapsLabel v-if="heroEyebrow" size="sm" class="text-white/80">{{ heroEyebrow }}</CapsLabel>
+
+          <!-- Upcoming: the matchup (once captains are set) + countdown, not a 0–0 score. -->
+          <template v-if="phase === 'upcoming' && tournament">
+            <CaptainMatchup v-if="showMatchup" :teams="teams" size="lg" class="mt-5" />
+            <h1 v-else class="mt-4 md:text-5xl">{{ tournament.name }}</h1>
+            <div v-if="segments" class="mt-7">
+              <CapsLabel class="mb-3 text-white/60">Tees off in</CapsLabel>
+              <div class="flex items-start justify-center gap-5 tabular-nums sm:gap-7">
+                <div v-for="seg in segments" :key="seg.label" class="flex flex-col items-center">
+                  <span class="font-body text-5xl font-bold leading-none md:text-6xl">{{ seg.text }}</span>
+                  <CapsLabel class="mt-1.5 text-white/60">{{ seg.label }}</CapsLabel>
+                </div>
               </div>
             </div>
-          </div>
-        </template>
+          </template>
 
-        <!-- Live / finished: the standing. -->
-        <template v-else-if="left && right">
-          <div class="mt-6 grid grid-cols-[1fr_auto_1fr] items-end gap-x-3">
-            <p class="truncate font-display text-xl font-bold uppercase tracking-wide">{{ left.captain?.last_name }}</p>
-            <span />
-            <p class="truncate font-display text-xl font-bold uppercase tracking-wide">{{ right.captain?.last_name }}</p>
-            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="leftColors.softText">
-              {{ pointsText(left.points) }}
-            </p>
-            <span class="pb-2 text-4xl font-bold text-white/50">–</span>
-            <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="rightColors.softText">
-              {{ pointsText(right.points) }}
-            </p>
-          </div>
-          <RouterLink
-            v-if="tournament"
-            :to="{ name: 'tournament', params: { id: tournament.id } }"
-            class="mt-8 inline-block rounded-md bg-mrc-accent-tint px-6 py-3 font-semibold text-mrc-accent shadow-lg"
-          >
-            View Leaderboard
-          </RouterLink>
-        </template>
+          <!-- Live / finished: the standing. -->
+          <template v-else-if="left && right">
+            <div class="mt-6 grid grid-cols-[1fr_auto_1fr] items-end gap-x-3">
+              <p class="truncate font-display text-xl font-bold uppercase tracking-wide">
+                {{ left.captain?.last_name }}
+              </p>
+              <span />
+              <p class="truncate font-display text-xl font-bold uppercase tracking-wide">
+                {{ right.captain?.last_name }}
+              </p>
+              <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="leftColors.softText">
+                {{ pointsText(left.points) }}
+              </p>
+              <span class="pb-2 text-4xl font-bold text-white/50">–</span>
+              <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="rightColors.softText">
+                {{ pointsText(right.points) }}
+              </p>
+            </div>
+            <RouterLink
+              v-if="tournament"
+              :to="{ name: 'tournament', params: { id: tournament.id } }"
+              class="mt-8 inline-block rounded-md bg-mrc-accent-tint px-6 py-3 font-semibold text-mrc-accent shadow-lg"
+            >
+              View Leaderboard
+            </RouterLink>
+          </template>
 
-        <h1 v-else-if="!loading">Manitoba Ryder Cup</h1>
+          <!-- No tournament to describe — a failed load lands here too, and the body below
+               carries the error and the retry. -->
+          <h1 v-else>Manitoba Ryder Cup</h1>
+        </template>
       </div>
     </section>
 
     <ContentContainer>
       <div class="space-y-8 py-6">
-        <!-- Pre-event: the drafted teams, or the field before the draft, then the schedule. -->
-        <template v-if="phase === 'upcoming'">
-          <SectionCard v-if="drafted" title="The Teams" padded>
-            <Rosters :players="players" :teams="teams" />
-          </SectionCard>
-          <SectionCard v-else-if="players.length" title="The Field" padded>
-            <PlayerField :players="players" />
-          </SectionCard>
-          <SectionCard v-if="hasSchedule" title="Order of Play">
+        <!-- Everything below the hero is gated on loaded data, because the pre-event states
+             are all inferred from absence: an unloaded page looks exactly like an
+             un-drafted one, and would claim the teams are still to be announced. -->
+        <AsyncState :loading="loading" :error="error" :retry="retry">
+          <template #loading>
+            <SkeletonSectionCard data-testid="body-skeleton" />
+          </template>
+
+          <!-- Pre-event: the drafted teams, or the field before the draft, then the schedule. -->
+          <template v-if="phase === 'upcoming'">
+            <SectionCard v-if="drafted" title="The Teams" padded>
+              <Rosters :players="players" :teams="teams" />
+            </SectionCard>
+            <SectionCard v-else-if="players.length" title="The Field" padded>
+              <PlayerField :players="players" />
+            </SectionCard>
+            <SectionCard v-if="hasSchedule" title="Order of Play">
+              <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
+            </SectionCard>
+            <CapsLabel v-if="tbdNote" size="sm" class="py-2 text-center text-mrc-muted">{{ tbdNote }}</CapsLabel>
+          </template>
+
+          <!-- Live / finished: the order of play. -->
+          <SectionCard v-else-if="results.length" title="Order of Play">
             <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
           </SectionCard>
-          <CapsLabel v-if="tbdNote" size="sm" class="py-2 text-center text-mrc-muted">{{ tbdNote }}</CapsLabel>
-        </template>
-
-        <!-- Live / finished: the order of play. -->
-        <SectionCard v-else-if="results.length" title="Order of Play">
-          <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
-        </SectionCard>
+        </AsyncState>
       </div>
     </ContentContainer>
   </div>
