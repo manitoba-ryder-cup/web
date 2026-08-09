@@ -66,6 +66,10 @@ jobs:
       # above them. Nothing is attached — the deployment itself lives in Cloudflare, so
       # there is no artifact here worth keeping.
       - name: Publish the release
-        uses: softprops/action-gh-release@v3
+        # Pinned to a commit, unlike the actions above it: those are published by GitHub
+        # and Cloudflare, while this one is an individual's. A tag is a mutable pointer, so
+        # @v3 runs whatever it points at when the job runs — and this step runs after the
+        # Cloudflare credential that deploys the site is already in the environment.
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           generate_release_notes: true
