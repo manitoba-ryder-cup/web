@@ -20,6 +20,8 @@ function match(): MatchResult {
     ],
     hole_results: [],
     tee_time: '2026-09-18T13:00:00Z',
+    scoring_opens_at: new Date(new Date('2026-09-18T13:00:00Z').getTime() - 2 * 3600000).toISOString(),
+    scoring_closes_at: new Date(new Date('2026-09-18T13:00:00Z').getTime() + 12 * 3600000).toISOString(),
     course_name: 'GC',
   }
 }

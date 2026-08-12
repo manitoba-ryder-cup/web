@@ -48,6 +48,8 @@ describe('PlayerTournamentRow', () => {
         lead: 3,
         holes_remaining: 2,
         tee_time: '2024-08-10T14:00:00Z',
+        scoring_opens_at: new Date(new Date('2024-08-10T14:00:00Z').getTime() - 2 * 3600000).toISOString(),
+        scoring_closes_at: new Date(new Date('2024-08-10T14:00:00Z').getTime() + 12 * 3600000).toISOString(),
         course_name: 'Clear Lake',
         sides: [
           { team_id: 'blue-1', players: [{ player_id: 'p1', first_name: 'Amy', last_name: 'Smith' }] },
