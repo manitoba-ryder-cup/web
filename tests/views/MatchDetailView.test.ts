@@ -16,6 +16,15 @@ const teeingOffNow = hoursFromNow(0)
 const teeingOffIn60Days = hoursFromNow(24 * 60)
 const playedLastYear = hoursFromNow(-24 * 365)
 
+// The API sends the window alongside the tee time, so a fixture that moves a match in
+// time has to move its window too — setting tee_time alone would leave the gate behind.
+const withWindow = <T extends { tee_time: string }>(m: T, teeTime: string): T => ({
+  ...m,
+  tee_time: teeTime,
+  scoring_opens_at: new Date(new Date(teeTime).getTime() - 2 * 3600000).toISOString(),
+  scoring_closes_at: new Date(new Date(teeTime).getTime() + 12 * 3600000).toISOString(),
+})
+
 const withLineup: MatchResult = {
   match_id: 'm1',
   format_name: 'Singles',
@@ -30,6 +39,8 @@ const withLineup: MatchResult = {
   ],
   hole_results: [],
   tee_time: teeingOffNow,
+  scoring_opens_at: new Date(new Date(teeingOffNow).getTime() - 2 * 3600000).toISOString(),
+  scoring_closes_at: new Date(new Date(teeingOffNow).getTime() + 12 * 3600000).toISOString(),
   course_name: 'Clear Lake',
 }
 // A match on the schedule whose lineup hasn't been picked yet.
@@ -106,7 +117,7 @@ describe('MatchDetailView', () => {
   it('does not make holes tappable before the cup is played', async () => {
     // The entry page would only turn them straight back — it refuses to score a match
     // that has not teed off.
-    match.mockReturnValue({ ...withLineup, tee_time: teeingOffIn60Days })
+    match.mockReturnValue(withWindow(withLineup, teeingOffIn60Days))
 
     const w = await open()
     await w.get('tbody tr').trigger('click')
@@ -117,7 +128,7 @@ describe('MatchDetailView', () => {
   })
 
   it('taps a hole through to its scores once the cup is under way', async () => {
-    match.mockReturnValue({ ...withLineup, tee_time: teeingOffNow })
+    match.mockReturnValue(withWindow(withLineup, teeingOffNow))
 
     const w = await open()
     await w.get('tbody tr').trigger('click')
@@ -128,7 +139,7 @@ describe('MatchDetailView', () => {
 
   it('keeps a played cup tappable, so its holes can still be read', async () => {
     // Scoring is shut for last year's cup, but every hole of it has something to show.
-    match.mockReturnValue({ ...withLineup, tee_time: playedLastYear })
+    match.mockReturnValue(withWindow(withLineup, playedLastYear))
 
     const w = await open()
     await w.get('tbody tr').trigger('click')

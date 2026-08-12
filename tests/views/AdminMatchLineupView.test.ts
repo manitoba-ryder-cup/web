@@ -49,6 +49,8 @@ describe('AdminMatchLineupView', () => {
         lead: 0,
         holes_remaining: 18,
         tee_time: storedTeeTime,
+        scoring_opens_at: new Date(new Date(storedTeeTime).getTime() - 2 * 3600000).toISOString(),
+        scoring_closes_at: new Date(new Date(storedTeeTime).getTime() + 12 * 3600000).toISOString(),
         course_name: 'Elmhurst',
         sides: [],
         hole_results: [],

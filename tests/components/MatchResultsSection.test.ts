@@ -29,6 +29,8 @@ function match(o: Partial<MatchResult> = {}): MatchResult {
     ],
     hole_results: ['t-red', null, 't-blue'],
     tee_time: '2026-09-18T13:00:00Z',
+    scoring_opens_at: '2026-09-18T11:00:00Z',
+    scoring_closes_at: '2026-09-19T01:00:00Z',
     course_name: 'Test GC',
     ...o,
   }

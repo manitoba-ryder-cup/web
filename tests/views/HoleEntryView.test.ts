@@ -14,6 +14,15 @@ const teeingOffNow = hoursFromNow(0)
 const teeingOffIn60Days = hoursFromNow(24 * 60)
 const playedLastYear = hoursFromNow(-24 * 365)
 
+// The API sends the window alongside the tee time, so a fixture that moves a match in
+// time has to move its window too — setting tee_time alone would leave the gate behind.
+const withWindow = <T extends { tee_time: string }>(m: T, teeTime: string): T => ({
+  ...m,
+  tee_time: teeTime,
+  scoring_opens_at: new Date(new Date(teeTime).getTime() - 2 * 3600000).toISOString(),
+  scoring_closes_at: new Date(new Date(teeTime).getTime() + 12 * 3600000).toISOString(),
+})
+
 const match: MatchResult = {
   match_id: 'm1',
   format_name: 'Singles',
@@ -28,6 +37,8 @@ const match: MatchResult = {
   ],
   hole_results: [],
   tee_time: teeingOffNow,
+  scoring_opens_at: new Date(new Date(teeingOffNow).getTime() - 2 * 3600000).toISOString(),
+  scoring_closes_at: new Date(new Date(teeingOffNow).getTime() + 12 * 3600000).toISOString(),
   course_name: 'Clear Lake',
 }
 const holes = Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, hdcp: i + 1, yards: 400 }))
@@ -77,7 +88,7 @@ async function openHole(hole = '15') {
 
 describe('HoleEntryView saving', () => {
   beforeEach(() => {
-    match.tee_time = teeingOffNow
+    Object.assign(match, withWindow(match, teeingOffNow))
     submitScore.mockReset()
     getMatchScores.mockClear()
     toasts.length = 0
@@ -106,7 +117,7 @@ describe('HoleEntryView saving', () => {
   it('refuses to offer wheels before the cup is played', async () => {
     // A match months out is only ever being poked at; the server refuses the write too,
     // so offering the wheels would only produce an error on save.
-    match.tee_time = teeingOffIn60Days
+    Object.assign(match, withWindow(match, teeingOffIn60Days))
 
     const w = await openHole('1')
 
@@ -117,7 +128,7 @@ describe('HoleEntryView saving', () => {
   it('still shows a played cup, read-only rather than "not started"', async () => {
     // Scoring is shut for last year's cup the same as for one months away, but they are
     // opposite situations to a reader: one has every score, the other has none.
-    match.tee_time = playedLastYear
+    Object.assign(match, withWindow(match, playedLastYear))
 
     const w = await openHole('5')
 

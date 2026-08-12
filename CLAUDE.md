@@ -73,9 +73,12 @@ These are load-bearing and easy to break by accident:
 - **A tier is a tee-box colour** (gold, blue, white) — the colour *is* the name. Don't append a noun.
 - **Tee times are UTC instants**, displayed in the viewer's own zone and locale. Going the
   other way (entering one) needs the course's timezone: `eventInputToUtc` in `lib/teeTime.ts`.
-- **`lib/scoringWindow.ts` mirrors a server rule** (`internal/golf/match.go`) and only gates
-  the UI; the API decides. If they drift, keep this the *wider* one — permissive costs a
-  clean 409, strict silently offers no way to record a legitimate score.
+- **`lib/scoringWindow.ts` reads the window off the match** (`scoring_opens_at` /
+  `scoring_closes_at`), which the API both computes and enforces. It used to restate the
+  rule as its own constants; that put one rule in two repos with nothing keeping them
+  equal. Don't reintroduce a local copy — a bound the API omits is read as *open*, because
+  permissive costs a clean 409 while strict silently offers no way to record a legitimate
+  score.
 - **Match margins render through `resultText`**, so "9 & 7" is the same string everywhere.
   That's why the API sends `lead` + `holes_remaining` rather than a rendered margin.
 

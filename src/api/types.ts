@@ -212,6 +212,10 @@ export interface MatchResult extends MatchStatus {
   hole_results: (string | null)[]
   tee_time: string // RFC3339 (UTC) — the instant the scoring window is measured from
   course_name: string
+  // The scoring window, RFC3339 (UTC), as the API computes and enforces it. Instants
+  // rather than a yes/no so they stay right on a page left open across the boundary.
+  scoring_opens_at: string
+  scoring_closes_at: string
 }
 
 // One team's (best-ball) gross score on a hole. In Fourball `strokes` is the better of
