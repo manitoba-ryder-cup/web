@@ -1,100 +1,159 @@
-// @vitest-environment node
-// Node rather than jsdom: these exercise real Request/Response/Headers, and Headers
-// .getSetCookie() is only there in the Node build.
 import { describe, it, expect } from 'vitest'
-import { isCacheable, isStorable, rewriteCookiePath } from '../../worker/src/proxy'
+import { isCacheable, isStorable, resolveRoute, rewriteCookiePath, upstreamUrl } from '../../worker/src/proxy'
 
-const anonymousGet = () => new Request('https://manitobarydercup.com/api/scorecard/v1/tournaments')
+// The Worker sits in front of every API request, so these are the decisions that a
+// regression would break silently: what gets proxied where, what may be served from a
+// shared cache, and whether the refresh cookie comes back to the browser at all.
 
-describe('what may be served from the edge', () => {
-  it('caches an anonymous GET', () => {
-    expect(isCacheable(anonymousGet())).toBe(true)
+describe('resolveRoute', () => {
+  it('routes each service prefix to its own origin', () => {
+    expect(resolveRoute('/api/scorecard/v1/players')?.target).toBe('SCORECARD_URL')
+    expect(resolveRoute('/api/auth/v1/login')?.target).toBe('HEIMDALL_URL')
   })
 
-  // The rule the live leaderboard rests on. Only scorers hold a token, and a scorer
-  // submits a hole then immediately refetches — handing them their own pre-submission
-  // data is the one staleness that would actually mislead someone.
-  it('never caches a request carrying a token', () => {
-    const req = new Request(anonymousGet(), { headers: { Authorization: 'Bearer t' } })
-    expect(isCacheable(req)).toBe(false)
+  it('matches a bare prefix as well as a path under it', () => {
+    expect(resolveRoute('/api/auth')?.target).toBe('HEIMDALL_URL')
   })
 
-  // A session cookie means the response is somebody's own view of their own state.
-  it('never caches a request carrying a cookie', () => {
-    const req = new Request(anonymousGet(), { headers: { Cookie: 'refresh_token=x' } })
-    expect(isCacheable(req)).toBe(false)
+  // A prefix has to end at a segment boundary. Matching on startsWith alone would send
+  // /api/scorecards-of-doom upstream to the real service.
+  it('does not match a longer word that merely starts with a prefix', () => {
+    expect(resolveRoute('/api/scorecardXYZ')).toBeUndefined()
+    expect(resolveRoute('/api/authentication')).toBeUndefined()
   })
 
-  it('never caches a write', () => {
-    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      const req = new Request('https://manitobarydercup.com/api/scorecard/v1/scores', { method })
-      expect(isCacheable(req), method).toBe(false)
-    }
+  it('leaves everything else to Pages', () => {
+    expect(resolveRoute('/')).toBeUndefined()
+    expect(resolveRoute('/api/')).toBeUndefined()
+    expect(resolveRoute('/players')).toBeUndefined()
+  })
+
+  // Only heimdall's cookies are re-anchored; rewriting scorecard's would be a no-op at
+  // best, and this flag is what index.ts branches on.
+  it('marks only the auth route for cookie rewriting', () => {
+    expect(resolveRoute('/api/auth')?.rewriteCookies).toBe(true)
+    expect(resolveRoute('/api/scorecard')?.rewriteCookies).toBe(false)
   })
 })
 
-describe('what may be stored', () => {
-  const withCacheControl = (value: string, status = 200) => new Response('{}', { status, headers: { 'Cache-Control': value } })
+describe('upstreamUrl', () => {
+  it('strips the proxy prefix, since the services are mounted at root', () => {
+    expect(upstreamUrl('https://scorecard.run.app', '/api/scorecard', '/api/scorecard/v1/players', '')).toBe(
+      'https://scorecard.run.app/v1/players',
+    )
+  })
+
+  it('preserves the query string', () => {
+    expect(upstreamUrl('https://scorecard.run.app', '/api/scorecard', '/api/scorecard/v1/players', '?tier=gold')).toBe(
+      'https://scorecard.run.app/v1/players?tier=gold',
+    )
+  })
+
+  // Stripping the prefix off a bare prefix leaves nothing, which is not a valid path.
+  it('turns a bare prefix into a root request', () => {
+    expect(upstreamUrl('https://heimdall.run.app', '/api/auth', '/api/auth', '')).toBe('https://heimdall.run.app/')
+  })
+
+  it('does not double the slash when the origin has a trailing one', () => {
+    expect(upstreamUrl('https://scorecard.run.app/', '/api/scorecard', '/api/scorecard/v1/players', '')).toBe(
+      'https://scorecard.run.app/v1/players',
+    )
+  })
+})
+
+describe('isCacheable', () => {
+  it('accepts an anonymous GET', () => {
+    expect(isCacheable(new Request('https://x/api/scorecard/v1/players'))).toBe(true)
+  })
+
+  // The edge cache is shared between every visitor, so anything identifying a caller must
+  // never reach it. A scorer submits a hole then immediately refetches; serving them their
+  // own pre-submission data is the one staleness that genuinely misleads.
+  it('refuses a request carrying an Authorization header', () => {
+    const req = new Request('https://x/api/scorecard/v1/players', { headers: { Authorization: 'Bearer token' } })
+    expect(isCacheable(req)).toBe(false)
+  })
+
+  it('refuses a request carrying a Cookie', () => {
+    const req = new Request('https://x/api/auth/v1/me', { headers: { Cookie: 'refresh_token=abc' } })
+    expect(isCacheable(req)).toBe(false)
+  })
+
+  it.each(['POST', 'PUT', 'DELETE', 'PATCH'])('refuses %s, which changes state', (method) => {
+    expect(isCacheable(new Request('https://x/api/scorecard/v1/players', { method }))).toBe(false)
+  })
+})
+
+describe('isStorable', () => {
+  const res = (status: number, headers: Record<string, string> = {}) => new Response('{}', { status, headers })
 
   it('stores a 200 the origin marked public', () => {
-    expect(isStorable(withCacheControl('public, max-age=60'))).toBe(true)
+    expect(isStorable(res(200, { 'Cache-Control': 'public, max-age=60' }))).toBe(true)
   })
 
-  // The services mark authenticated reads and every error no-store; this is the check
-  // that keeps the Worker from second-guessing them.
-  it('respects no-store', () => {
-    expect(isStorable(withCacheControl('no-store'))).toBe(false)
+  // The services decide what may be cached, because only they know whether a cup is being
+  // scored right now. Silence is not consent.
+  it('refuses a response with no Cache-Control at all', () => {
+    expect(isStorable(res(200))).toBe(false)
   })
 
-  it('stores nothing without an explicit public directive', () => {
-    expect(isStorable(new Response('{}', { status: 200 }))).toBe(false)
-    expect(isStorable(withCacheControl('max-age=60'))).toBe(false)
+  it.each(['no-store', 'private, max-age=60', 'max-age=60'])('refuses %s', (cc) => {
+    expect(isStorable(res(200, { 'Cache-Control': cc }))).toBe(false)
   })
 
-  // "public" must be a directive, not a substring of one.
-  it('is not fooled by a directive that merely contains the word', () => {
-    expect(isStorable(withCacheControl('no-cache, x-publisher=1'))).toBe(false)
+  // A cached error outlives whatever caused it — a 404 stored during a deploy would
+  // survive long after the route came back.
+  it.each([404, 500, 502, 301])('refuses status %i even when marked public', (status) => {
+    expect(isStorable(res(status, { 'Cache-Control': 'public, max-age=60' }))).toBe(false)
   })
 
-  // A cached error outlives whatever caused it.
-  it('never stores an error, even one marked public', () => {
-    for (const status of [301, 404, 500]) {
-      expect(isStorable(withCacheControl('public, max-age=60', status)), String(status)).toBe(false)
-    }
-  })
-
-  // The Cache API rejects these outright rather than ignoring them.
-  it('never stores a response that sets a cookie', () => {
-    const res = new Response('{}', {
-      status: 200,
-      headers: { 'Cache-Control': 'public, max-age=60' },
-    })
-    res.headers.append('Set-Cookie', 'session=abc; Path=/')
-    expect(isStorable(res)).toBe(false)
+  // The Cache API rejects a response carrying Set-Cookie outright, so this is checked
+  // rather than thrown on.
+  it('refuses a public response that carries a Set-Cookie', () => {
+    const r = res(200, { 'Cache-Control': 'public, max-age=60' })
+    r.headers.append('Set-Cookie', 'refresh_token=abc; Path=/api/auth/v1/refresh')
+    expect(isStorable(r)).toBe(false)
   })
 })
 
-// Untested until now, and the failure mode is quiet: login works, then sessions stop
-// refreshing once the access token expires.
-describe('re-anchoring the refresh cookie', () => {
-  it('moves heimdall’s refresh path under the proxy prefix', () => {
-    const got = rewriteCookiePath('refresh_token=x; Path=/v1/refresh; HttpOnly', '/api/auth')
-    expect(got).toContain('Path=/api/auth/v1/refresh')
+describe('rewriteCookiePath', () => {
+  // heimdall sets Path=/v1/refresh because it is mounted at root. Behind the proxy the
+  // browser would never send that cookie back to /api/auth/v1/refresh, so the session
+  // would silently fail to survive a reload.
+  it('re-anchors the refresh path under the proxy prefix', () => {
+    expect(rewriteCookiePath('refresh_token=abc; Path=/v1/refresh; HttpOnly; Secure', '/api/auth')).toBe(
+      'refresh_token=abc; Path=/api/auth/v1/refresh; HttpOnly; Secure',
+    )
   })
 
-  it('re-anchors a root-scoped cookie', () => {
-    expect(rewriteCookiePath('a=b; Path=/', '/api/auth')).toContain('Path=/api/auth')
+  it('re-anchors a root path to the prefix itself', () => {
+    expect(rewriteCookiePath('session=xyz; Path=/; HttpOnly', '/api/auth')).toBe('session=xyz; Path=/api/auth; HttpOnly')
+  })
+
+  it('handles a root path at the very end of the header', () => {
+    expect(rewriteCookiePath('session=xyz; Path=/', '/api/auth')).toBe('session=xyz; Path=/api/auth')
   })
 
   it('leaves any other path alone', () => {
-    const cookie = 'a=b; Path=/somewhere/else'
+    const cookie = 'session=xyz; Path=/somewhere/else; HttpOnly'
     expect(rewriteCookiePath(cookie, '/api/auth')).toBe(cookie)
   })
 
-  it('keeps the other attributes', () => {
-    const got = rewriteCookiePath('refresh_token=x; Path=/v1/refresh; HttpOnly; Secure; SameSite=Strict', '/api/auth')
-    expect(got).toContain('HttpOnly')
-    expect(got).toContain('Secure')
-    expect(got).toContain('SameSite=Strict')
+  it('matches the attribute case-insensitively, as Set-Cookie allows', () => {
+    expect(rewriteCookiePath('refresh_token=abc; path=/v1/refresh', '/api/auth')).toBe('refresh_token=abc; Path=/api/auth/v1/refresh')
+  })
+
+  // The two replacements run in sequence, so a path already rewritten to /api/auth/v1/...
+  // must not then be caught by the bare-root rule.
+  it('does not rewrite twice', () => {
+    const once = rewriteCookiePath('refresh_token=abc; Path=/v1/refresh; HttpOnly', '/api/auth')
+    expect(rewriteCookiePath(once, '/api/auth')).toBe(once)
+  })
+
+  it('preserves the security attributes it does not touch', () => {
+    const out = rewriteCookiePath('refresh_token=abc; Path=/v1/refresh; HttpOnly; Secure; SameSite=Strict', '/api/auth')
+    expect(out).toContain('HttpOnly')
+    expect(out).toContain('Secure')
+    expect(out).toContain('SameSite=Strict')
   })
 })
