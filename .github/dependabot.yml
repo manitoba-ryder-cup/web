@@ -19,6 +19,15 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # typescript-eslint peers on `typescript >=4.8.4 <6.1.0`, and no published version
+      # supports 7 yet — including the alphas. A major TS bump therefore makes `npm ci`
+      # unresolvable, which fails every job before it starts and takes the eight unrelated
+      # updates grouped with it down too. Remove this once typescript-eslint supports 7.
+      #
+      # Only the root project: the Worker has no typescript-eslint and no such constraint.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
     groups:
       production:
         dependency-type: production
