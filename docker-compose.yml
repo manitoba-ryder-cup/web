@@ -25,6 +25,7 @@ services:
       - "5442:5432" # non-default host port to avoid clashing with the test stacks
     volumes:
       - ./dev/postgres/init:/docker-entrypoint-initdb.d:ro
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U superuser"]
       interval: 5s
@@ -82,3 +83,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+volumes:
+  postgres_data:
