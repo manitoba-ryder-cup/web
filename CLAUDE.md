@@ -117,12 +117,14 @@ and wrapping rules churn them and un-align hand-spaced lists. Hand-format those;
 `npm run format` on everything else. A pre-commit hook checks staged files — enable it
 once per clone with `git config core.hooksPath .githooks`.
 
-Commits are `type(scope): subject` — types `feat`/`fix`/`refactor`/`build`/`chore`, scope
-`web` for the app and `dev` for the local stack. The subject is lowercase and describes
-the change in the product's terms ("show how a player's matches end", not "add stats
-rows"). Bodies explain the reasoning, and say what was considered and dropped. No
-`Co-Authored-By` trailer and no generated-with footer, in commits or PR descriptions — the
-repo squash-merges with the PR body as the message, so anything in it lands in the log.
+Commits are `type(scope): subject` — types `feat`/`fix`/`style`/`refactor`/`build`/`chore`,
+scope `web` for the app and `dev` for the local stack. `style` is a visual change that adds
+no capability: sizing, colour, spacing. Branch names take the same type as the commit. The
+subject is lowercase and describes the change in the product's terms ("show how a player's
+matches end", not "add stats rows"). Bodies explain the reasoning, and say what was
+considered and dropped. No `Co-Authored-By` trailer and no generated-with footer, in
+commits or PR descriptions — the repo squash-merges with the PR body as the message, so
+anything in it lands in the log.
 
 PR descriptions are read as commit messages, so write them as prose. A table has to beat a
 sentence to earn its place.
