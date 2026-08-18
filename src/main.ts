@@ -4,6 +4,13 @@ import './assets/main.css'
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
+import { reloadOnceForStaleChunk } from './lib/staleChunk'
+
+// A lazily imported route whose chunk the latest deploy replaced fails to load; without
+// this the user is left on a dead route with nothing to act on.
+window.addEventListener('vite:preloadError', () => {
+  reloadOnceForStaleChunk(sessionStorage, () => window.location.reload())
+})
 
 const app = createApp(App)
 app.use(createPinia())
