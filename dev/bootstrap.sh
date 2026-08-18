@@ -44,7 +44,7 @@ echo "==> Starting postgres and heimdall..."
 SCORECARD_PUBLIC_TENANT_ID=bootstrapping docker compose up -d postgres heimdall
 
 echo "==> Waiting for heimdall..."
-until curl -sfI "$HEIMDALL/healthz" >/dev/null 2>&1; do sleep 1; done  # /healthz is HEAD-only
+until curl -sfI "$HEIMDALL/health" >/dev/null 2>&1; do sleep 1; done  # /health is HEAD-only
 
 # Scopes must exist BEFORE registering: the bootstrapped admin role is granted every
 # permission that exists at the moment it is created.
@@ -117,7 +117,7 @@ fi
 # --- phase 4: scorecard, now that there is a tenant for it to serve --------------------
 echo "==> Starting scorecard..."
 docker compose up -d scorecard
-until curl -sf http://localhost:5000/healthz >/dev/null 2>&1; do sleep 1; done
+until curl -sf http://localhost:5000/health >/dev/null 2>&1; do sleep 1; done
 
 cat <<EOF
 
