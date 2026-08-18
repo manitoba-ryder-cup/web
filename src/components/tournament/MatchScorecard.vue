@@ -106,8 +106,8 @@ function open(hole: number) {
            card. A <caption> keeps this part of the table rather than a strip that happens
            to sit above one. Charcoal here, mrc-muted for the structural bands (header row,
            Hole and Par columns), panel-alt for the totals. -->
-      <caption v-if="courseName || formatName" class="bg-mrc-charcoal px-3 py-2.5">
-        <div class="flex items-baseline justify-between gap-3 text-xs font-semibold uppercase tracking-widest text-white/70">
+      <caption v-if="courseName || formatName" class="bg-mrc-charcoal px-3 py-3">
+        <div class="flex items-baseline justify-between gap-3 font-semibold text-white/90">
           <span class="min-w-0 truncate text-left">{{ courseName }}</span>
           <span class="shrink-0 text-right">{{ formatName }}</span>
         </div>
