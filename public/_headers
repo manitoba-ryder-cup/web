@@ -1,4 +1,26 @@
-# Keep the private tournament app out of search engines (carried over from the previous
-# nginx config's X-Robots-Tag).
+# Response headers for everything Cloudflare Pages serves. /api/* never reaches Pages —
+# the Worker answers it at the edge — so these cover the app shell and its assets only.
+
 /*
+  # Keep the private tournament app out of search engines (carried over from the previous
+  # nginx config's X-Robots-Tag).
   X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex
+
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+  # frame-ancestors below says the same thing; this is for browsers that predate it.
+  X-Frame-Options: DENY
+
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
+
+  # Everything the app loads is same-origin: no CDN, no web fonts, no third-party images.
+  # 'unsafe-inline' for styles alone is unavoidable — Vue writes `:style` bindings as
+  # inline style attributes, and style-src covers attributes as well as <style> elements.
+  # Scripts need no such exemption: the build emits one module and never calls eval.
+  # img-src allows data: because Vite inlines any asset under 4KB, so an icon added later
+  # would otherwise fail a check nothing runs.
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+  # Pages sends this by default. Nothing here is meant to be read cross-origin, and the
+  # SPA calls its API same-origin through the Worker.
+  ! Access-Control-Allow-Origin
