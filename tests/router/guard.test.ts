@@ -27,7 +27,7 @@ router.addRoute({
 router.addRoute({
   path: '/__scoped',
   name: 'scoped',
-  meta: { requiresAuth: true, requiresScope: SCOPE_TOURNAMENTS_WRITE },
+  meta: { requiresScope: SCOPE_TOURNAMENTS_WRITE },
   component: { template: '<div/>' },
 })
 
@@ -43,6 +43,15 @@ describe('router guard', () => {
     await router.push('/__protected')
     expect(router.currentRoute.value.name).toBe('login')
     expect(router.currentRoute.value.query.redirect).toBe('/__protected')
+  })
+
+  // The real /admin routes name a scope and nothing else, so an anonymous visitor has to
+  // reach login through the scope requirement alone — landing on the dashboard would
+  // leave them with no way in.
+  it('sends an anonymous visitor to login from a scope-only route', async () => {
+    await router.push('/__scoped')
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/__scoped')
   })
 
   // A scorer is signed in and holds a write scope, and still has no business in tournament

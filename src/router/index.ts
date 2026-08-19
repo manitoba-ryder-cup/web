@@ -61,14 +61,14 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: () => import('@/views/admin/AdminView.vue'),
-      meta: { requiresAuth: true, requiresScope: SCOPE_TOURNAMENTS_WRITE },
+      meta: { requiresScope: SCOPE_TOURNAMENTS_WRITE },
     },
     {
       path: '/admin/tournaments/:id',
       name: 'admin-tournament',
       component: () => import('@/views/admin/AdminTournamentView.vue'),
       props: true,
-      meta: { requiresAuth: true, requiresScope: SCOPE_TOURNAMENTS_WRITE, back: () => ({ to: { name: 'admin' }, label: 'Admin' }) },
+      meta: { requiresScope: SCOPE_TOURNAMENTS_WRITE, back: () => ({ to: { name: 'admin' }, label: 'Admin' }) },
     },
     {
       path: '/admin/tournaments/:id/players',
@@ -76,7 +76,6 @@ const router = createRouter({
       component: () => import('@/views/admin/AdminRosterView.vue'),
       props: true,
       meta: {
-        requiresAuth: true,
         requiresScope: SCOPE_TOURNAMENTS_WRITE,
         back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }),
       },
@@ -87,7 +86,6 @@ const router = createRouter({
       component: () => import('@/views/admin/AdminTeamsView.vue'),
       props: true,
       meta: {
-        requiresAuth: true,
         requiresScope: SCOPE_TOURNAMENTS_WRITE,
         back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }),
       },
@@ -98,7 +96,6 @@ const router = createRouter({
       component: () => import('@/views/admin/AdminMatchLineupView.vue'),
       props: true,
       meta: {
-        requiresAuth: true,
         requiresScope: SCOPE_TOURNAMENTS_WRITE,
         back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }),
       },
@@ -115,13 +112,16 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   // Referenced inside the guard (not at module scope) so Pinia is active when this runs.
-  // The /admin/* routes set requiresAuth; public reads stay open to everyone.
   const auth = useAuthStore()
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+
+  // A scope is only ever held by someone signed in, so requiring one requires a session.
+  // Deriving it means a route cannot ask for a scope and forget to ask for the login,
+  // which would send an anonymous visitor to the dashboard with no way forward.
+  if ((to.meta.requiresAuth || to.meta.requiresScope) && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  // Signed in but without the scope: sending them to login would loop, since logging in
-  // again grants nothing new.
+  // Signed in and still not allowed: back to login would loop, since signing in again
+  // grants nothing new.
   if (to.meta.requiresScope && !auth.hasScope(to.meta.requiresScope)) {
     return { name: 'dashboard' }
   }

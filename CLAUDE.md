@@ -68,8 +68,10 @@ button, and nothing else. Everything else gates on *capability*, so it names the
 needs: `auth.hasScope(SCOPE_TOURNAMENTS_WRITE)` for the admin area, `SCOPE_SCORES_WRITE`
 for the score wheel. The scopes are read off the access token (`lib/token.ts`), which
 decides what to *offer*; the services decide what is *allowed*, and an unreadable token
-yields none. Gating a route is `requiresScope` in its meta. A read stays public even where
-the write beside it does not — the hole page shows a spectator every score and no wheel.
+yields none. Gating a route is `requiresScope` in its meta, which implies a session: an
+anonymous visitor reaches login, a signed-in one without the scope reaches the dashboard.
+A read stays public even where the write beside it does not — the hole page shows a
+spectator every score and no wheel.
 
 ## Domain invariants
 
