@@ -57,6 +57,8 @@ vi.mock('@/api/scorecard', () => ({
 }))
 
 import MatchDetailView from '@/views/MatchDetailView.vue'
+import { tokenWithScopes } from '../support/token'
+import { SCOPE_TOURNAMENTS_WRITE, SCOPE_SCORES_WRITE } from '@/api/scopes'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -69,7 +71,7 @@ const router = createRouter({
 
 async function open({ loggedIn = true } = {}) {
   setActivePinia(createPinia())
-  if (loggedIn) useAuthStore().accessToken = 'tok'
+  if (loggedIn) useAuthStore().accessToken = tokenWithScopes([SCOPE_TOURNAMENTS_WRITE])
   router.push('/t/t1/m/m1')
   await router.isReady()
   const w = mount(MatchDetailView, { props: { tournamentId: 't1', matchId: 'm1' }, global: { plugins: [router] } })
@@ -112,6 +114,22 @@ describe('MatchDetailView', () => {
 
     expect(w.text()).toContain("lineup for this match hasn't been set")
     expect(w.find('a[href="/admin/t/t1/m/m1"]').exists()).toBe(true)
+  })
+
+  // Being signed in is not the test: the lineup page needs tournaments:write, so offering
+  // a scorer the link would only bounce them back to the dashboard.
+  it('withholds the lineup link from a signed-in user who cannot set one', async () => {
+    match.mockReturnValue(noLineup)
+    setActivePinia(createPinia())
+    useAuthStore().accessToken = tokenWithScopes([SCOPE_SCORES_WRITE])
+
+    router.push('/t/t1/m/m1')
+    await router.isReady()
+    const w = mount(MatchDetailView, { props: { tournamentId: 't1', matchId: 'm1' }, global: { plugins: [router] } })
+    await flushPromises()
+
+    expect(w.text()).toContain("lineup for this match hasn't been set")
+    expect(w.find('a[href="/admin/t/t1/m/m1"]').exists()).toBe(false)
   })
 
   it('does not make holes tappable before the cup is played', async () => {

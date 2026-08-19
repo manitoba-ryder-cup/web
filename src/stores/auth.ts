@@ -2,11 +2,16 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api/auth'
 import type { User } from '@/api/types'
+import { scopesFrom } from '@/lib/token'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
   const user = ref<User | null>(null)
   const isAuthenticated = computed(() => accessToken.value !== null)
+  // Read off the token rather than stored separately, so a refresh that narrows a user's
+  // access narrows what they are offered on the next request rather than at next login.
+  const scopes = computed(() => scopesFrom(accessToken.value))
+  const hasScope = (scope: string) => scopes.value.includes(scope)
 
   async function login(email: string, password: string) {
     // Fetch token + user before assigning either, so a me() failure never
@@ -49,5 +54,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { accessToken, user, isAuthenticated, login, refresh, restore, logout }
+  return { accessToken, user, isAuthenticated, scopes, hasScope, login, refresh, restore, logout }
 })

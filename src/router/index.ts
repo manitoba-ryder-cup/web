@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded, type RouteLocationRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
 
 // Some detail routes declare a contextual back link. The app header renders it (replacing
 // the wordmark) purely from the current route's meta, so it never lingers across a
@@ -7,6 +8,9 @@ import { useAuthStore } from '@/stores/auth'
 declare module 'vue-router' {
   interface RouteMeta {
     back?: (route: RouteLocationNormalizedLoaded) => { to: RouteLocationRaw; label: string }
+    // A scope the token must carry. Authentication alone is not enough for the admin
+    // area: a scorer holds a write scope and still has no business in tournament setup.
+    requiresScope?: string
   }
 }
 
@@ -57,35 +61,44 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: () => import('@/views/admin/AdminView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresScope: SCOPE_TOURNAMENTS_WRITE },
     },
     {
       path: '/admin/tournaments/:id',
       name: 'admin-tournament',
       component: () => import('@/views/admin/AdminTournamentView.vue'),
       props: true,
-      meta: { requiresAuth: true, back: () => ({ to: { name: 'admin' }, label: 'Admin' }) },
+      meta: { requiresScope: SCOPE_TOURNAMENTS_WRITE, back: () => ({ to: { name: 'admin' }, label: 'Admin' }) },
     },
     {
       path: '/admin/tournaments/:id/players',
       name: 'admin-roster',
       component: () => import('@/views/admin/AdminRosterView.vue'),
       props: true,
-      meta: { requiresAuth: true, back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }) },
+      meta: {
+        requiresScope: SCOPE_TOURNAMENTS_WRITE,
+        back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }),
+      },
     },
     {
       path: '/admin/tournaments/:id/teams',
       name: 'admin-teams',
       component: () => import('@/views/admin/AdminTeamsView.vue'),
       props: true,
-      meta: { requiresAuth: true, back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }) },
+      meta: {
+        requiresScope: SCOPE_TOURNAMENTS_WRITE,
+        back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }),
+      },
     },
     {
       path: '/admin/tournaments/:id/matches/:matchId',
       name: 'admin-lineup',
       component: () => import('@/views/admin/AdminMatchLineupView.vue'),
       props: true,
-      meta: { requiresAuth: true, back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }) },
+      meta: {
+        requiresScope: SCOPE_TOURNAMENTS_WRITE,
+        back: (r) => ({ to: { name: 'admin-tournament', params: { id: r.params.id } }, label: 'Setup' }),
+      },
     },
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
     {
@@ -99,10 +112,18 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   // Referenced inside the guard (not at module scope) so Pinia is active when this runs.
-  // The /admin/* routes set requiresAuth; public reads stay open to everyone.
   const auth = useAuthStore()
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+
+  // A scope is only ever held by someone signed in, so requiring one requires a session.
+  // Deriving it means a route cannot ask for a scope and forget to ask for the login,
+  // which would send an anonymous visitor to the dashboard with no way forward.
+  if ((to.meta.requiresAuth || to.meta.requiresScope) && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  // Signed in and still not allowed: back to login would loop, since signing in again
+  // grants nothing new.
+  if (to.meta.requiresScope && !auth.hasScope(to.meta.requiresScope)) {
+    return { name: 'dashboard' }
   }
 })
 

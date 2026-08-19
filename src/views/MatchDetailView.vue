@@ -12,6 +12,7 @@ import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import MatchScorecard from '@/components/tournament/MatchScorecard.vue'
+import { SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
 
 const props = defineProps<{ tournamentId: string; matchId: string }>()
 
@@ -100,9 +101,10 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
         </p>
         <p class="mt-6 text-mrc-muted">The lineup for this match hasn't been set yet.</p>
         <!-- For an admin this empty state's whole purpose is to set the lineup, so it gets a
-             real button; it only shows when logged in, so public viewers never see it. -->
+             real button. It needs the scope the lineup page itself requires, or it would
+             offer a scorer a link that bounces them back. -->
         <RouterLink
-          v-if="auth.isAuthenticated"
+          v-if="auth.hasScope(SCOPE_TOURNAMENTS_WRITE)"
           :to="{ name: 'admin-lineup', params: { id: tournamentId, matchId } }"
           class="mt-6 inline-flex items-center justify-center rounded bg-mrc-accent px-6 py-2 font-semibold text-white shadow-md transition hover:bg-mrc-accent-dark"
         >

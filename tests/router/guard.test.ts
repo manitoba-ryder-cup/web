@@ -12,13 +12,22 @@ vi.mock('@/api/auth', () => ({
 }))
 
 import router from '@/router'
+import { useAuthStore } from '@/stores/auth'
+import { SCOPE_TOURNAMENTS_WRITE, SCOPE_SCORES_WRITE } from '@/api/scopes'
+import { tokenWithScopes } from '../support/token'
 
-// No app route sets requiresAuth yet (all reads are public), so register a synthetic
-// protected route to exercise the guard itself — it's infrastructure for future admin pages.
+// A synthetic route so the guard is exercised without depending on which real routes
+// happen to be protected. The /admin/* routes carry both these meta fields.
 router.addRoute({
   path: '/__protected',
   name: 'protected',
   meta: { requiresAuth: true },
+  component: { template: '<div/>' },
+})
+router.addRoute({
+  path: '/__scoped',
+  name: 'scoped',
+  meta: { requiresScope: SCOPE_TOURNAMENTS_WRITE },
   component: { template: '<div/>' },
 })
 
@@ -34,5 +43,32 @@ describe('router guard', () => {
     await router.push('/__protected')
     expect(router.currentRoute.value.name).toBe('login')
     expect(router.currentRoute.value.query.redirect).toBe('/__protected')
+  })
+
+  // The real /admin routes name a scope and nothing else, so an anonymous visitor has to
+  // reach login through the scope requirement alone — landing on the dashboard would
+  // leave them with no way in.
+  it('sends an anonymous visitor to login from a scope-only route', async () => {
+    await router.push('/__scoped')
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/__scoped')
+  })
+
+  // A scorer is signed in and holds a write scope, and still has no business in tournament
+  // setup. Authentication was the only gate before, so the admin area was open to them.
+  it('turns away a signed-in user whose token lacks the scope', async () => {
+    const auth = useAuthStore()
+    auth.accessToken = tokenWithScopes([SCOPE_SCORES_WRITE])
+
+    await router.push('/__scoped')
+    expect(router.currentRoute.value.name).toBe('dashboard')
+  })
+
+  it('lets through a user whose token carries it', async () => {
+    const auth = useAuthStore()
+    auth.accessToken = tokenWithScopes([SCOPE_TOURNAMENTS_WRITE])
+
+    await router.push('/__scoped')
+    expect(router.currentRoute.value.name).toBe('scoped')
   })
 })
