@@ -6,6 +6,7 @@ import { toast } from '@/composables/useToast'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseAlert from '@/components/base/BaseAlert.vue'
+import PasswordInput from '@/components/base/PasswordInput.vue'
 import { displayError } from '@/lib/displayError'
 
 const email = ref('')
@@ -48,7 +49,7 @@ async function onSubmit() {
       <h1 class="mb-10 text-center text-white">Welcome Back</h1>
       <BaseAlert v-if="error" variant="error" class="mb-6">{{ error }}</BaseAlert>
       <BaseInput v-model="email" type="email" placeholder="Email Address" class="mb-6" />
-      <BaseInput v-model="password" type="password" placeholder="Password" @keyup.enter="onSubmit" />
+      <PasswordInput v-model="password" placeholder="Password" @keyup.enter="onSubmit" />
       <RouterLink :to="{ name: 'forgot-password' }" class="block">
         <div class="mb-10 mr-1 mt-2 flex justify-end text-sm text-mrc-accent underline hover:text-white">Forgot your password?</div>
       </RouterLink>
