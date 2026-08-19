@@ -13,6 +13,7 @@ import GroupsIcon from '@/components/icons/GroupsIcon.vue'
 import TrophyIcon from '@/components/icons/TrophyIcon.vue'
 import LoginIcon from '@/components/icons/LoginIcon.vue'
 import AdminIcon from '@/components/icons/AdminIcon.vue'
+import { SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -84,7 +85,7 @@ async function onLogout() {
 
       <div class="mb-1 mt-4 border-b border-white/15 px-4 py-2 text-xs uppercase tracking-wider text-mrc-faint">Account</div>
       <template v-if="auth.isAuthenticated">
-        <NavLink to="/admin" variant="drawer"><AdminIcon class="mr-4" />Admin</NavLink>
+        <NavLink v-if="auth.hasScope(SCOPE_TOURNAMENTS_WRITE)" to="/admin" variant="drawer"><AdminIcon class="mr-4" />Admin</NavLink>
         <button type="button" class="flex w-full items-center px-4 py-2 text-left hover:bg-mrc-accent/10" @click="onLogout">
           <LoginIcon class="mr-4" />Logout
         </button>

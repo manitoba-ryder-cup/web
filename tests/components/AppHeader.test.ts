@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import { useAuthStore } from '@/stores/auth'
+import { SCOPE_TOURNAMENTS_WRITE, SCOPE_SCORES_WRITE } from '@/api/scopes'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -52,6 +53,28 @@ describe('AppHeader', () => {
     expect(w.text()).not.toContain('Login')
   })
 
+  // Being signed in is not the test for the admin area: a scorer holds a write scope and
+  // still has no business in tournament setup. Offering the link and having the API refuse
+  // is a worse answer than not offering it.
+  it('hides Admin from a signed-in user whose token lacks the scope', async () => {
+    const auth = useAuthStore()
+    auth.accessToken = tokenWithScopes([SCOPE_SCORES_WRITE])
+    router.push('/')
+    await router.isReady()
+    const w = mount(AppHeader, { global: { plugins: [router] } })
+    expect(w.text()).toContain('Logout')
+    expect(w.text()).not.toContain('Admin')
+  })
+
+  it('shows Admin when the token carries the scope', async () => {
+    const auth = useAuthStore()
+    auth.accessToken = tokenWithScopes([SCOPE_TOURNAMENTS_WRITE])
+    router.push('/')
+    await router.isReady()
+    const w = mount(AppHeader, { global: { plugins: [router] } })
+    expect(w.text()).toContain('Admin')
+  })
+
   // The drawer's three close paths (backdrop, Esc, route change) are the trickiest
   // part of NavDrawer, so each gets its own regression test.
   async function openDrawer() {
@@ -83,3 +106,8 @@ describe('AppHeader', () => {
     expect(w.find('aside').classes()).toContain('translate-x-full')
   })
 })
+
+function tokenWithScopes(scopes: string[]): string {
+  const body = btoa(JSON.stringify({ scopes })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return `header.${body}.signature`
+}
