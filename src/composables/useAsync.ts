@@ -1,4 +1,5 @@
 import { ref, onMounted, onUnmounted, type Ref } from 'vue'
+import { displayError } from '@/lib/displayError'
 
 interface UseAsyncOptions {
   // When set, silently re-fetch on this cadence (ms) while the tab is visible, so live
@@ -39,7 +40,7 @@ export function useAsync<T>(fetcher: () => Promise<T>, options: UseAsyncOptions 
       error.value = ''
     } catch (e) {
       // Never empty: an empty error renders as a loaded page with nothing in it.
-      error.value = (e instanceof Error && e.message) || 'Something went wrong'
+      error.value = displayError(e)
     } finally {
       loading.value = false
     }

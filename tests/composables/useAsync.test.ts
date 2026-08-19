@@ -67,9 +67,10 @@ describe('useAsync', () => {
     expect(w.vm.data).toBe(null)
     expect(w.vm.loading).toBe(false)
   })
+  // The sentence the services answer a fault with, so the two cannot drift apart.
   it('falls back to a generic message for non-Error throws', async () => {
     const w = mount(harness(() => Promise.reject('weird')))
     await flushPromises()
-    expect(w.vm.error).toBe('Something went wrong')
+    expect(w.vm.error).toBe('Sorry, something went wrong. Please try again later.')
   })
 })
