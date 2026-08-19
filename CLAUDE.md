@@ -110,7 +110,10 @@ them rather than mocking `Intl` or `Date`.
 
 Comments explain **why**, not what — the tradeoff, the failure mode it prevents, the
 alternative rejected. Look at `dev/bootstrap.sh` or `lib/scoringWindow.ts` for the house
-style. Don't add narration that restates the code.
+style. Don't add narration that restates the code, and write for someone who never saw the
+change: "used to" earns its place only where it warns off a path they might take again, as
+`scoringWindow.ts` does with the constants it once held. Anything else about how the code
+got this way is a commit message.
 
 Prose and infra are **prettier-ignored** (`*.md`, `docker-compose.yml`) because its quote
 and wrapping rules churn them and un-align hand-spaced lists. Hand-format those; run
