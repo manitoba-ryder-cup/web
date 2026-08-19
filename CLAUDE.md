@@ -57,10 +57,19 @@ and the dashboard's "to be announced" are all claims about *loaded* data that an
 page satisfies just as well. Every view test asserts that copy can't leak into the load.
 
 **Auth.** `ApiClient` refreshes and retries exactly once on a 401; `authApi` bypasses
-`ApiClient` on purpose (login has no token, and refresh must not trigger its own
-interceptor). `main.ts` awaits `auth.restore()` before mounting so route guards see a
-resolved state. `scorecardApi` builds its client lazily because Pinia has to be active
-first — the same reason the router guard calls `useAuthStore()` inside the guard.
+`ApiClient` because that retry is wrong for every call it makes — a refused login has no
+session to refresh, and refresh would recurse into itself. `main.ts` awaits
+`auth.restore()` before mounting so route guards see a resolved state. `scorecardApi`
+builds its client lazily because Pinia has to be active first — the same reason the router
+guard calls `useAuthStore()` inside the guard.
+
+**`isAuthenticated` is only ever the right test for the session itself** — the Logout
+button, and nothing else. Everything else gates on *capability*, so it names the scope it
+needs: `auth.hasScope(SCOPE_TOURNAMENTS_WRITE)` for the admin area, `SCOPE_SCORES_WRITE`
+for the score wheel. The scopes are read off the access token (`lib/token.ts`), which
+decides what to *offer*; the services decide what is *allowed*, and an unreadable token
+yields none. Gating a route is `requiresScope` in its meta. A read stays public even where
+the write beside it does not — the hole page shows a spectator every score and no wheel.
 
 ## Domain invariants
 
