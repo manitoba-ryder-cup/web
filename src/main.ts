@@ -5,12 +5,17 @@ import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
 import { reloadOnceForStaleChunk } from './lib/staleChunk'
+import { registerSW } from 'virtual:pwa-register'
 
 // A lazily imported route whose chunk the latest deploy replaced fails to load; without
 // this the user is left on a dead route with nothing to act on.
 window.addEventListener('vite:preloadError', () => {
   reloadOnceForStaleChunk(sessionStorage, () => window.location.reload())
 })
+
+// Installs the worker and swaps in a new build as soon as one is deployed. The previous
+// site's worker could never be replaced, which left every visitor on a dead version.
+registerSW({ immediate: true })
 
 const app = createApp(App)
 app.use(createPinia())
