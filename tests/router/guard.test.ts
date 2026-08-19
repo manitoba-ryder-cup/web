@@ -14,6 +14,7 @@ vi.mock('@/api/auth', () => ({
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { SCOPE_TOURNAMENTS_WRITE, SCOPE_SCORES_WRITE } from '@/api/scopes'
+import { tokenWithScopes } from '../support/token'
 
 // A synthetic route so the guard is exercised without depending on which real routes
 // happen to be protected. The /admin/* routes carry both these meta fields.
@@ -62,8 +63,3 @@ describe('router guard', () => {
     expect(router.currentRoute.value.name).toBe('scoped')
   })
 })
-
-function tokenWithScopes(scopes: string[]): string {
-  const body = btoa(JSON.stringify({ scopes })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  return `header.${body}.signature`
-}

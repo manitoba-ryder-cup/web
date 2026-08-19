@@ -5,6 +5,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import { useAuthStore } from '@/stores/auth'
 import { SCOPE_TOURNAMENTS_WRITE, SCOPE_SCORES_WRITE } from '@/api/scopes'
+import { tokenWithScopes } from '../support/token'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -106,8 +107,3 @@ describe('AppHeader', () => {
     expect(w.find('aside').classes()).toContain('translate-x-full')
   })
 })
-
-function tokenWithScopes(scopes: string[]): string {
-  const body = btoa(JSON.stringify({ scopes })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  return `header.${body}.signature`
-}

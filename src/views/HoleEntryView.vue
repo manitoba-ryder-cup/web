@@ -16,6 +16,8 @@ import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import ScoreWheel from '@/components/tournament/ScoreWheel.vue'
 import FlagIcon from '@/components/icons/FlagIcon.vue'
+import { useAuthStore } from '@/stores/auth'
+import { SCOPE_SCORES_WRITE } from '@/api/scopes'
 
 const props = defineProps<{ tournamentId: string; matchId: string; hole: string }>()
 const router = useRouter()
@@ -29,6 +31,7 @@ const { error, loading, retry, refresh, teams, results, holeStates, holes, match
 // Before a match tees off there is nothing to show and nothing to record, so the wheels
 // aren't offered — the server refuses the write too. Afterwards there is everything to
 // show: a played match still reads, it just reads read-only.
+const auth = useAuthStore()
 const started = computed(() => hasStarted(match.value))
 // Read-only outside the match's scoring window as well as once it is decided, matching
 // the server: a score entered for last year's match would be refused.
@@ -38,7 +41,11 @@ const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.
 // loaded result is a snapshot from mount, so a save that ends the match sets this too —
 // otherwise walking to the next hole would still offer an editable wheel.
 const finishedByWrite = ref(false)
-const readonly = computed(() => finishedByWrite.value || !scoreable.value || (match.value?.finished ?? false))
+// Reading a hole is public; recording one is not. Without the scope the page still shows
+// what was scored, which is what a spectator came for, and offers no wheel to turn.
+const readonly = computed(
+  () => finishedByWrite.value || !scoreable.value || (match.value?.finished ?? false) || !auth.hasScope(SCOPE_SCORES_WRITE),
+)
 
 // Singles/Fourball record a score per player; one-ball formats (Alt Shot/Scramble/Scotch)
 // record one score per team (player_id null).

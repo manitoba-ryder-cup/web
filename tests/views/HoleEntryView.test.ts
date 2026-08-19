@@ -63,6 +63,10 @@ vi.mock('@/api/scorecard', () => ({
 }))
 
 import HoleEntryView from '@/views/HoleEntryView.vue'
+import { setActivePinia, createPinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
+import { SCOPE_SCORES_WRITE } from '@/api/scopes'
+import { tokenWithScopes } from '../support/token'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -88,6 +92,9 @@ async function openHole(hole = '15') {
 
 describe('HoleEntryView saving', () => {
   beforeEach(() => {
+    // Recording a hole needs the scope; the tests below are all about what a scorer sees.
+    setActivePinia(createPinia())
+    useAuthStore().accessToken = tokenWithScopes([SCOPE_SCORES_WRITE])
     Object.assign(match, withWindow(match, teeingOffNow))
     submitScore.mockReset()
     getMatchScores.mockClear()
@@ -96,6 +103,17 @@ describe('HoleEntryView saving', () => {
   })
   // Spies here stub the router; a leaked one silently redirects the next test.
   afterEach(() => vi.restoreAllMocks())
+
+  // A spectator reads a hole — that is the public half of this page — and is offered no
+  // way to record one. Same shape as a played cup: the scores show, the wheel does not turn.
+  it('reads a live hole read-only when the token cannot score', async () => {
+    useAuthStore().accessToken = tokenWithScopes([])
+    const w = await openHole('15')
+
+    expect(w.text()).not.toContain("hasn't started yet")
+    expect(w.find('[data-tile]').exists()).toBe(true)
+    expect(saveButton(w).text()).not.toContain('Save')
+  })
 
   it('shows the entry shape while loading rather than an empty screen', async () => {
     // Deliberately not `openHole()`: it flushes, and this asserts pre-flush.
