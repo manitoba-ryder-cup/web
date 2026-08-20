@@ -66,7 +66,7 @@ describe('TournamentView', () => {
     await flushPromises()
     const text = wrapper.text()
 
-    // Hero: "{year} · {location}" eyebrow + the captain matchup. On the leaderboard the
+    // Hero: "{year} · {location}" eyebrow + the captain matchup. On the scores page the
     // captains are white (not team colours) — the ScoreBar right here owns the colour.
     expect(text).toContain('2026 · Winnipeg')
     expect(text).toContain('Jones')

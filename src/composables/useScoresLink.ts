@@ -6,8 +6,8 @@ import { scorecardApi } from '@/api/scorecard'
 const latestTournamentId = ref<string | null>(null)
 let started = false
 
-/** Where "Leaderboard" points: the most recent tournament, or the list until that resolves. */
-export function useLeaderboardLink(): ComputedRef<string> {
+/** Where "Scores" points: the most recent tournament, or the list until that resolves. */
+export function useScoresLink(): ComputedRef<string> {
   if (!started) {
     started = true
     scorecardApi
@@ -23,7 +23,7 @@ export function useLeaderboardLink(): ComputedRef<string> {
 }
 
 /** Tests need each case to start from nothing. */
-export function resetLeaderboardLink() {
+export function resetScoresLink() {
   latestTournamentId.value = null
   started = false
 }

@@ -6,7 +6,7 @@ vi.mock('@/api/scorecard', () => ({ scorecardApi: { listTournaments: vi.fn() } }
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import AppTabBar from '@/components/layout/AppTabBar.vue'
-import { resetLeaderboardLink } from '@/composables/useLeaderboardLink'
+import { resetScoresLink } from '@/composables/useScoresLink'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -40,28 +40,28 @@ function hrefFor(w: ReturnType<typeof mount>, label: string) {
 describe('AppTabBar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    resetLeaderboardLink()
+    resetScoresLink()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([OLDER, LATEST])
   })
 
   it('offers all four destinations', async () => {
     const w = await mountBar()
-    for (const label of ['Home', 'Leaderboard', 'Players', 'History']) {
+    for (const label of ['Home', 'Scores', 'Players', 'History']) {
       expect(w.text()).toContain(label)
     }
   })
 
-  it('points Leaderboard at the most recent tournament', async () => {
+  it('points Scores at the most recent tournament', async () => {
     const w = await mountBar()
-    expect(hrefFor(w, 'Leaderboard')).toBe('/tournaments/t2')
+    expect(hrefFor(w, 'Scores')).toBe('/tournaments/t2')
   })
 
   // The bar is on every screen, so a failed lookup must not leave a dead tab — the
-  // history list is a worse answer than the live leaderboard but still a working one.
+  // history list is a worse answer than the live scores but still a working one.
   it('falls back to the tournament list when the lookup fails', async () => {
     vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new Error('offline'))
     const w = await mountBar()
-    expect(hrefFor(w, 'Leaderboard')).toBe('/tournaments')
+    expect(hrefFor(w, 'Scores')).toBe('/tournaments')
   })
 
   it('marks the tab matching the current route', async () => {
@@ -80,22 +80,22 @@ describe('AppTabBar', () => {
     expect(home?.attributes('aria-current')).toBeUndefined()
   })
 
-  // Leaderboard resolves to /tournaments/:id, which History (/tournaments) is a prefix
+  // Scores resolves to /tournaments/:id, which History (/tournaments) is a prefix
   // of — the same trap as Home, one level down.
-  it('marks Leaderboard but not History on a tournament page', async () => {
+  it('marks Scores but not History on a tournament page', async () => {
     const w = await mountBar('/tournaments/t2')
-    const leaderboard = w.findAll('a').find((a) => a.text().includes('Leaderboard'))
+    const scores = w.findAll('a').find((a) => a.text().includes('Scores'))
     const history = w.findAll('a').find((a) => a.text().includes('History'))
-    expect(leaderboard?.attributes('aria-current')).toBe('page')
+    expect(scores?.attributes('aria-current')).toBe('page')
     expect(history?.attributes('aria-current')).toBeUndefined()
   })
 
   // A match sits under the tournament it belongs to, so the tab you arrived through
   // stays lit rather than the bar going blank as you drill in.
-  it('keeps Leaderboard active on a match page', async () => {
+  it('keeps Scores active on a match page', async () => {
     const w = await mountBar('/tournaments/t2/matches/m1')
-    const leaderboard = w.findAll('a').find((a) => a.text().includes('Leaderboard'))
-    expect(leaderboard?.attributes('aria-current')).toBe('page')
+    const scores = w.findAll('a').find((a) => a.text().includes('Scores'))
+    expect(scores?.attributes('aria-current')).toBe('page')
   })
 
   // Colour is the only other thing marking the current tab, and it is not enough on its

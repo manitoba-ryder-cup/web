@@ -28,7 +28,7 @@ const router = createRouter({
       name: 'match',
       component: () => import('@/views/MatchDetailView.vue'),
       props: true,
-      meta: { back: (r) => ({ to: { name: 'tournament', params: { id: r.params.tournamentId } }, label: 'Leaderboard' }) },
+      meta: { back: (r) => ({ to: { name: 'tournament', params: { id: r.params.tournamentId } }, label: 'Scores' }) },
     },
     {
       path: '/tournaments/:tournamentId/matches/:matchId/holes/:hole',

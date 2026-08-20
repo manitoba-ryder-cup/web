@@ -170,7 +170,7 @@ const { segments } = useCountdown(teeOffAt)
               :to="{ name: 'tournament', params: { id: tournament.id } }"
               class="mt-8 inline-block rounded-md bg-mrc-accent-tint px-6 py-3 font-semibold text-mrc-accent shadow-lg"
             >
-              View Leaderboard
+              View scores
             </RouterLink>
           </template>
 

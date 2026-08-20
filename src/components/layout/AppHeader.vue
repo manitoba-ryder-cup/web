@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { useLeaderboardLink } from '@/composables/useLeaderboardLink'
+import { useScoresLink } from '@/composables/useScoresLink'
 import NavLink from './NavLink.vue'
 import AccountMenu from './AccountMenu.vue'
 import ArrowLeftIcon from '@/components/icons/ArrowLeftIcon.vue'
@@ -12,12 +12,12 @@ import ArrowLeftIcon from '@/components/icons/ArrowLeftIcon.vue'
 const route = useRoute()
 const back = computed(() => route.meta.back?.(route) ?? null)
 
-const leaderboardTo = useLeaderboardLink()
+const scoresTo = useScoresLink()
 
 // Only shown from md up, where there is no tab bar. Same destinations, so the two cannot
 // disagree about where the app goes.
 const links = computed(() => [
-  { to: leaderboardTo.value, label: 'Leaderboard' },
+  { to: scoresTo.value, label: 'Scores' },
   { to: '/players', label: 'Players' },
   { to: '/tournaments', label: 'History' },
 ])

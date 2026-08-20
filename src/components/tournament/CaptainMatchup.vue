@@ -3,7 +3,7 @@ import type { TournamentTeam } from '@/api/types'
 import { useTeamPair } from '@/composables/useTeamPair'
 // "Captain vs Captain" for a hero on a dark/photo background. Team colours by default
 // (the dashboard centrepiece); `white` drops them where colour would be redundant next to
-// a ScoreBar (the leaderboard). Teams arrive Blue-left/Red-right; identified by captain.
+// a ScoreBar (the scores page). Teams arrive Blue-left/Red-right; identified by captain.
 const props = withDefaults(defineProps<{ teams: TournamentTeam[]; size?: 'md' | 'lg'; white?: boolean }>(), {
   size: 'md',
   white: false,
