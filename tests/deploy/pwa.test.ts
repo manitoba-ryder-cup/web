@@ -21,8 +21,7 @@ describe('PWA configuration', () => {
     expect(config).toMatch(/navigateFallbackDenylist:\s*\[\/\^\\\/api\\\//)
   })
 
-  // The previous worker could never be replaced, which is what left every visitor on a
-  // dead build. A prompt-based update would put a dialog between a deploy and a phone.
+  // A prompt-based update puts a dialog between a deploy and a phone in a field.
   it('takes updates without asking', () => {
     expect(config).toContain("registerType: 'autoUpdate'")
     expect(config).toContain('skipWaiting: true')

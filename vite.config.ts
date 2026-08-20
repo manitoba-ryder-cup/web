@@ -10,9 +10,8 @@ export default defineConfig({
     vue(),
     tailwindcss(),
     VitePWA({
-      // autoUpdate, not prompt: the previous worker's failure was that it could never be
-      // replaced, and a prompt is one more thing between a new deploy and a phone in a
-      // field actually running it.
+      // autoUpdate, not prompt: a dialog is one more thing between a deploy and a phone in
+      // a field actually running it.
       registerType: 'autoUpdate',
       // The logo and the fallback avatar are on nearly every screen and come to 24KB
       // between them; without these an offline roster is a page of broken images.
@@ -34,12 +33,10 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // The shell only. Fonts and photographs are 1.9MB of the 2.3MB build and are
-        // cached when they are first used instead, so installing does not download the
-        // whole site over cellular.
+        // The shell only: fonts and photographs are 1.9MB of the 2.3MB build, and are
+        // cached as they are used instead of on install.
         globPatterns: ['**/*.{js,css,html}'],
-        // service-worker.js is the retirement stub for the previous site's worker, not
-        // part of this app.
+        // Not this app's worker — see public/service-worker.js.
         globIgnores: ['service-worker.js'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
