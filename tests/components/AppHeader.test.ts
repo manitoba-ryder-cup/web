@@ -1,109 +1,79 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+
+vi.mock('@/api/scorecard', () => ({ scorecardApi: { listTournaments: vi.fn() } }))
+
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
+import { scorecardApi } from '@/api/scorecard'
 import AppHeader from '@/components/layout/AppHeader.vue'
-import { useAuthStore } from '@/stores/auth'
-import { SCOPE_TOURNAMENTS_WRITE, SCOPE_SCORES_WRITE } from '@/api/scopes'
-import { tokenWithScopes } from '../support/token'
+import { resetLeaderboardLink } from '@/composables/useLeaderboardLink'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'home', component: { template: '<div/>' } },
+    { path: '/', name: 'dashboard', component: { template: '<div/>' } },
+    { path: '/players', name: 'players', component: { template: '<div/>' } },
     { path: '/tournaments', name: 'tournaments', component: { template: '<div/>' } },
-    { path: '/dashboard', name: 'dashboard', component: { template: '<div/>' } },
+    { path: '/tournaments/:id', name: 'tournament', component: { template: '<div/>' } },
     { path: '/login', name: 'login', component: { template: '<div/>' } },
+    {
+      path: '/deep',
+      name: 'deep',
+      component: { template: '<div/>' },
+      meta: { back: () => ({ to: { name: 'players' }, label: 'Players' }) },
+    },
   ],
 })
+
+async function mountHeader(path = '/') {
+  await router.push(path)
+  await router.isReady()
+  const w = mount(AppHeader, { global: { plugins: [router, createPinia()] } })
+  await flushPromises()
+  return w
+}
 
 describe('AppHeader', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.clearAllMocks()
+    resetLeaderboardLink()
+    vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
+      { id: 't1', name: 'Old', start_date: '2025-07-01', end_date: '2025-07-03', location: 'Winnipeg' },
+      { id: 't2', name: 'New', start_date: '2026-09-01', end_date: '2026-09-03', location: 'Brandon' },
+    ])
   })
 
-  it('shows Login (not Logout) when logged out, plus News + History', async () => {
-    router.push('/')
-    await router.isReady()
-    const w = mount(AppHeader, { global: { plugins: [router] } })
-    expect(w.text()).toContain('Login')
-    expect(w.text()).not.toContain('Logout')
-    expect(w.text()).toContain('News')
-    expect(w.text()).toContain('History')
+  it('shows the wordmark on a route with no back link', async () => {
+    const w = await mountHeader('/')
+    expect(w.text()).toContain('Manitoba Ryder Cup')
   })
 
-  it('opens the drawer when the hamburger is clicked', async () => {
-    router.push('/')
-    await router.isReady()
-    const w = mount(AppHeader, { global: { plugins: [router] } })
-    // drawer starts translated off-screen
-    expect(w.find('aside').classes()).toContain('translate-x-full')
-    await w.get('button[aria-label="Open menu"]').trigger('click')
-    expect(w.find('aside').classes()).toContain('translate-x-0')
+  // The back link is the header's own job — the tab bar has no notion of where you came
+  // from — and it replaces the wordmark rather than sitting beside it.
+  it('replaces the wordmark with the back link the route declares', async () => {
+    const w = await mountHeader('/deep')
+    expect(w.text()).toContain('Players')
+    expect(w.text()).not.toContain('Manitoba Ryder Cup')
   })
 
-  it('shows Logout (not Login) when authenticated', async () => {
-    const auth = useAuthStore()
-    auth.user = { id: '1', email: 'a@b.c', first_name: 'A', last_name: 'B' } as never
-    // isAuthenticated derives from accessToken !== null (see src/stores/auth.ts)
-    auth.accessToken = 'tok'
-    router.push('/')
-    await router.isReady()
-    const w = mount(AppHeader, { global: { plugins: [router] } })
-    expect(w.text()).toContain('Logout')
-    expect(w.text()).not.toContain('Login')
+  // Only shown from md up, where the tab bar is hidden. If these two ever disagree the app
+  // has two different answers for where it goes.
+  it.each(['Leaderboard', 'Players', 'History'])('offers %s in the desktop nav', async (label) => {
+    expect((await mountHeader()).text()).toContain(label)
   })
 
-  // Being signed in is not the test for the admin area: a scorer holds a write scope and
-  // still has no business in tournament setup. Offering the link and having the API refuse
-  // is a worse answer than not offering it.
-  it('hides Admin from a signed-in user whose token lacks the scope', async () => {
-    const auth = useAuthStore()
-    auth.accessToken = tokenWithScopes([SCOPE_SCORES_WRITE])
-    router.push('/')
-    await router.isReady()
-    const w = mount(AppHeader, { global: { plugins: [router] } })
-    expect(w.text()).toContain('Logout')
-    expect(w.text()).not.toContain('Admin')
+  it('points Leaderboard at the most recent tournament', async () => {
+    const w = await mountHeader()
+    const link = w.findAll('a').find((a) => a.text().includes('Leaderboard'))
+    expect(link?.attributes('href')).toBe('/tournaments/t2')
   })
 
-  it('shows Admin when the token carries the scope', async () => {
-    const auth = useAuthStore()
-    auth.accessToken = tokenWithScopes([SCOPE_TOURNAMENTS_WRITE])
-    router.push('/')
-    await router.isReady()
-    const w = mount(AppHeader, { global: { plugins: [router] } })
-    expect(w.text()).toContain('Admin')
-  })
-
-  // The drawer's three close paths (backdrop, Esc, route change) are the trickiest
-  // part of NavDrawer, so each gets its own regression test.
-  async function openDrawer() {
-    router.push('/')
-    await router.isReady()
-    const w = mount(AppHeader, { attachTo: document.body, global: { plugins: [router] } })
-    await w.get('button[aria-label="Open menu"]').trigger('click')
-    expect(w.find('aside').classes()).toContain('translate-x-0')
-    return w
-  }
-
-  it('closes the drawer when the backdrop is clicked', async () => {
-    const w = await openDrawer()
-    await w.get('.fixed.inset-0').trigger('click')
-    expect(w.find('aside').classes()).toContain('translate-x-full')
-  })
-
-  it('closes the drawer on Escape', async () => {
-    const w = await openDrawer()
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
-    await w.vm.$nextTick()
-    expect(w.find('aside').classes()).toContain('translate-x-full')
-  })
-
-  it('closes the drawer on route change', async () => {
-    const w = await openDrawer()
-    await router.push('/tournaments')
-    await w.vm.$nextTick()
-    expect(w.find('aside').classes()).toContain('translate-x-full')
+  // Account state lives in AccountMenu, which is tested on its own; the header only has to
+  // render it.
+  it('carries the account menu', async () => {
+    const w = await mountHeader()
+    expect(w.findComponent({ name: 'AccountMenu' }).exists()).toBe(true)
   })
 })

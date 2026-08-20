@@ -9,3 +9,7 @@ docs/superpowers
 
 # Written by dev/bootstrap.sh — the tenant heimdall minted for this environment.
 .env
+
+# Agent scratch: settings, and worktrees that live inside the repo. A worktree here is
+# a git repo of its own, so committing one is both easy and a mess to undo.
+.claude/

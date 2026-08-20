@@ -8,6 +8,9 @@ import { SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
 declare module 'vue-router' {
   interface RouteMeta {
     back?: (route: RouteLocationNormalizedLoaded) => { to: RouteLocationRaw; label: string }
+    // Hides the bottom nav. Score entry is a full-height control and the bar would sit
+    // under the thumb that works it.
+    hidesNav?: boolean
     // A scope the token must carry. Authentication alone is not enough for the admin
     // area: a scorer holds a write scope and still has no business in tournament setup.
     requiresScope?: string
@@ -18,7 +21,6 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
-    { path: '/news', name: 'news', component: () => import('@/views/NewsView.vue') },
     { path: '/tournaments', name: 'tournaments', component: () => import('@/views/TournamentsView.vue') },
     { path: '/tournaments/:id', name: 'tournament', component: () => import('@/views/TournamentView.vue'), props: true },
     {
@@ -34,6 +36,7 @@ const router = createRouter({
       component: () => import('@/views/HoleEntryView.vue'),
       props: true,
       meta: {
+        hidesNav: true,
         back: (r) => ({
           to: { name: 'match', params: { tournamentId: r.params.tournamentId, matchId: r.params.matchId } },
           label: 'Scorecard',
