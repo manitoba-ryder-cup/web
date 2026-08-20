@@ -43,9 +43,35 @@ describe('PWA configuration', () => {
     expect(config).toContain("purpose: 'maskable'")
   })
 
+  // The icon is the two teams, so it has to be the two teams' colours — the ones the
+  // leaderboard uses, not a second pair that only exists here.
+  it('draws the icon in the team colours', () => {
+    const css = readFileSync(resolve(root, 'src/assets/main.css'), 'utf8')
+    const token = (name: string) => css.match(new RegExp(`--color-mrc-${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1]
+    const svg = readFileSync(resolve(root, 'public/favicon.svg'), 'utf8')
+    expect(svg).toContain(token('blue-team'))
+    expect(svg).toContain(token('red-team'))
+  })
+
   // iOS ignores the manifest's icons on older versions, so the home-screen install falls
   // back to a screenshot of the page unless this is declared.
   it('declares an apple-touch-icon in the HTML', () => {
     expect(readFileSync(resolve(root, 'index.html'), 'utf8')).toContain('rel="apple-touch-icon"')
+  })
+
+  // The meta overrides the manifest, so a mismatch shows as a band of one colour above a
+  // header of another — visible only once installed, which is where nobody is looking.
+  it('gives the status bar the same colour in the manifest and the HTML', () => {
+    const html = readFileSync(resolve(root, 'index.html'), 'utf8')
+    const fromHtml = html.match(/name="theme-color" content="([^"]+)"/)?.[1]
+    const fromManifest = config.match(/theme_color: '([^']+)'/)?.[1]
+    expect(fromHtml).toBe(fromManifest)
+  })
+
+  // Whatever colour it is, it has to be the header's, or the two meet in a visible seam.
+  it('gives the status bar the header colour', () => {
+    const css = readFileSync(resolve(root, 'src/assets/main.css'), 'utf8')
+    const ink = css.match(/--color-mrc-ink:\s*(#[0-9a-fA-F]{6})/)?.[1]
+    expect(config).toContain(`theme_color: '${ink}'`)
   })
 })
