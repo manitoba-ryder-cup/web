@@ -6,7 +6,6 @@ vi.mock('@/api/scorecard', () => ({
     listTournaments: vi.fn(),
     getTournamentTeams: vi.fn(),
     getTournamentResults: vi.fn(),
-    getTournamentPlayers: vi.fn(),
   },
 }))
 
@@ -18,10 +17,31 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'dashboard', component: { template: '<div/>' } },
+    { path: '/players', name: 'players', component: { template: '<div/>' } },
     { path: '/tournaments/:id', name: 'tournament', component: { template: '<div/>' } },
     { path: '/tournaments/:tournamentId/matches/:matchId', name: 'match', component: { template: '<div/>' } },
   ],
 })
+
+function match(teeTime: string, format: string, finished = false) {
+  return {
+    match_id: teeTime + format,
+    format_name: format,
+    sides: [],
+    hole_results: [],
+    finished,
+    winner_team_id: null,
+    leader_team_id: null,
+    lead: 0,
+    holes_remaining: 18,
+    tee_time: teeTime,
+    course_name: 'Buffalo Point',
+    scoring_opens_at: teeTime,
+    scoring_closes_at: teeTime,
+  }
+}
+const FRI = '2026-09-18T14:00:00Z'
+const SAT = '2026-09-19T14:00:00Z'
 
 const TOURNAMENT = { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Winnipeg' }
 const TEAMS = [
@@ -39,15 +59,16 @@ describe('DashboardView', () => {
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([TOURNAMENT])
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue(TEAMS)
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([])
-    vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([])
   })
 
-  it('shows skeletons instead of claiming teams are unannounced while loading', async () => {
+  it('shows skeletons rather than a session card while loading', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball')])
     const wrapper = mountDashboard()
 
-    // The regression: an unloaded page is indistinguishable from an un-drafted one, so
-    // the phase notice used to render against empty data and state this as fact.
-    expect(wrapper.text()).not.toContain('to be announced')
+    // An unloaded page is indistinguishable from a cup with nothing left to play, so the
+    // session heading is a claim about data that hasn't arrived. Matched without regard to
+    // case, so the guard survives the copy being reworded.
+    expect(wrapper.text()).not.toMatch(/next out/i)
     expect(wrapper.find('[data-testid="hero-skeleton"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="body-skeleton"]').exists()).toBe(true)
 
@@ -55,7 +76,7 @@ describe('DashboardView', () => {
 
     expect(wrapper.find('[data-testid="hero-skeleton"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="body-skeleton"]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('to be announced')
+    expect(wrapper.text()).toMatch(/next out/i)
   })
 
   it('offers a retry instead of a phase notice when the load fails', async () => {
@@ -64,7 +85,7 @@ describe('DashboardView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('offline')
-    expect(wrapper.text()).not.toContain('to be announced')
+    expect(wrapper.text()).not.toMatch(/next out/i)
     // The hero has no tournament to describe, so it falls back to the site name.
     expect(wrapper.text()).toContain('Manitoba Ryder Cup')
 
@@ -75,5 +96,32 @@ describe('DashboardView', () => {
     // Loaded: the hero swaps the site name for the captain matchup.
     expect(wrapper.text()).toContain('Jones')
     expect(wrapper.text()).toContain('Smith')
+  })
+
+  // The whole point of the landing page: the session in play, not the entire order of
+  // play. Before the event most of the schedule is rows with a time and no lineup.
+  it('shows only the session being played, not the whole schedule', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball'), match(SAT, 'Singles')])
+    const w = mountDashboard()
+    await flushPromises()
+    expect(w.text()).toContain('Fourball')
+    expect(w.text()).not.toContain('Singles')
+  })
+
+  it('moves on to the next session once one has finished', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles')])
+    const w = mountDashboard()
+    await flushPromises()
+    expect(w.text()).toContain('Singles')
+  })
+
+  // Nothing is next once the cup is over, and a card headed "Next out" with an empty body
+  // is worse than no card.
+  it('drops the session card when every match has finished', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles', true)])
+    const w = mountDashboard()
+    await flushPromises()
+    expect(w.text()).not.toContain('Next out')
+    expect(w.text()).not.toContain('On the course')
   })
 })
