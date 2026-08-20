@@ -43,14 +43,15 @@ describe('PWA configuration', () => {
     expect(config).toContain("purpose: 'maskable'")
   })
 
-  // The icon is the two teams, so it has to be the two teams' colours — the ones the
-  // leaderboard uses, not a second pair that only exists here.
-  it('draws the icon in the team colours', () => {
+  // The icon is the two teams, so it has to be drawn in their colours from the palette
+  // rather than a second pair that only exists here. It sits on the emphasis step: at icon
+  // size the leaderboard's own blue and red are louder than they are on a page.
+  it('draws the icon in the palette colours of the two teams', () => {
     const css = readFileSync(resolve(root, 'src/assets/main.css'), 'utf8')
     const token = (name: string) => css.match(new RegExp(`--color-mrc-${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1]
     const svg = readFileSync(resolve(root, 'public/favicon.svg'), 'utf8')
-    expect(svg).toContain(token('blue-team'))
-    expect(svg).toContain(token('red-team'))
+    expect(svg).toContain(token('blue-strong'))
+    expect(svg).toContain(token('red-strong'))
   })
 
   // iOS ignores the manifest's icons on older versions, so the home-screen install falls
