@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
+// No listPlayers: the archive moved to the history page, and leaving it off the mock means
+// a view that reached for it again would fail here rather than quietly widen the page.
 vi.mock('@/api/scorecard', () => ({
-  scorecardApi: { listTournaments: vi.fn(), listPlayers: vi.fn(), getTournamentPlayers: vi.fn(), getTournamentTeams: vi.fn() },
+  scorecardApi: { listTournaments: vi.fn(), getTournamentPlayers: vi.fn(), getTournamentTeams: vi.fn() },
 }))
 
 import { createRouter, createWebHistory } from 'vue-router'
@@ -41,40 +43,12 @@ async function loaded() {
   return w
 }
 
-const clickOption = (w: Awaited<ReturnType<typeof loaded>>, label: string) =>
-  w
-    .findAll('button')
-    .find((b) => b.text() === label)!
-    .trigger('click')
-
 describe('PlayersView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     router.push('/players')
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
       { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Winnipeg' },
-    ])
-    // Bygone plays no cup this year, so which of the two names renders says which scope is
-    // showing without leaning on the markup either one happens to use.
-    vi.mocked(scorecardApi.listPlayers).mockResolvedValue([
-      {
-        id: 'p1',
-        user_id: null,
-        first_name: 'Amy',
-        last_name: 'Smith',
-        photo_path: '',
-        record: { wins: 1, losses: 0, ties: 0 },
-        cups_won: 0,
-      },
-      {
-        id: 'p9',
-        user_id: null,
-        first_name: 'Gus',
-        last_name: 'Bygone',
-        photo_path: '',
-        record: { wins: 0, losses: 2, ties: 0 },
-        cups_won: 0,
-      },
     ])
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
       { id: 'blue-1', color: 'Blue', captain: { id: 'c1', first_name: 'Bo', last_name: 'Jones' }, points: 0 },
@@ -83,11 +57,11 @@ describe('PlayersView', () => {
     vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([entrant()])
   })
 
-  it('shows the filter and card skeleton while loading', async () => {
+  it('shows a team-sheet skeleton while loading', async () => {
     const w = mount(PlayersView, { global: { plugins: [router] } })
 
     expect(w.findAll('[data-testid="skeleton"]').length).toBeGreaterThan(0)
-    // The per-scope empty copy describes loaded data.
+    // The empty copy describes loaded data.
     expect(w.text()).not.toContain("This year's roster hasn't been set yet.")
 
     await flushPromises()
@@ -96,14 +70,7 @@ describe('PlayersView', () => {
     expect(w.text()).toContain('Smith')
   })
 
-  it('opens on this cup', async () => {
-    const w = await loaded()
-
-    expect(w.text()).toContain('Smith')
-    expect(w.text()).not.toContain('Bygone')
-  })
-
-  it('shows this cup by team once the draft is done', async () => {
+  it('shows the field by team once the draft is done', async () => {
     vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([entrant({ team_id: 'blue-1' })])
     const w = await loaded()
 
@@ -111,26 +78,17 @@ describe('PlayersView', () => {
     expect(w.text()).toContain('Team Reid')
   })
 
-  it('shows this cup as one field until every entrant has a team', async () => {
+  it('shows one field until every entrant has a team', async () => {
     const w = await loaded()
 
     expect(w.text()).not.toContain('Team Jones')
     expect(w.text()).toContain('Smith')
   })
 
-  it('widens to every player who has ever taken part', async () => {
+  it('says so when this year has no roster yet', async () => {
+    vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([])
     const w = await loaded()
 
-    await clickOption(w, 'All time')
-
-    expect(w.text()).toContain('Bygone')
-  })
-
-  it('opens on the scope the hash names', async () => {
-    router.push('/players#all-time')
-    await router.isReady()
-    const w = await loaded()
-
-    expect(w.text()).toContain('Bygone')
+    expect(w.text()).toContain("This year's roster hasn't been set yet.")
   })
 })
