@@ -3,7 +3,7 @@ import { displayError } from '@/lib/displayError'
 
 interface UseAsyncOptions {
   // When set, silently re-fetch on this cadence (ms) while the tab is visible, so live
-  // views (leaderboard, standings) stay current without a manual refresh.
+  // views (scores, standings) stay current without a manual refresh.
   intervalMs?: number
 }
 

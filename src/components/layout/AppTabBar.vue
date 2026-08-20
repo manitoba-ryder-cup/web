@@ -1,26 +1,26 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { useLeaderboardLink } from '@/composables/useLeaderboardLink'
+import { useScoresLink } from '@/composables/useScoresLink'
 import HomeIcon from '@/components/icons/HomeIcon.vue'
-import LeaderboardIcon from '@/components/icons/LeaderboardIcon.vue'
+import ScoresIcon from '@/components/icons/ScoresIcon.vue'
 import GroupsIcon from '@/components/icons/GroupsIcon.vue'
 import TrophyIcon from '@/components/icons/TrophyIcon.vue'
 
 const route = useRoute()
-const leaderboardTo = useLeaderboardLink()
+const scoresTo = useScoresLink()
 
 // Each tab owns its own active rule rather than leaning on RouterLink's isActive, which
-// only lights a tab on the exact route it points at: drilling from the leaderboard into a
+// only lights a tab on the exact route it points at: drilling from the scores into a
 // match would blank the bar, and there'd be no way to say that a match still belongs to
-// Leaderboard. Home and History are exact for the opposite reason — every path sits under
+// Scores. Home and History are exact for the opposite reason — every path sits under
 // `/`, and a tournament sits under `/tournaments`, so a prefix test lights two at once.
 const tabs = computed(() => [
   { to: '/', label: 'Home', icon: HomeIcon, active: (p: string) => p === '/' },
   {
-    to: leaderboardTo.value,
-    label: 'Leaderboard',
-    icon: LeaderboardIcon,
+    to: scoresTo.value,
+    label: 'Scores',
+    icon: ScoresIcon,
     active: (p: string) => /^\/tournaments\/[^/]/.test(p),
   },
   { to: '/players', label: 'Players', icon: GroupsIcon, active: (p: string) => /^\/players(\/|$)/.test(p) },

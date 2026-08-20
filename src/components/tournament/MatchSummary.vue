@@ -4,7 +4,7 @@ import type { MatchResult, MatchSide, TournamentTeam } from '@/api/types'
 import { resultText, playerSurnames } from '@/lib/matchResult'
 import { useMatchSides } from '@/composables/useMatchSides'
 
-// Compact leaderboard row: side | result pill | side. The side that's ahead fills with its
+// Compact scores row: side | result pill | side. The side that's ahead fills with its
 // team colour; sides/colour come from useMatchSides (by team id) — never hardcoded.
 const props = defineProps<{ match: MatchResult; teams: TournamentTeam[] }>()
 const { left, right, colorFor } = useMatchSides(

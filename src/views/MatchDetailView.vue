@@ -67,7 +67,7 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
         </div>
       </template>
       <template v-if="match && leftTeam && rightTeam">
-        <!-- The leaderboard row you tapped, reused as this page's heading: it names both
+        <!-- The scores row you tapped, reused as this page's heading: it names both
              sides AND states the result at a fixed position. The Match column and the Tot
              row carry the result too, but neither sits anywhere predictable — the Match
              column's last filled cell moves as the round goes on, and Tot means scrolling.

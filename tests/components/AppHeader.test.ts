@@ -7,7 +7,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import AppHeader from '@/components/layout/AppHeader.vue'
-import { resetLeaderboardLink } from '@/composables/useLeaderboardLink'
+import { resetScoresLink } from '@/composables/useScoresLink'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -38,7 +38,7 @@ describe('AppHeader', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
-    resetLeaderboardLink()
+    resetScoresLink()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
       { id: 't1', name: 'Old', start_date: '2025-07-01', end_date: '2025-07-03', location: 'Winnipeg' },
       { id: 't2', name: 'New', start_date: '2026-09-01', end_date: '2026-09-03', location: 'Brandon' },
@@ -60,13 +60,13 @@ describe('AppHeader', () => {
 
   // Only shown from md up, where the tab bar is hidden. If these two ever disagree the app
   // has two different answers for where it goes.
-  it.each(['Leaderboard', 'Players', 'History'])('offers %s in the desktop nav', async (label) => {
+  it.each(['Scores', 'Players', 'History'])('offers %s in the desktop nav', async (label) => {
     expect((await mountHeader()).text()).toContain(label)
   })
 
-  it('points Leaderboard at the most recent tournament', async () => {
+  it('points Scores at the most recent tournament', async () => {
     const w = await mountHeader()
-    const link = w.findAll('a').find((a) => a.text().includes('Leaderboard'))
+    const link = w.findAll('a').find((a) => a.text().includes('Scores'))
     expect(link?.attributes('href')).toBe('/tournaments/t2')
   })
 
