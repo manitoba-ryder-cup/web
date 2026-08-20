@@ -98,6 +98,16 @@ describe('AppTabBar', () => {
     expect(leaderboard?.attributes('aria-current')).toBe('page')
   })
 
+  // Colour is the only other thing marking the current tab, and it is not enough on its
+  // own for anyone who cannot see the difference.
+  it('marks the active tab with something other than colour', async () => {
+    const w = await mountBar('/players')
+    const players = w.findAll('a').find((a) => a.text().includes('Players'))
+    const history = w.findAll('a').find((a) => a.text().includes('History'))
+    expect(players?.find('span.absolute').exists()).toBe(true)
+    expect(history?.find('span.absolute').exists()).toBe(false)
+  })
+
   // The desktop header carries its own inline nav; two navs at once is the bug.
   it('is hidden from the desktop breakpoint up', async () => {
     const w = await mountBar()

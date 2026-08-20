@@ -35,6 +35,18 @@ describe('AccountMenu', () => {
     setActivePinia(createPinia())
   })
 
+  // Both states sit in the top corner, which is the hardest place on a phone to hit, so
+  // each has to be at least a finger tall — and they are two different elements.
+  it('gives the login link a full tap target', async () => {
+    expect((await mountMenu()).get('a').classes()).toContain('min-h-11')
+  })
+
+  it('gives the account button a full tap target', async () => {
+    useAuthStore().accessToken = tokenWithScopes([])
+    const w = await mountMenu()
+    expect(w.get('button[aria-label="Account"]').classes()).toContain('min-h-11')
+  })
+
   // Signed out there is exactly one thing to do, so a menu holding a single item is one
   // tap of ceremony — the control is the link.
   it('is a direct link to login when signed out', async () => {

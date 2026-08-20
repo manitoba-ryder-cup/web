@@ -36,9 +36,12 @@ const tabs = computed(() => [
             :href="href"
             @click="navigate"
             :aria-current="t.active(route.path) ? 'page' : undefined"
-            class="flex flex-col items-center gap-1 py-2"
+            class="relative flex flex-col items-center gap-1 py-2"
             :class="t.active(route.path) ? 'text-mrc-accent-soft' : 'text-white/70'"
           >
+            <!-- Colour alone would be the only thing separating the current tab from the
+                 rest, which is nothing to anyone who cannot see the difference. -->
+            <span v-if="t.active(route.path)" class="absolute inset-x-3 top-0 h-0.5 rounded-b bg-mrc-accent-soft" />
             <component :is="t.icon" />
             <span class="text-[0.625rem]">{{ t.label }}</span>
           </a>

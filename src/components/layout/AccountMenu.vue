@@ -35,14 +35,15 @@ async function onLogout() {
 }
 </script>
 <template>
-  <RouterLink v-if="!auth.isAuthenticated" to="/login" class="flex items-center gap-2 px-3 text-white/80 hover:text-white">
+  <RouterLink v-if="!auth.isAuthenticated" to="/login" class="flex min-h-11 items-center gap-2 px-3 text-white/80 hover:text-white">
     <LoginIcon /><span class="sr-only md:not-sr-only md:text-sm">Login</span>
   </RouterLink>
   <div v-else class="relative">
     <button
       type="button"
-      class="flex items-center px-3 text-white/80 hover:text-white"
+      class="flex min-h-11 items-center px-3 text-white/80 hover:text-white"
       aria-label="Account"
+      aria-haspopup="menu"
       :aria-expanded="open"
       @click="open = !open"
     >
