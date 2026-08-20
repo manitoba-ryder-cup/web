@@ -4,7 +4,9 @@ import tseslint from 'typescript-eslint'
 import pluginVue from 'eslint-plugin-vue'
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
+  // .claude holds git worktrees of this same repo. Linting into one gives every file a
+  // second candidate tsconfig root and fails the whole run.
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', '.claude/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],

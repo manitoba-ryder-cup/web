@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import type { MatchResult, TournamentPlayer, TournamentTeam } from '@/api/types'
+import type { MatchResult, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
+import { currentSession, groupIntoSessions } from '@/lib/sessions'
 import { tournamentEyebrow } from '@/lib/tournament'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -15,8 +16,6 @@ import ContentContainer from '@/components/layout/ContentContainer.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 import SectionCard from '@/components/layout/SectionCard.vue'
 import OrderOfPlay from '@/components/tournament/OrderOfPlay.vue'
-import Rosters from '@/components/tournament/Rosters.vue'
-import PlayerField from '@/components/tournament/PlayerField.vue'
 import CaptainMatchup from '@/components/tournament/CaptainMatchup.vue'
 
 const route = useRoute()
@@ -29,18 +28,12 @@ const { data, error, loading, retry } = useAsync(
     const tournament = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))[0] ?? null
     let teams: TournamentTeam[] = []
     let results: MatchResult[] = []
-    let players: TournamentPlayer[] = []
     if (tournament) {
-      const [t, r, p] = await Promise.all([
-        scorecardApi.getTournamentTeams(tournament.id),
-        scorecardApi.getTournamentResults(tournament.id),
-        scorecardApi.getTournamentPlayers(tournament.id),
-      ])
+      const [t, r] = await Promise.all([scorecardApi.getTournamentTeams(tournament.id), scorecardApi.getTournamentResults(tournament.id)])
       teams = t
       results = r
-      players = p
     }
-    return { tournament, teams, results, players }
+    return { tournament, teams, results }
   },
   { intervalMs: 20000 },
 )
@@ -48,34 +41,15 @@ const { data, error, loading, retry } = useAsync(
 const tournament = computed(() => data.value?.tournament ?? null)
 const teams = computed(() => data.value?.teams ?? [])
 const results = computed(() => data.value?.results ?? [])
-const players = computed(() => data.value?.players ?? [])
 const { left, right, leftColors, rightColors } = useTeamPair(teams)
 
-// The pre-event page fills in progressively as data lands: field → (captains) matchup →
-// (draft) team sheets → (schedule) order of play. The `?captains|drafted|schedule=false`
-// overrides force the earlier states for previewing against the (fully-populated) demo.
+// The hero fills in as data lands: the site name until there is a tournament, then the
+// captains' matchup once both are named. `?captains=false` forces the earlier state for
+// previewing against the (fully-populated) demo.
 const showMatchup = computed(() => {
   if (route.query.captains === 'false') return false
   return !!(left.value?.captain && right.value?.captain)
 })
-const drafted = computed(() => {
-  if (route.query.drafted === 'false') return false
-  // The captains are on teams from the start, so "some assigned" isn't the draft being
-  // done — treat it as drafted only once every entered player has a team.
-  return players.value.length > 0 && players.value.every((p) => !!p.team_id)
-})
-const hasSchedule = computed(() => {
-  if (route.query.schedule === 'false') return false
-  return results.value.length > 0
-})
-// What's still to come, phrased for the pre-event notice below the field.
-const tbdNote = computed(() => {
-  if (!drafted.value && !hasSchedule.value) return 'Teams and schedule to be announced'
-  if (!drafted.value) return 'Teams to be announced'
-  if (!hasSchedule.value) return 'Schedule to be announced'
-  return ''
-})
-
 // Phase from the results: nothing played = upcoming (draft/schedule), all done = finished,
 // otherwise live. `?phase=` overrides it for previewing a mode against real data.
 const phase = computed<'upcoming' | 'live' | 'finished'>(() => {
@@ -107,6 +81,20 @@ const teeOffAt = computed<number | null>(() => {
 })
 
 const { segments } = useCountdown(teeOffAt)
+
+// The landing page shows the session being played or the next to tee off, and links to the
+// rest. It used to print the whole order of play, which before the event is mostly rows
+// carrying a time and nothing else, because the lineups are not set yet.
+// `?session=N` steps to a later one, matching the other overrides here — a demo whose
+// earliest session is a stray single match cannot show what a real slate looks like.
+const session = computed(() => {
+  const skip = Number(route.query.session)
+  if (typeof route.query.session === 'string' && Number.isFinite(skip)) {
+    return groupIntoSessions(results.value)[skip] ?? null
+  }
+  return currentSession(results.value)
+})
+const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 'Next out'))
 </script>
 <template>
   <div>
@@ -183,31 +171,17 @@ const { segments } = useCountdown(teeOffAt)
 
     <ContentContainer>
       <div class="space-y-8 py-6">
-        <!-- Everything below the hero is gated on loaded data, because the pre-event states
-             are all inferred from absence: an unloaded page looks exactly like an
-             un-drafted one, and would claim the teams are still to be announced. -->
+        <!-- Gated on loaded data: the session card is inferred from absence, so an
+             unloaded page looks exactly like a cup with nothing left to play and would
+             quietly drop the one thing this page is for. -->
         <AsyncState :loading="loading" :error="error" :retry="retry">
           <template #loading>
             <SkeletonSectionCard data-testid="body-skeleton" />
           </template>
 
-          <!-- Pre-event: the drafted teams, or the field before the draft, then the schedule. -->
-          <template v-if="phase === 'upcoming'">
-            <SectionCard v-if="drafted" title="The Teams" padded>
-              <Rosters :players="players" :teams="teams" />
-            </SectionCard>
-            <SectionCard v-else-if="players.length" title="The Field" padded>
-              <PlayerField :players="players" />
-            </SectionCard>
-            <SectionCard v-if="hasSchedule" title="Order of Play">
-              <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
-            </SectionCard>
-            <CapsLabel v-if="tbdNote" size="sm" class="py-2 text-center text-mrc-muted">{{ tbdNote }}</CapsLabel>
-          </template>
-
-          <!-- Live / finished: the order of play. -->
-          <SectionCard v-else-if="results.length" title="Order of Play">
-            <OrderOfPlay flat :matches="results" :teams="teams" :tournament-id="tournament?.id ?? ''" />
+          <!-- The one thing worth reading in full: what is being played, or what is next. -->
+          <SectionCard v-if="session" :title="sessionTitle">
+            <OrderOfPlay flat :matches="session.matches" :teams="teams" :tournament-id="tournament?.id ?? ''" />
           </SectionCard>
         </AsyncState>
       </div>

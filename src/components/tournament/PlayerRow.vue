@@ -2,9 +2,12 @@
 import { RouterLink } from 'vue-router'
 import type { TournamentPlayer } from '@/api/types'
 import TierDot from '@/components/base/TierDot.vue'
+import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 
-// One player line, shared by the team sheet and the pre-draft field: name (linking to the
-// profile, where the year's bio lives), a tier dot, and career form below.
+// One player line, shared by the team sheet and the pre-draft field: a face, the name
+// (linking to the profile, where the year's bio lives), a tier dot, and career form.
+// Two of these sit side by side on a phone, so the tier stays a dot rather than the text
+// badge the player cards use — there is not the width for both a face and a word.
 defineProps<{ player: TournamentPlayer }>()
 
 function record(p: TournamentPlayer): string {
@@ -12,15 +15,18 @@ function record(p: TournamentPlayer): string {
 }
 </script>
 <template>
-  <RouterLink :to="{ name: 'player', params: { id: player.player_id } }" class="group block py-1.5">
-    <div class="flex items-center gap-1.5">
-      <span class="min-w-0 flex-1 truncate text-mrc-ink transition group-hover:text-mrc-accent">
-        {{ player.first_name }} {{ player.last_name }}
-      </span>
-      <TierDot :tier="player.tier" :title="`${player.tier} tier`" />
-    </div>
-    <div class="mt-0.5 text-sm tabular-nums text-mrc-muted">
-      {{ record(player) }}<span v-if="player.cups_won > 0"> · {{ player.cups_won }} {{ player.cups_won === 1 ? 'CUP' : 'CUPS' }}</span>
+  <RouterLink :to="{ name: 'player', params: { id: player.player_id } }" class="group flex items-center gap-2 py-1.5">
+    <PlayerAvatar :photo-path="player.photo_path" :alt="`${player.first_name} ${player.last_name}`" size="row" />
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-1.5">
+        <span class="min-w-0 flex-1 truncate text-mrc-ink transition group-hover:text-mrc-accent">
+          {{ player.first_name }} {{ player.last_name }}
+        </span>
+        <TierDot :tier="player.tier" :title="`${player.tier} tier`" />
+      </div>
+      <div class="mt-0.5 text-sm tabular-nums text-mrc-muted">
+        {{ record(player) }}<span v-if="player.cups_won > 0"> · {{ player.cups_won }} {{ player.cups_won === 1 ? 'CUP' : 'CUPS' }}</span>
+      </div>
     </div>
   </RouterLink>
 </template>

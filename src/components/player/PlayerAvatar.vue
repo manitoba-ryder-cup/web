@@ -3,7 +3,7 @@ import { ref, watch, computed } from 'vue'
 const DEFAULT = '/img/default-avatar.webp'
 // 'sm'/'lg' are round avatars; 'card' is a square photo panel that fills a card's edge;
 // 'hero' is the large round headshot on a dark hero band (a light ring instead of a line).
-const props = withDefaults(defineProps<{ photoPath?: string; alt?: string; size?: 'sm' | 'lg' | 'card' | 'hero' }>(), {
+const props = withDefaults(defineProps<{ photoPath?: string; alt?: string; size?: 'row' | 'sm' | 'lg' | 'card' | 'hero' }>(), {
   photoPath: '',
   alt: '',
   size: 'sm',
@@ -21,6 +21,10 @@ function onError() {
 }
 const sizeClass = computed(() => {
   switch (props.size) {
+    // Two rows sit side by side on a phone, so this is the one size that has to leave
+    // room for a name beside it.
+    case 'row':
+      return 'h-9 w-9 rounded-full border border-mrc-line'
     case 'card':
       return 'h-28 w-28'
     case 'hero':

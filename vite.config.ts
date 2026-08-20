@@ -91,5 +91,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
+    // .claude holds git worktrees of this same repo, whose tests are another branch's and
+    // would be run — and reported — as if they were this one's.
+    exclude: ['node_modules/**', 'dist/**', '.claude/**'],
   },
 })
