@@ -20,11 +20,12 @@ export default defineConfig({
         name: 'Manitoba Ryder Cup',
         short_name: 'Ryder Cup',
         description: 'Live scores, matches and players for the Manitoba Ryder Cup.',
-        // Matches the app header (bg-mrc-ink), so the status bar reads as part of it
-        // rather than a band above it. background_color is the splash behind the icon,
-        // which is a different moment and stays brand blue.
+        // Both are the header colour (bg-mrc-ink). theme_color keeps the status bar from
+        // reading as a band above the header; background_color is the ground the launcher
+        // centres the icon on, and the icon's own left half is brand blue — on a blue
+        // ground it disappears and leaves half a trophy.
         theme_color: '#212121',
-        background_color: '#01366d',
+        background_color: '#212121',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
