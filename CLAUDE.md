@@ -104,6 +104,15 @@ Colours come from the `mrc-*` tokens in the `@theme` block of `main.css`, not ra
 palette classes. The base font-size lives on `html` (14px mobile, 16px from `md`) so the
 rem unit itself scales — don't move it to a wrapper.
 
+**A UI change starts with the `frontend-design` skill** and is measured in a browser before
+it's called done — `getBoundingClientRect`, computed colour, focus an element and look.
+None of what goes wrong here shows up in a screenshot or a class list: **tap targets reach
+44px**, **state never rests on colour alone**, keyboard focus stays visible, and motion
+respects `prefers-reduced-motion`.
+
+The app installs to home screens, and `md` is the line between the tab bar and the header's
+inline nav — so a narrow browser window is a faithful preview of the installed app.
+
 ## TypeScript
 
 `erasableSyntaxOnly` is on: no enums, no namespaces, and **no constructor parameter
