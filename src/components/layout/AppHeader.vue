@@ -38,7 +38,7 @@ const links = computed(() => [
 
         <div class="flex items-center">
           <nav class="mr-2 hidden items-center gap-5 text-sm md:flex">
-            <NavLink v-for="l in links" :key="l.to" :to="l.to" variant="inline">{{ l.label }}</NavLink>
+            <NavLink v-for="l in links" :key="l.to" :to="l.to">{{ l.label }}</NavLink>
           </nav>
           <AccountMenu />
         </div>

@@ -3,10 +3,11 @@ import { useToasts } from '@/composables/useToast'
 const { toasts, dismiss } = useToasts()
 </script>
 <template>
-  <!-- Bottom-centre, thumb-reachable and out of the way. aria-live so screen readers
-       announce confirmations; tap a toast to dismiss it early. -->
+  <!-- Bottom-centre, thumb-reachable and out of the way. Held clear of the tab bar below
+       md, where the bar owns the bottom of the screen; from md there is no bar. aria-live
+       so screen readers announce confirmations; tap a toast to dismiss it early. -->
   <div
-    class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4"
+    class="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex flex-col items-center gap-2 px-4 md:bottom-4"
     aria-live="polite"
     aria-atomic="true"
   >
