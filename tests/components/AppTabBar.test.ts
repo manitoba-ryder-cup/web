@@ -99,13 +99,18 @@ describe('AppTabBar', () => {
   })
 
   // Colour is the only other thing marking the current tab, and it is not enough on its
-  // own for anyone who cannot see the difference.
+  // own for anyone who cannot see the difference. The pill is present or absent.
   it('marks the active tab with something other than colour', async () => {
     const w = await mountBar('/players')
-    const players = w.findAll('a').find((a) => a.text().includes('Players'))
-    const history = w.findAll('a').find((a) => a.text().includes('History'))
-    expect(players?.find('span.absolute').exists()).toBe(true)
-    expect(history?.find('span.absolute').exists()).toBe(false)
+    const pill = (label: string) =>
+      w
+        .findAll('a')
+        .find((a) => a.text().includes(label))
+        ?.find('span.rounded-full')
+        .classes()
+        .some((c) => c.startsWith('bg-'))
+    expect(pill('Players')).toBe(true)
+    expect(pill('History')).toBe(false)
   })
 
   // The desktop header carries its own inline nav; two navs at once is the bug.
