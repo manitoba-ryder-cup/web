@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useScoresLink } from '@/composables/useScoresLink'
-import { navSection } from '@/lib/navSection'
+import { navSection, type NavSection } from '@/lib/navSection'
 import NavLink from './NavLink.vue'
 import AccountMenu from './AccountMenu.vue'
 import ArrowLeftIcon from '@/components/icons/ArrowLeftIcon.vue'
@@ -19,7 +19,7 @@ const scoresTo = useScoresLink()
 // navSection rule the bar uses, so the two cannot disagree about where the app goes or
 // about which screen you are on.
 const section = computed(() => navSection(route))
-const links = computed(() => [
+const links = computed((): { to: string; label: string; section: NavSection }[] => [
   // Home is here and not left to the wordmark: a detail page replaces the wordmark with
   // its back link, so without this the only way home from a profile is to leave it first.
   { to: '/', label: 'Home', section: 'home' },
@@ -44,7 +44,7 @@ const links = computed(() => [
 
         <div class="flex items-center">
           <nav class="mr-2 hidden items-center gap-5 text-sm md:flex">
-            <NavLink v-for="l in links" :key="l.to" :to="l.to" :active="l.section === section">{{ l.label }}</NavLink>
+            <NavLink v-for="l in links" :key="l.label" :to="l.to" :active="l.section === section">{{ l.label }}</NavLink>
           </nav>
           <AccountMenu />
         </div>
