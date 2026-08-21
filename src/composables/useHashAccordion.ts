@@ -33,8 +33,9 @@ export function useHashAccordion(ids: () => string[]) {
     const nowOpen = openId.value !== id
     openId.value = nowOpen ? id : ''
     // replace, not push: opening rows shouldn't fill the back button with steps through
-    // one page.
-    router.replace({ hash: nowOpen ? `#${id}` : '' })
+    // one page. The query rides along because an omitted one resolves to empty, which
+    // would drop the `from` the profile's back link is derived from.
+    router.replace({ query: route.query, hash: nowOpen ? `#${id}` : '' })
   }
 
   return { openId, toggle }

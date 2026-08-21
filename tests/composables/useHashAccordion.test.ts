@@ -61,6 +61,20 @@ describe('useHashAccordion', () => {
     expect(scrollIntoView).not.toHaveBeenCalled()
   })
 
+  // The profile's back link is a pure function of the route, so anything that rewrites the
+  // URL has to leave the rest of it alone: an omitted query resolves to empty, which would
+  // turn "back to History" into "back to Teams" on the first row anyone opened.
+  it('keeps the query when it moves the hash', async () => {
+    const w = await mountAt('', ['t1', 't2'])
+    await router.replace({ path: '/players/p1', query: { from: 'history' } })
+
+    ;(w.vm as unknown as { toggle: (id: string) => void }).toggle('t1')
+    await flushPromises()
+
+    expect(router.currentRoute.value.hash).toBe('#t1')
+    expect(router.currentRoute.value.query.from).toBe('history')
+  })
+
   // A hash naming a cup this player never played must not open a row or move the page.
   it('ignores a hash that matches no row', async () => {
     const w = await mountAt('#nope', ['t1', 't2'])

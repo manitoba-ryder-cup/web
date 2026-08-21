@@ -37,14 +37,17 @@ describe('AccountMenu', () => {
 
   // Both states sit in the top corner, which is the hardest place on a phone to hit, so
   // each has to be at least a finger tall — and they are two different elements.
+  // Sized in px, not rems. The root font-size is 14px below md, so min-h-11 renders 38.5
+  // there — a class that reads as 44 and misses it on exactly the screens the minimum is
+  // for, in the corner of the screen hardest to reach.
   it('gives the login link a full tap target', async () => {
-    expect((await mountMenu()).get('a').classes()).toContain('min-h-11')
+    expect((await mountMenu()).get('a').classes()).toContain('min-h-[44px]')
   })
 
   it('gives the account button a full tap target', async () => {
     useAuthStore().accessToken = tokenWithScopes([])
     const w = await mountMenu()
-    expect(w.get('button[aria-label="Account"]').classes()).toContain('min-h-11')
+    expect(w.get('button[aria-label="Account"]').classes()).toContain('min-h-[44px]')
   })
 
   // Signed out there is exactly one thing to do, so a menu holding a single item is one

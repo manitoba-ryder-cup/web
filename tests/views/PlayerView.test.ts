@@ -234,4 +234,26 @@ describe('PlayerView stats tab', () => {
     expect(open).toHaveLength(1)
     expect(open[0].text()).toContain('Opponents')
   })
+
+  // Partners and opponents are profiles too, reached from inside a profile. The list the
+  // reader started in hasn't changed, so the back link's `from` travels with them rather
+  // than resetting to this year's teams two names down the chain.
+  it('carries where the reader came from onto the profiles it links to', async () => {
+    await router.replace({ path: '/players/p1', query: { from: 'history' } })
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Stats')!
+      .trigger('click')
+    await flushPromises()
+    await w
+      .findAll('button[aria-expanded]')
+      .find((b) => b.text().includes('Partners'))!
+      .trigger('click')
+    await flushPromises()
+
+    const link = w.findAll('a').find((a) => a.text().includes('Cam Macaulay'))
+    expect(link?.attributes('href')).toContain('from=history')
+  })
 })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import type { NotableMatch, PairRecord, PlayerStats } from '@/api/types'
 import { resultText } from '@/lib/matchResult'
 import BaseAccordion from '@/components/base/BaseAccordion.vue'
@@ -25,6 +25,15 @@ const repeatedTeammates = computed(() => props.stats.teammates.filter((t) => t.m
 const frequentOpponents = computed(() => props.stats.opponents.filter((o) => o.matches >= REPEATED))
 
 const name = (p: PairRecord) => `${p.first_name} ${p.last_name}`
+
+// A partner or opponent opens from the same list this profile was opened from, so `from`
+// rides along rather than resetting the back link to this year's teams.
+const route = useRoute()
+const profile = (id: string) => ({
+  name: 'player',
+  params: { id },
+  ...(route.query.from ? { query: { from: route.query.from } } : {}),
+})
 
 // Through resultText, so a margin here reads exactly as it does on a scorecard — "9 & 7",
 // or "1 up" for one settled on the last green. winner_team_id only has to be non-null for
@@ -113,7 +122,7 @@ const toggle = (id: string) => (openSection.value = openSection.value === id ? '
           <RouterLink
             v-for="t in repeatedTeammates"
             :key="t.player_id"
-            :to="{ name: 'player', params: { id: t.player_id } }"
+            :to="profile(t.player_id)"
             class="flex items-center justify-between py-2 transition hover:text-mrc-accent"
           >
             <span class="truncate">{{ name(t) }}</span>
@@ -133,7 +142,7 @@ const toggle = (id: string) => (openSection.value = openSection.value === id ? '
           <RouterLink
             v-for="o in frequentOpponents"
             :key="o.player_id"
-            :to="{ name: 'player', params: { id: o.player_id } }"
+            :to="profile(o.player_id)"
             class="flex items-center justify-between py-2 transition hover:text-mrc-accent"
           >
             <span class="truncate">{{ name(o) }}</span>

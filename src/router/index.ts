@@ -43,13 +43,24 @@ const router = createRouter({
         }),
       },
     },
-    { path: '/players', name: 'players', component: () => import('@/views/PlayersView.vue') },
+    { path: '/teams', name: 'teams', component: () => import('@/views/TeamsView.vue') },
+    // /players was this page's address until the archive moved to the history page and it
+    // became this year's teams. Installed home screens and shared links still point here.
+    { path: '/players', redirect: { name: 'teams' } },
     {
       path: '/players/:id',
       name: 'player',
       component: () => import('@/views/PlayerView.vue'),
       props: true,
-      meta: { back: () => ({ to: { name: 'players' }, label: 'Players' }) },
+      // A profile is reached from this year's roster and from the history page's
+      // participants, so the back link reads the `from` its card put in the URL. Route in,
+      // link out: a refresh or a shared link answers the same as the tap did.
+      meta: {
+        back: (r) =>
+          r.query.from === 'history'
+            ? { to: { name: 'tournaments', hash: '#participants' }, label: 'History' }
+            : { to: { name: 'teams' }, label: 'Teams' },
+      },
     },
     {
       // The per-cup page is gone — a player's cups open in place on their profile instead.

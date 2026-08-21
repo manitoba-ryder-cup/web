@@ -12,6 +12,11 @@ import TierBadge from '@/components/base/TierBadge.vue'
 // tournamentId follows the same rule, and opens the profile with that cup already
 // expanded: a card showing this year's flight should land on this year's write-up rather
 // than make you find it, and the rest of the player's career is right there under it.
+//
+// `from` names the list this card was tapped in, so the profile's back link can offer it.
+// It rides in the URL rather than in navigation state because the header derives that link
+// purely from the route — state would answer differently after a refresh or on a link
+// someone was sent.
 const props = defineProps<{
   id: string
   firstName: string
@@ -21,12 +26,14 @@ const props = defineProps<{
   cups: number
   tier?: string
   tournamentId?: string
+  from?: string
 }>()
 
 const fullName = computed(() => `${props.firstName} ${props.lastName}`)
 const to = computed(() => ({
   name: 'player',
   params: { id: props.id },
+  ...(props.from ? { query: { from: props.from } } : {}),
   ...(props.tournamentId ? { hash: `#${props.tournamentId}` } : {}),
 }))
 </script>
