@@ -14,6 +14,19 @@ export interface HoleRow {
   state: { text: string; cls: string } | null
 }
 
+// One player's contribution to a hole. `counted` marks the score the side played — in a
+// fourball the lower of the two — so the row above can be traced to the player who made it.
+export interface HolePlayerScore {
+  playerId: string
+  name: string
+  strokes: number | null
+  counted: boolean
+}
+export interface HoleDetail {
+  left: HolePlayerScore[]
+  right: HolePlayerScore[]
+}
+
 // A won hole gets a faint team-colour tint behind the coloured digit — scannable down the
 // column, softer than a solid fill. A played-but-lost hole is plain ink; an unplayed hole
 // (no score) is faint.

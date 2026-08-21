@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Hole, HoleStatus, TournamentTeam } from '@/api/types'
+import type { Hole, HoleStatus, MatchPlayer, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
-import type { HoleRow } from './scorecard'
+import type { HoleDetail, HoleRow } from './scorecard'
 import ScorecardRow from './ScorecardRow.vue'
+import ScorecardHoleDetail from './ScorecardHoleDetail.vue'
 import ScorecardSummaryRow from './ScorecardSummaryRow.vue'
 
 // A vertical scorecard (holes down the rows, à la the real Southwood card): teams sit
@@ -25,8 +26,11 @@ const props = defineProps<{
   tournamentId: string
   matchId: string
   // Whether a hole taps through to its entry page. False before the cup is played, when
-  // that page would only turn you straight back.
+  // that page would only turn you straight back, and false for anyone who cannot record a
+  // score — for them the tap opens what each player made instead.
   tappable?: boolean
+  leftPlayers?: MatchPlayer[]
+  rightPlayers?: MatchPlayer[]
 }>()
 
 const router = useRouter()
@@ -94,8 +98,33 @@ const resultCls = computed(() => {
   return states.length ? states[states.length - 1].cls : 'text-mrc-ink'
 })
 
+// A fourball is the only format that records more than one score a side, so it is the only
+// one with anything behind the row. Everywhere else the row already shows what was made.
+function detailFor(hole: number): HoleDetail | null {
+  const s = byHole.value.get(hole)
+  if (!s) return null
+  const side = (team: TournamentTeam, players: MatchPlayer[] | undefined) => {
+    const scored = s.team_scores.find((t) => t.team_id === team.id)
+    const best = scored?.strokes ?? null
+    return (players ?? []).map((p) => {
+      const strokes = scored?.player_scores.find((ps) => ps.player_id === p.player_id)?.strokes ?? null
+      return { playerId: p.player_id, name: `${p.first_name} ${p.last_name}`, strokes, counted: strokes != null && strokes === best }
+    })
+  }
+  const left = side(props.leftTeam, props.leftPlayers)
+  const right = side(props.rightTeam, props.rightPlayers)
+  return left.length > 1 || right.length > 1 ? { left, right } : null
+}
+const openHole = ref<number | null>(null)
+
 function open(hole: number) {
-  router.push({ name: 'hole', params: { tournamentId: props.tournamentId, matchId: props.matchId, hole } })
+  // The most useful thing the reader is allowed to do: record the hole if they can,
+  // otherwise open what each player made.
+  if (props.tappable) {
+    router.push({ name: 'hole', params: { tournamentId: props.tournamentId, matchId: props.matchId, hole } })
+    return
+  }
+  openHole.value = openHole.value === hole ? null : hole
 }
 </script>
 <template>
@@ -134,25 +163,39 @@ function open(hole: number) {
         </tr>
       </thead>
       <tbody>
-        <ScorecardRow
-          v-for="r in front"
-          :key="r.hole"
-          :row="r"
-          :left-meta="leftMeta"
-          :right-meta="rightMeta"
-          :tappable="tappable !== false"
-          @open="open"
-        />
+        <template v-for="r in front" :key="r.hole">
+          <ScorecardRow
+            :row="r"
+            :left-meta="leftMeta"
+            :right-meta="rightMeta"
+            :tappable="tappable !== false || detailFor(r.hole) !== null"
+            :expanded="openHole === r.hole"
+            @open="open"
+          />
+          <ScorecardHoleDetail
+            v-if="openHole === r.hole && detailFor(r.hole)"
+            :detail="detailFor(r.hole)!"
+            :left-meta="leftMeta"
+            :right-meta="rightMeta"
+          />
+        </template>
         <ScorecardSummaryRow label="Out" :yards="out.yards" :left="out.left" :right="out.right" :par="out.par" />
-        <ScorecardRow
-          v-for="r in back"
-          :key="r.hole"
-          :row="r"
-          :left-meta="leftMeta"
-          :right-meta="rightMeta"
-          :tappable="tappable !== false"
-          @open="open"
-        />
+        <template v-for="r in back" :key="r.hole">
+          <ScorecardRow
+            :row="r"
+            :left-meta="leftMeta"
+            :right-meta="rightMeta"
+            :tappable="tappable !== false || detailFor(r.hole) !== null"
+            :expanded="openHole === r.hole"
+            @open="open"
+          />
+          <ScorecardHoleDetail
+            v-if="openHole === r.hole && detailFor(r.hole)"
+            :detail="detailFor(r.hole)!"
+            :left-meta="leftMeta"
+            :right-meta="rightMeta"
+          />
+        </template>
         <ScorecardSummaryRow label="In" :yards="inc.yards" :left="inc.left" :right="inc.right" :par="inc.par" />
         <ScorecardSummaryRow
           label="Tot"

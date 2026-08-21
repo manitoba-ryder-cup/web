@@ -46,13 +46,62 @@ const withLineup: MatchResult = {
 // A match on the schedule whose lineup hasn't been picked yet.
 const noLineup: MatchResult = { ...withLineup, sides: [] }
 
+// A fourball is the only format that records a score per player, so it is the only one
+// with anything behind a hole row.
+const fourball: MatchResult = {
+  ...withLineup,
+  format_name: 'Fourball',
+  sides: [
+    {
+      team_id: 'blue',
+      players: [
+        { player_id: 'p1', first_name: 'Justin', last_name: 'Rabe' },
+        { player_id: 'p3', first_name: 'Keith', last_name: 'Van Walleghem' },
+      ],
+    },
+    {
+      team_id: 'red',
+      players: [
+        { player_id: 'p2', first_name: 'Harbs', last_name: 'Benning' },
+        { player_id: 'p4', first_name: 'Connor', last_name: 'Macaulay' },
+      ],
+    },
+  ],
+}
+const fourballHole = {
+  hole_number: 1,
+  team_scores: [
+    {
+      team_id: 'blue',
+      strokes: 4,
+      player_scores: [
+        { player_id: 'p1', strokes: 4 },
+        { player_id: 'p3', strokes: 6 },
+      ],
+    },
+    {
+      team_id: 'red',
+      strokes: 5,
+      player_scores: [
+        { player_id: 'p2', strokes: 5 },
+        { player_id: 'p4', strokes: 5 },
+      ],
+    },
+  ],
+  leader_team_id: 'blue',
+  lead: 1,
+  holes_remaining: 17,
+  decided: false,
+}
+
 const match = vi.fn(() => withLineup)
+const scores = vi.fn((): unknown[] => [])
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
     getTournamentResults: vi.fn(() => Promise.resolve([match()])),
     getMatchHoles: vi.fn(() => Promise.resolve([])),
-    getMatchScores: vi.fn(() => Promise.resolve([])),
+    getMatchScores: vi.fn(() => Promise.resolve(scores())),
   },
 }))
 
@@ -69,9 +118,9 @@ const router = createRouter({
   ],
 })
 
-async function open({ loggedIn = true } = {}) {
+async function open({ loggedIn = true, scopes = [SCOPE_TOURNAMENTS_WRITE] } = {}) {
   setActivePinia(createPinia())
-  if (loggedIn) useAuthStore().accessToken = tokenWithScopes([SCOPE_TOURNAMENTS_WRITE])
+  if (loggedIn) useAuthStore().accessToken = tokenWithScopes(scopes)
   router.push('/t/t1/m/m1')
   await router.isReady()
   const w = mount(MatchDetailView, { props: { tournamentId: 't1', matchId: 'm1' }, global: { plugins: [router] } })
@@ -80,7 +129,10 @@ async function open({ loggedIn = true } = {}) {
 }
 
 describe('MatchDetailView', () => {
-  beforeEach(() => match.mockReturnValue(withLineup))
+  beforeEach(() => {
+    match.mockReturnValue(withLineup)
+    scores.mockReturnValue([])
+  })
 
   it('reserves the standings bar and scorecard while loading', async () => {
     // Deliberately not the `open()` helper: it flushes, and this asserts pre-flush.
@@ -145,25 +197,55 @@ describe('MatchDetailView', () => {
     expect(w.get('tbody tr').classes()).not.toContain('cursor-pointer')
   })
 
-  it('taps a hole through to its scores once the cup is under way', async () => {
+  // The entry page is for recording, so only someone who can record is sent to it.
+  it('taps a hole through to its scores for a scorer once the cup is under way', async () => {
     match.mockReturnValue(withWindow(withLineup, teeingOffNow))
 
-    const w = await open()
+    const w = await open({ scopes: [SCOPE_SCORES_WRITE] })
     await w.get('tbody tr').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.name).toBe('hole')
   })
 
-  it('keeps a played cup tappable, so its holes can still be read', async () => {
-    // Scoring is shut for last year's cup, but every hole of it has something to show.
-    match.mockReturnValue(withWindow(withLineup, playedLastYear))
+  // A reader who cannot score has no business on the entry page, so the hole opens where
+  // they are: the scores each player made, under the row they tapped.
+  it('opens a hole in place for a reader who cannot score', async () => {
+    match.mockReturnValue(withWindow(fourball, playedLastYear))
+    scores.mockReturnValue([fourballHole])
 
     const w = await open()
     await w.get('tbody tr').trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.name).toBe('hole')
+    expect(router.currentRoute.value.name).toBe('match')
+    expect(w.text()).toContain('Keith Van Walleghem')
+    expect(w.text()).toContain('Connor Macaulay')
+  })
+
+  it('closes the hole it opened when the row is tapped again', async () => {
+    match.mockReturnValue(withWindow(fourball, playedLastYear))
+    scores.mockReturnValue([fourballHole])
+    const w = await open()
+
+    await w.get('tbody tr').trigger('click')
+    await w.get('tbody tr').trigger('click')
+    await flushPromises()
+
+    expect(w.text()).not.toContain('Keith Van Walleghem')
+  })
+
+  // Singles and the one-ball formats record a score a side, which the row already shows —
+  // so there is nothing behind the row and it does not invite a tap it cannot answer.
+  it('offers nothing to open where a side records one score', async () => {
+    match.mockReturnValue(withWindow(withLineup, playedLastYear))
+    const w = await open()
+
+    await w.get('tbody tr').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('match')
+    expect(w.get('tbody tr').classes()).not.toContain('cursor-pointer')
   })
 
   it('never offers it to a logged-out viewer', async () => {

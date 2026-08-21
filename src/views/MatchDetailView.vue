@@ -12,7 +12,7 @@ import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import MatchScorecard from '@/components/tournament/MatchScorecard.vue'
-import { SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
+import { SCOPE_SCORES_WRITE, SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
 
 const props = defineProps<{ tournamentId: string; matchId: string }>()
 
@@ -33,6 +33,10 @@ const leftTeam = computed(() => teams.value.find((t) => t.id === left.value?.tea
 const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.team_id) ?? null)
 const leftLabel = computed(() => (left.value ? playerInitials(left.value.players) : ''))
 const rightLabel = computed(() => (right.value ? playerInitials(right.value.players) : ''))
+// A hole taps through to its entry page only for someone who can record one. Everyone
+// else gets what each player made, opened in the card rather than on a page whose wheels
+// they could not turn.
+const canScore = computed(() => auth.hasScope(SCOPE_SCORES_WRITE))
 </script>
 <template>
   <!-- No image hero: the ScoreBar is the only thing worth pinning here, and a photo
@@ -87,7 +91,9 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
           :result-label="match.finished ? resultText(match) : undefined"
           :tournament-id="tournamentId"
           :match-id="matchId"
-          :tappable="hasStarted(match)"
+          :left-players="left?.players"
+          :right-players="right?.players"
+          :tappable="hasStarted(match) && canScore"
         />
       </template>
       <!-- The match exists on the schedule but has no lineup yet — show its context and say
