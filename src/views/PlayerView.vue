@@ -97,7 +97,7 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
         <FullBleed flush-top>
-          <SkeletonTabs />
+          <SkeletonTabs :tabs="2" />
           <div class="px-4 pt-6"><SkeletonList :rows="6" /></div>
         </FullBleed>
       </template>
