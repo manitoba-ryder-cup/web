@@ -5,7 +5,7 @@ import { useMatchSides } from '@/composables/useMatchSides'
 
 interface Options {
   // Poll, for a view watching a round happen. The hole-entry flow loads once instead:
-  // it writes the scores itself, and a refetch mid-entry would fight the wheels.
+  // it writes the scores itself, and a refetch mid-entry would fight the strips.
   intervalMs?: number
   // Treat a missing tee set as empty rather than an error. The scorecard renders without
   // par; the entry page cannot, so it lets the failure surface.
