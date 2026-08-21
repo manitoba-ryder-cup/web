@@ -23,7 +23,7 @@ const tabs = computed(() => [
     icon: ScoresIcon,
     active: (p: string) => /^\/tournaments\/[^/]/.test(p),
   },
-  { to: '/players', label: 'Players', icon: GroupsIcon, active: (p: string) => /^\/players(\/|$)/.test(p) },
+  { to: '/teams', label: 'Teams', icon: GroupsIcon, active: (p: string) => /^\/(teams|players)(\/|$)/.test(p) },
   { to: '/tournaments', label: 'History', icon: TrophyIcon, active: (p: string) => p === '/tournaments' },
 ])
 

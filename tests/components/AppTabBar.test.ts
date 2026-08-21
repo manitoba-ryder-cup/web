@@ -12,7 +12,8 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'dashboard', component: { template: '<div/>' } },
-    { path: '/players', name: 'players', component: { template: '<div/>' } },
+    { path: '/teams', name: 'teams', component: { template: '<div/>' } },
+    { path: '/players/:id', name: 'player', component: { template: '<div/>' } },
     { path: '/tournaments', name: 'tournaments', component: { template: '<div/>' } },
     { path: '/tournaments/:id', name: 'tournament', component: { template: '<div/>' } },
     { path: '/tournaments/:tournamentId/matches/:matchId', name: 'match', component: { template: '<div/>' } },
@@ -46,7 +47,7 @@ describe('AppTabBar', () => {
 
   it('offers all four destinations', async () => {
     const w = await mountBar()
-    for (const label of ['Home', 'Scores', 'Players', 'History']) {
+    for (const label of ['Home', 'Scores', 'Teams', 'History']) {
       expect(w.text()).toContain(label)
     }
   })
@@ -65,17 +66,25 @@ describe('AppTabBar', () => {
   })
 
   it('marks the tab matching the current route', async () => {
-    const w = await mountBar('/players')
-    const players = w.findAll('a').find((a) => a.text().includes('Players'))
-    expect(players?.attributes('aria-current')).toBe('page')
+    const w = await mountBar('/teams')
+    const teams = w.findAll('a').find((a) => a.text().includes('Teams'))
+    expect(teams?.attributes('aria-current')).toBe('page')
     const history = w.findAll('a').find((a) => a.text().includes('History'))
     expect(history?.attributes('aria-current')).toBeUndefined()
+  })
+
+  // A profile still lives under /players, which is where the whole page used to live.
+  // Drilling into one from the teams must keep the tab it was reached from lit.
+  it('keeps Teams marked on a player profile', async () => {
+    const w = await mountBar('/players/p1')
+    const teams = w.findAll('a').find((a) => a.text().includes('Teams'))
+    expect(teams?.attributes('aria-current')).toBe('page')
   })
 
   // Home is `/`, which every path is a prefix of. Marking it active everywhere would
   // leave two tabs lit at once on every other screen.
   it('marks Home active only on the dashboard', async () => {
-    const w = await mountBar('/players')
+    const w = await mountBar('/teams')
     const home = w.findAll('a').find((a) => a.text().includes('Home'))
     expect(home?.attributes('aria-current')).toBeUndefined()
   })
@@ -101,7 +110,7 @@ describe('AppTabBar', () => {
   // Colour is the only other thing marking the current tab, and it is not enough on its
   // own for anyone who cannot see the difference. The pill is present or absent.
   it('marks the active tab with something other than colour', async () => {
-    const w = await mountBar('/players')
+    const w = await mountBar('/teams')
     const pill = (label: string) =>
       w
         .findAll('a')
@@ -109,7 +118,7 @@ describe('AppTabBar', () => {
         ?.find('span.rounded-full')
         .classes()
         .some((c) => c.startsWith('bg-'))
-    expect(pill('Players')).toBe(true)
+    expect(pill('Teams')).toBe(true)
     expect(pill('History')).toBe(false)
   })
 

@@ -18,7 +18,7 @@ const scoresTo = useScoresLink()
 // disagree about where the app goes.
 const links = computed(() => [
   { to: scoresTo.value, label: 'Scores' },
-  { to: '/players', label: 'Players' },
+  { to: '/teams', label: 'Teams' },
   { to: '/tournaments', label: 'History' },
 ])
 </script>

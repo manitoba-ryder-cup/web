@@ -13,7 +13,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'dashboard', component: { template: '<div/>' } },
-    { path: '/players', name: 'players', component: { template: '<div/>' } },
+    { path: '/teams', name: 'teams', component: { template: '<div/>' } },
     { path: '/tournaments', name: 'tournaments', component: { template: '<div/>' } },
     { path: '/tournaments/:id', name: 'tournament', component: { template: '<div/>' } },
     { path: '/login', name: 'login', component: { template: '<div/>' } },
@@ -21,7 +21,7 @@ const router = createRouter({
       path: '/deep',
       name: 'deep',
       component: { template: '<div/>' },
-      meta: { back: () => ({ to: { name: 'players' }, label: 'Players' }) },
+      meta: { back: () => ({ to: { name: 'teams' }, label: 'Teams' }) },
     },
   ],
 })
@@ -54,13 +54,13 @@ describe('AppHeader', () => {
   // from — and it replaces the wordmark rather than sitting beside it.
   it('replaces the wordmark with the back link the route declares', async () => {
     const w = await mountHeader('/deep')
-    expect(w.text()).toContain('Players')
+    expect(w.text()).toContain('Teams')
     expect(w.text()).not.toContain('Manitoba Ryder Cup')
   })
 
   // Only shown from md up, where the tab bar is hidden. If these two ever disagree the app
   // has two different answers for where it goes.
-  it.each(['Scores', 'Players', 'History'])('offers %s in the desktop nav', async (label) => {
+  it.each(['Scores', 'Teams', 'History'])('offers %s in the desktop nav', async (label) => {
     expect((await mountHeader()).text()).toContain(label)
   })
 

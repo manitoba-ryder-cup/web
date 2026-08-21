@@ -8,10 +8,10 @@ import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import Rosters from '@/components/tournament/Rosters.vue'
 import PlayerField from '@/components/tournament/PlayerField.vue'
 
-// This year's players and nobody else. Once the draft is done that means the two teams
-// side by side, because the question people ask is how the sides compare; before it, the
-// field as one list. Everyone who has ever played is on the history page, which is where
-// an archive belongs.
+// This year's two sides. Named for what people come looking for — the matchup, the
+// captains, who is in which flight — rather than for the list it is made of; before the
+// draft that list is all there is, so the field stands in until the teams exist. Everyone
+// who has ever played is on the history page, which is where an archive belongs.
 const { data, error, loading, retry } = useAsync(async () => {
   const tournaments = await scorecardApi.listTournaments()
   const current = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))[0] ?? null
@@ -29,7 +29,7 @@ const teams = computed(() => data.value?.teams ?? [])
 const drafted = computed(() => roster.value.length > 0 && roster.value.every((p) => !!p.team_id))
 </script>
 <template>
-  <PageLayout title="Players" image="/img/mountain-green.webp">
+  <PageLayout title="Teams" image="/img/mountain-green.webp">
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
         <!-- Hand-built rather than SkeletonList: this page is two columns of faced rows
@@ -49,7 +49,7 @@ const drafted = computed(() => roster.value.length > 0 && roster.value.every((p)
           </div>
         </div>
       </template>
-      <p v-if="!roster.length" class="text-center text-mrc-muted">This year's roster hasn't been set yet.</p>
+      <p v-if="!roster.length" class="text-center text-mrc-muted">This year's teams haven't been picked yet.</p>
       <Rosters v-else-if="drafted" :players="roster" :teams="teams" />
       <PlayerField v-else :players="roster" />
     </AsyncState>

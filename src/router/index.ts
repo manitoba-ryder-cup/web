@@ -43,7 +43,10 @@ const router = createRouter({
         }),
       },
     },
-    { path: '/players', name: 'players', component: () => import('@/views/PlayersView.vue') },
+    { path: '/teams', name: 'teams', component: () => import('@/views/TeamsView.vue') },
+    // /players was this page's address until the archive moved to the history page and it
+    // became this year's teams. Installed home screens and shared links still point here.
+    { path: '/players', redirect: { name: 'teams' } },
     {
       path: '/players/:id',
       name: 'player',
@@ -56,7 +59,7 @@ const router = createRouter({
         back: (r) =>
           r.query.from === 'history'
             ? { to: { name: 'tournaments', hash: '#participants' }, label: 'History' }
-            : { to: { name: 'players' }, label: 'Players' },
+            : { to: { name: 'teams' }, label: 'Teams' },
       },
     },
     {

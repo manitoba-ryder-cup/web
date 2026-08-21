@@ -10,12 +10,12 @@ vi.mock('@/api/scorecard', () => ({
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import type { TournamentPlayer } from '@/api/types'
-import PlayersView from '@/views/PlayersView.vue'
+import TeamsView from '@/views/TeamsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/players', component: { template: '<div/>' } },
+    { path: '/teams', component: { template: '<div/>' } },
     { path: '/players/:id', name: 'player', component: { template: '<div/>' } },
   ],
 })
@@ -38,15 +38,15 @@ function entrant(o: Partial<TournamentPlayer> = {}): TournamentPlayer {
 }
 
 async function loaded() {
-  const w = mount(PlayersView, { global: { plugins: [router] } })
+  const w = mount(TeamsView, { global: { plugins: [router] } })
   await flushPromises()
   return w
 }
 
-describe('PlayersView', () => {
+describe('TeamsView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    router.push('/players')
+    router.push('/teams')
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
       { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Winnipeg' },
     ])
@@ -58,11 +58,11 @@ describe('PlayersView', () => {
   })
 
   it('shows a team-sheet skeleton while loading', async () => {
-    const w = mount(PlayersView, { global: { plugins: [router] } })
+    const w = mount(TeamsView, { global: { plugins: [router] } })
 
     expect(w.findAll('[data-testid="skeleton"]').length).toBeGreaterThan(0)
     // The empty copy describes loaded data.
-    expect(w.text()).not.toContain("This year's roster hasn't been set yet.")
+    expect(w.text()).not.toContain("This year's teams haven't been picked yet.")
 
     await flushPromises()
 
@@ -85,10 +85,10 @@ describe('PlayersView', () => {
     expect(w.text()).toContain('Smith')
   })
 
-  it('says so when this year has no roster yet', async () => {
+  it('says so when this year has no teams yet', async () => {
     vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([])
     const w = await loaded()
 
-    expect(w.text()).toContain("This year's roster hasn't been set yet.")
+    expect(w.text()).toContain("This year's teams haven't been picked yet.")
   })
 })
