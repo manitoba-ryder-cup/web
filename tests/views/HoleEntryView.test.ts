@@ -76,10 +76,10 @@ const router = createRouter({
   ],
 })
 
-// The score wheel's stroke tiles are buttons too, so the save button is the one that
+// The stroke strip's tiles are buttons too, so the save button is the one that
 // isn't a tile.
 function saveButton(w: ReturnType<typeof mount>) {
-  return w.findAll('button').filter((b) => b.attributes('data-tile') === undefined)[0]
+  return w.findAll('button').filter((b) => b.attributes('data-stroke') === undefined)[0]
 }
 
 async function openHole(hole = '15') {
@@ -105,13 +105,13 @@ describe('HoleEntryView saving', () => {
   afterEach(() => vi.restoreAllMocks())
 
   // A spectator reads a hole — that is the public half of this page — and is offered no
-  // way to record one. Same shape as a played cup: the scores show, the wheel does not turn.
+  // way to record one. Same shape as a played cup: the scores show, nothing can be tapped.
   it('reads a live hole read-only when the token cannot score', async () => {
     useAuthStore().accessToken = tokenWithScopes([])
     const w = await openHole('15')
 
     expect(w.text()).not.toContain("hasn't started yet")
-    expect(w.find('[data-tile]').exists()).toBe(true)
+    expect(w.find('[data-stroke]').exists()).toBe(true)
     expect(saveButton(w).text()).not.toContain('Save')
   })
 
@@ -132,15 +132,15 @@ describe('HoleEntryView saving', () => {
     expect(w.find('[data-testid="skeleton"]').exists()).toBe(false)
   })
 
-  it('refuses to offer wheels before the cup is played', async () => {
+  it('refuses to offer a strip before the cup is played', async () => {
     // A match months out is only ever being poked at; the server refuses the write too,
-    // so offering the wheels would only produce an error on save.
+    // so offering the strips would only produce an error on save.
     Object.assign(match, withWindow(match, teeingOffIn60Days))
 
     const w = await openHole('1')
 
     expect(w.text()).toContain("hasn't started yet")
-    expect(w.find('[data-tile]').exists()).toBe(false)
+    expect(w.find('[data-stroke]').exists()).toBe(false)
   })
 
   it('still shows a played cup, read-only rather than "not started"', async () => {
@@ -151,7 +151,7 @@ describe('HoleEntryView saving', () => {
     const w = await openHole('5')
 
     expect(w.text()).not.toContain("hasn't started yet")
-    expect(w.find('[data-tile]').exists()).toBe(true)
+    expect(w.find('[data-stroke]').exists()).toBe(true)
     expect(saveButton(w).text()).not.toContain('Save')
   })
 
@@ -236,7 +236,7 @@ describe('HoleEntryView saving', () => {
     expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 
-  it('reports a 409 and locks the wheels instead of a bare save error', async () => {
+  it('reports a 409 and locks the strips instead of a bare save error', async () => {
     submitScore.mockRejectedValue(new ApiError(409, 'match is complete'))
     const w = await openHole('16')
 

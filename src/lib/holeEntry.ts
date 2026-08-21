@@ -1,10 +1,10 @@
 import type { Hole, HoleStatus, MatchSide } from '@/api/types'
 import { playerNames, playerSurnames } from '@/lib/matchResult'
 
-// One score wheel on the hole-entry page. playerId is null for a one-ball format, where
+// One stroke strip on the hole-entry page. playerId is null for a one-ball format, where
 // the score belongs to the team. `scored` separates a recorded par from par-as-a-default,
-// which the wheel renders differently. priorStrokes/priorPar are the round up to but not
-// including this hole, so the wheel can show a running total that moves as you dial.
+// which the strip renders differently. priorStrokes/priorPar are the round up to but not
+// including this hole, so the strip can show a running total that moves with the choice.
 export interface HoleEntry {
   key: string
   teamId: string
@@ -31,7 +31,7 @@ function strokesOn(state: HoleStatus, teamId: string, playerId: string | null): 
   return team.player_scores.find((s) => s.player_id === playerId)?.strokes ?? null
 }
 
-// Builds the wheels for one hole, in side order. Per-player formats must read the
+// Builds the strips for one hole, in side order. Per-player formats must read the
 // breakdown, not the side's `strokes` — in Fourball that's only the better of the two.
 export function buildHoleEntries(sides: MatchSide[], { perPlayer, holeNumber, holes, holeStates }: Options): HoleEntry[] {
   const parOf = new Map(holes.map((h) => [h.number, h.par]))

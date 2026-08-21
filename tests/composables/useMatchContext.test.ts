@@ -67,7 +67,7 @@ describe('useMatchContext', () => {
   })
 
   it('surfaces a missing tee set as an error by default', async () => {
-    // The entry page cannot lay out a wheel without par, so it must not load half-blind.
+    // The entry page cannot lay out a strip without par, so it must not load half-blind.
     getMatchHoles.mockRejectedValue(new Error('no tee set'))
 
     const w = mount(harness())

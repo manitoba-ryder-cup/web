@@ -43,7 +43,7 @@ describe('buildHoleEntries', () => {
   })
 
   it('flags whether the strokes came from a recorded score or are just par', () => {
-    // The wheel renders an unscored hole blank, so it has to tell a recorded par from a
+    // The strip renders an unscored hole blank, so it has to tell a recorded par from a
     // defaulted one.
     const scored = status(7, [
       { team_id: 'blue', strokes: 4, player_scores: [{ player_id: 'p1', strokes: 4 }] },
