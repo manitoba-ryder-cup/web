@@ -14,7 +14,8 @@ const route = useRoute()
 const back = computed(() => route.meta.back?.(route) ?? null)
 
 const cup = useCupStore()
-cup.load()
+// A failed lookup leaves Scores on the list — a worse link, never a broken header.
+cup.load().catch(() => {})
 const scoresTo = computed(() => cup.scoresTo)
 
 // Only shown from md up, where there is no tab bar. Same destinations and the same

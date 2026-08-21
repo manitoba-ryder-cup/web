@@ -7,6 +7,7 @@ vi.mock('@/api/scorecard', () => ({
   scorecardApi: { listTournaments: vi.fn(), getTournamentPlayers: vi.fn(), getTournamentTeams: vi.fn() },
 }))
 
+import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import type { TournamentPlayer } from '@/api/types'
@@ -45,6 +46,7 @@ async function loaded() {
 
 describe('TeamsView', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
     router.push('/teams')
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([

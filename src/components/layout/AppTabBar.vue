@@ -10,7 +10,8 @@ import TrophyIcon from '@/components/icons/TrophyIcon.vue'
 
 const route = useRoute()
 const cup = useCupStore()
-cup.load()
+// A failed lookup leaves Scores on the list — a worse link, never a broken header.
+cup.load().catch(() => {})
 const scoresTo = computed(() => cup.scoresTo)
 
 // Which tab is lit is navSection's call, not RouterLink's isActive, which only matches the

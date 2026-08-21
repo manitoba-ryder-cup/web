@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import type { MatchResult, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
+import { useCupStore } from '@/stores/cup'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
@@ -19,13 +20,15 @@ import OrderOfPlay from '@/components/tournament/OrderOfPlay.vue'
 import CaptainMatchup from '@/components/tournament/CaptainMatchup.vue'
 
 const route = useRoute()
+const cup = useCupStore()
 
 // The landing adapts to the event's phase: before it (the draft + schedule), during it
 // (the live standing), and after (the final standing). Polls live.
 const { data, error, loading, retry } = useAsync(
   async () => {
-    const tournaments = await scorecardApi.listTournaments()
-    const tournament = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))[0] ?? null
+    // Resolved once by the shell; the standing is what this polls for, not which cup it is.
+    await cup.load()
+    const tournament = cup.current
     let teams: TournamentTeam[] = []
     let results: MatchResult[] = []
     if (tournament) {

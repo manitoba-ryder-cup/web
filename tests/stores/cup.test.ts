@@ -30,6 +30,36 @@ describe('the cup store', () => {
     expect(cup.scoresTo).toBe('/tournaments/latest')
   })
 
+  // A view awaits load() for the value now, so returning early to a request still in
+  // flight would hand it the null it renders as "there is no cup".
+  it('makes a caller that joins a request in flight wait for its answer', async () => {
+    let release: (v: typeof CUPS) => void = () => {}
+    vi.mocked(scorecardApi.listTournaments).mockReturnValue(new Promise((r) => (release = r)))
+    const cup = useCupStore()
+
+    const first = cup.load()
+    let joinedResolved = false
+    void cup.load().then(() => (joinedResolved = true))
+    await new Promise((r) => setTimeout(r, 0))
+
+    // The point of the test: it must still be waiting. Resolving here would resolve to the
+    // null a view renders as "there is no cup".
+    expect(joinedResolved).toBe(false)
+
+    release(CUPS)
+    await first
+    expect(cup.current?.id).toBe('latest')
+  })
+
+  it('gives a view the cup itself, not only its id', async () => {
+    vi.mocked(scorecardApi.listTournaments).mockResolvedValue(CUPS)
+    const cup = useCupStore()
+
+    await cup.load()
+
+    expect(cup.current?.location).toBe('Buffalo Point')
+  })
+
   it('asks once however many callers there are', async () => {
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue(CUPS)
     const cup = useCupStore()
@@ -46,12 +76,20 @@ describe('the cup store', () => {
     vi.mocked(scorecardApi.listTournaments).mockRejectedValueOnce(new Error('offline')).mockResolvedValue(CUPS)
     const cup = useCupStore()
 
-    await cup.load()
+    await expect(cup.load()).rejects.toThrow('offline')
     expect(cup.scoresTo).toBe('/tournaments')
 
     await cup.load()
 
     expect(cup.scoresTo).toBe('/tournaments/latest')
+  })
+
+  // A view puts the failure on screen with a retry; rendering "no cup yet" instead would
+  // be a claim about data that never arrived.
+  it('tells a caller the lookup failed rather than reporting no cup', async () => {
+    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new Error('offline'))
+
+    await expect(useCupStore().load()).rejects.toThrow('offline')
   })
 
   it('resolves to the list when there are no cups at all', async () => {

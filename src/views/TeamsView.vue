@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
+import { useCupStore } from '@/stores/cup'
 import { tournamentEyebrow } from '@/lib/tournament'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -15,9 +16,12 @@ import PlayerField from '@/components/tournament/PlayerField.vue'
 // captains, who is in which flight — rather than for the list it is made of; before the
 // draft that list is all there is, so the field stands in until the teams exist. Everyone
 // who has ever played is on the history page, which is where an archive belongs.
+const cup = useCupStore()
 const { data, error, loading, retry } = useAsync(async () => {
-  const tournaments = await scorecardApi.listTournaments()
-  const current = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))[0] ?? null
+  // The store already resolved this when the shell mounted, so the roster request starts
+  // now rather than after a round trip spent asking which cup we are looking at.
+  await cup.load()
+  const current = cup.current
   const [roster, teams] = current
     ? await Promise.all([scorecardApi.getTournamentPlayers(current.id), scorecardApi.getTournamentTeams(current.id)])
     : [[], []]

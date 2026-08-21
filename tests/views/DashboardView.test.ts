@@ -9,6 +9,7 @@ vi.mock('@/api/scorecard', () => ({
   },
 }))
 
+import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import DashboardView from '@/views/DashboardView.vue'
@@ -55,6 +56,7 @@ function mountDashboard() {
 
 describe('DashboardView', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([TOURNAMENT])
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue(TEAMS)
