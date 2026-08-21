@@ -7,7 +7,6 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import AppHeader from '@/components/layout/AppHeader.vue'
-import { resetScoresLink } from '@/composables/useScoresLink'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -45,7 +44,6 @@ describe('AppHeader', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
-    resetScoresLink()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
       { id: 't1', name: 'Old', start_date: '2025-07-01', end_date: '2025-07-03', location: 'Winnipeg' },
       { id: 't2', name: 'New', start_date: '2026-09-01', end_date: '2026-09-03', location: 'Brandon' },
