@@ -24,16 +24,22 @@ async function loaded() {
   return w
 }
 
-const clickTab = (w: Awaited<ReturnType<typeof loaded>>, label: string) =>
-  w
+// Each half fetches when it is first shown, so opening a tab is a load: flush after the
+// click or the assertion reads the skeleton.
+const clickTab = async (w: Awaited<ReturnType<typeof loaded>>, label: string) => {
+  await w
     .findAll('button')
     .find((b) => b.text() === label)!
     .trigger('click')
+  await flushPromises()
+}
 
 describe('TournamentsView', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    router.push('/tournaments')
+    // Awaited: the router is shared across these cases and a tab click writes the hash, so
+    // an un-awaited reset leaves the previous test opening this one on Participants.
+    await router.push('/tournaments')
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
       { id: 't1', name: 'Summer Cup', start_date: '2019-07-01', end_date: '2019-07-03', location: 'Winnipeg' },
       { id: 't2', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Gimli' },
@@ -143,11 +149,40 @@ describe('TournamentsView', () => {
     expect(w.text()).toContain('Bygone')
   })
 
-  it('opens on the tab the hash names', async () => {
-    router.push('/tournaments#participants')
-    await router.isReady()
+  // The cups are what the page opens on; the roll is the longer list and the half most
+  // visitors never ask for. Fetching it anyway is a request nobody made.
+  it('leaves the participants list alone until someone opens it', async () => {
+    const w = await loaded()
+
+    expect(scorecardApi.listPlayers).not.toHaveBeenCalled()
+
+    await clickTab(w, 'Participants')
+
+    expect(scorecardApi.listPlayers).toHaveBeenCalledTimes(1)
+  })
+
+  // And once it has loaded, coming back to it shows what it already has rather than
+  // spending the request again.
+  it('does not re-fetch a tab it has already loaded', async () => {
+    const w = await loaded()
+    await clickTab(w, 'Participants')
+    await clickTab(w, 'Tournaments')
+    await clickTab(w, 'Participants')
+
+    expect(scorecardApi.listPlayers).toHaveBeenCalledTimes(1)
+    expect(scorecardApi.listTournaments).toHaveBeenCalledTimes(1)
+    expect(w.text()).toContain('Bygone')
+  })
+
+  // Awaited: the component has to mount with the hash already resolved, the way router-view
+  // mounts it. Left un-awaited it mounts on the cups and only flips once the navigation
+  // drains — which fetches the archive too, and would pass whether or not the hash reached
+  // the first frame.
+  it('opens on the tab the hash names, without loading the other one', async () => {
+    await router.push('/tournaments#participants')
     const w = await loaded()
 
     expect(w.text()).toContain('Bygone')
+    expect(scorecardApi.listTournaments).not.toHaveBeenCalled()
   })
 })

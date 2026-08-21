@@ -59,6 +59,7 @@ vi.mock('@/api/scorecard', () => ({
   },
 }))
 
+import { scorecardApi } from '@/api/scorecard'
 import PlayerView from '@/views/PlayerView.vue'
 
 const router = createRouter({
@@ -255,5 +256,105 @@ describe('PlayerView stats tab', () => {
 
     const link = w.findAll('a').find((a) => a.text().includes('Cam Macaulay'))
     expect(link?.attributes('href')).toContain('from=history')
+  })
+  // A profile links to other profiles, and vue-router reuses this component across a change
+  // of :id — so without a reload the URL names one player while the page shows the last one.
+  it('loads the player the URL names after following a link to another profile', async () => {
+    await router.replace({ path: '/players/p1', query: { from: 'history' } })
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    expect(w.text()).toContain('Jane Doe')
+
+    vi.mocked(scorecardApi.getPlayer).mockResolvedValueOnce({
+      id: 'p2',
+      user_id: null,
+      first_name: 'Cam',
+      last_name: 'Macaulay',
+      photo_path: '',
+      record: { wins: 1, losses: 0, ties: 0 },
+      cups_won: 1,
+    })
+    await w.setProps({ id: 'p2' })
+    await flushPromises()
+
+    expect(scorecardApi.getPlayer).toHaveBeenLastCalledWith('p2')
+    expect(w.text()).toContain('Cam Macaulay')
+    expect(w.text()).not.toContain('Jane Doe')
+  })
+
+  // The open cup is named in the hash, and a link to another profile carries none. Leaving
+  // a row open under a URL that no longer names it makes the two disagree.
+  it('closes the cup the last profile had open', async () => {
+    await router.replace({ path: '/players/p1', hash: '#t2' })
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    const open = () => w.findAll('button[aria-expanded]').filter((b) => b.attributes('aria-expanded') === 'true')
+    expect(open()).toHaveLength(1)
+
+    await router.replace({ path: '/players/p2' })
+    await w.setProps({ id: 'p2' })
+    await flushPromises()
+
+    expect(open()).toHaveLength(0)
+  })
+  // The hero is rendered outside AsyncState, so the error branch does not cover it. A
+  // failed load after an :id change would otherwise leave the last player standing under
+  // the new player's URL — the symptom this whole page was fixed for, in the error path.
+  it('shows no hero at all when the player the URL names fails to load', async () => {
+    await router.replace('/players/p1')
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    expect(w.text()).toContain('Jane Doe')
+
+    vi.mocked(scorecardApi.getPlayer).mockRejectedValueOnce(new Error('offline'))
+    vi.mocked(scorecardApi.getPlayerTournaments).mockRejectedValueOnce(new Error('offline'))
+    vi.mocked(scorecardApi.getPlayerStats).mockRejectedValueOnce(new Error('offline'))
+    await router.replace('/players/p2')
+    await w.setProps({ id: 'p2' })
+    await flushPromises()
+
+    expect(w.text()).not.toContain('Jane Doe')
+    expect(w.text()).toContain('offline')
+    expect(w.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
+  })
+
+  // Tapping through partner links faster than the network settles: the slow one must not
+  // land on top of the profile that arrived after it.
+  it('keeps the profile the URL names when a slower one lands late', async () => {
+    await router.replace('/players/p1')
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+
+    let landP2: (p: unknown) => void = () => {}
+    vi.mocked(scorecardApi.getPlayer).mockImplementationOnce(() => new Promise((resolve) => (landP2 = resolve)) as never)
+    await w.setProps({ id: 'p2' })
+    await flushPromises()
+
+    vi.mocked(scorecardApi.getPlayer).mockResolvedValueOnce({
+      id: 'p3',
+      user_id: null,
+      first_name: 'Third',
+      last_name: 'Player',
+      photo_path: '',
+      record: { wins: 0, losses: 0, ties: 0 },
+      cups_won: 0,
+    })
+    await w.setProps({ id: 'p3' })
+    await flushPromises()
+    expect(w.text()).toContain('Third Player')
+
+    landP2({
+      id: 'p2',
+      user_id: null,
+      first_name: 'Second',
+      last_name: 'Player',
+      photo_path: '',
+      record: { wins: 0, losses: 0, ties: 0 },
+      cups_won: 0,
+    })
+    await flushPromises()
+
+    expect(w.text()).toContain('Third Player')
+    expect(w.text()).not.toContain('Second Player')
   })
 })

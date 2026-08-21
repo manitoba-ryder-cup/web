@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useHashAccordion } from '@/composables/useHashAccordion'
@@ -28,6 +28,11 @@ const { data, error, loading, retry } = useAsync(async () => {
   ])
   return { player, history, stats }
 })
+
+// A profile links to other profiles — partners and opponents — and vue-router reuses this
+// component across a change of :id, so nothing would refetch: the URL would name one player
+// while the page kept showing the last one, with no way out but a reload.
+watch(() => props.id, retry)
 
 const player = computed(() => data.value?.player ?? null)
 const history = computed(() => data.value?.history ?? [])
