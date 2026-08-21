@@ -26,24 +26,11 @@ const cups = computed(() => data.value?.cups ?? [])
 const players = computed(() =>
   [...(data.value?.players ?? [])].sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)),
 )
-
-// Each tab's heading is its own totals line — the one fact only this page can state, and
-// with the tabs above it there is nothing left for a standfirst to explain. Both halves of
-// the run are load-bearing: the span and the count disagree by exactly the years no cup was
-// played, so "2008 – 2026 · 18 cups" says a year was missed without spending a sentence on
-// it. The players line is anchored to the same first year so the two read as a pair.
-const firstYear = computed(() => cups.value[cups.value.length - 1]?.tournament.start_date.slice(0, 4) ?? '') // sorted newest first
-const run = computed(() => {
-  if (!cups.value.length) return ''
-  return `${firstYear.value} – ${cups.value[0].tournament.start_date.slice(0, 4)} · ${cups.value.length} cups`
-})
-const played = computed(() => {
-  if (!players.value.length) return ''
-  return firstYear.value ? `${players.value.length} players since ${firstYear.value}` : `${players.value.length} players`
-})
 </script>
 <template>
-  <PageLayout title="History" image="/img/oceanside.webp">
+  <!-- The hero says what the tab bar already says, so it carries the line the page used to
+       spend a paragraph on and earns the height that way. -->
+  <PageLayout title="History" image="/img/oceanside.webp" below="An event like no other">
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
         <!-- Same full-bleed wrapper and pt-6 panel gap BaseTabs uses, so the grid doesn't
@@ -60,14 +47,12 @@ const played = computed(() => {
           <template #default="{ index }">
             <div class="px-4">
               <template v-if="index === 0">
-                <h2 v-if="run" class="mb-6 text-center tabular-nums">{{ run }}</h2>
                 <p v-if="!cups.length" class="text-center text-mrc-muted">No tournaments yet.</p>
                 <CardGrid v-else>
                   <TournamentCard v-for="x in cups" :key="x.tournament.id" :tournament="x.tournament" :teams="x.teams" />
                 </CardGrid>
               </template>
               <template v-else>
-                <h2 v-if="played" class="mb-6 text-center tabular-nums">{{ played }}</h2>
                 <p v-if="!players.length" class="text-center text-mrc-muted">No players yet.</p>
                 <CardGrid v-else>
                   <PlayerCard

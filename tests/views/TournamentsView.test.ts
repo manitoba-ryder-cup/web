@@ -77,13 +77,21 @@ describe('TournamentsView', () => {
     expect(w.text()).toContain('Gimli')
   })
 
+  // Page chrome, not a claim about data, so it is there before the archive loads — and it
+  // is the only thing on the page the bottom nav does not already say.
+  it("carries the event's line in the hero from the first frame", () => {
+    const w = mount(TournamentsView, { global: { plugins: [router] } })
+
+    expect(w.text()).toContain('An event like no other')
+  })
+
   it('opens on the cups, newest first', async () => {
     const w = await loaded()
 
     expect(w.text()).toContain('Gimli')
     expect(w.text()).not.toContain('Bygone')
-    // The span and the count together say a year was missed.
-    expect(w.text()).toContain('2019 – 2026 · 2 cups')
+    // Newest first, so the most recent cup leads rather than the first one ever played.
+    expect(w.text().indexOf('Gimli')).toBeLessThan(w.text().indexOf('Winnipeg'))
   })
 
   it('lists everyone who has played on the other tab', async () => {
@@ -91,8 +99,6 @@ describe('TournamentsView', () => {
 
     await clickTab(w, 'Participants')
 
-    // Anchored to the first cup's year, so the two tabs' headings read as a pair.
-    expect(w.text()).toContain('2 players since 2019')
     expect(w.text()).not.toContain('Gimli')
     // Sorted by surname, not the order the server happened to return.
     expect(w.text().indexOf('Bygone')).toBeLessThan(w.text().indexOf('Winterhalt'))
