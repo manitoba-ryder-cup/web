@@ -12,7 +12,7 @@ import TournamentCard from '@/components/tournament/TournamentCard.vue'
 //
 // The fetch lives here rather than in the page so it starts when this half is first shown
 // and not before, and so an outage on it leaves the other half readable.
-const { data, error, loading, retry } = useAsync(async () => {
+const { data, error, loading, retry } = useAsync(['cups', 'archive'], async () => {
   const tournaments = await scorecardApi.listTournaments()
   const sorted = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))
   return Promise.all(sorted.map(async (t) => ({ tournament: t, teams: await scorecardApi.getTournamentTeams(t.id) })))

@@ -10,7 +10,7 @@ import LinkCard from '@/components/base/LinkCard.vue'
 
 // Admin home: pick a tournament to set up. Most recent first — that's almost always the
 // one being worked on.
-const { data, error, loading, retry } = useAsync(() => scorecardApi.listTournaments())
+const { data, error, loading, retry } = useAsync(['admin', 'tournaments'], () => scorecardApi.listTournaments())
 const tournaments = computed(() => [...(data.value ?? [])].sort((a, b) => b.start_date.localeCompare(a.start_date)))
 </script>
 <template>

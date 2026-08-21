@@ -21,8 +21,8 @@ const auth = useAuthStore()
 // Polls, so a spectator watching the round sees it move. Par is non-fatal here — the
 // card renders without it.
 const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
-  props.tournamentId,
-  props.matchId,
+  () => props.tournamentId,
+  () => props.matchId,
   {
     intervalMs: 20000,
     parOptional: true,

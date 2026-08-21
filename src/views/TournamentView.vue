@@ -16,6 +16,7 @@ import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue
 const props = defineProps<{ id: string }>()
 // Poll so the standings + results stay live during a round without a manual refresh.
 const { data, error, loading, retry } = useAsync(
+  () => ['tournament', props.id],
   async () => {
     const [tournament, teams, results] = await Promise.all([
       scorecardApi.getTournament(props.id),
