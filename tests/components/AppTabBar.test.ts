@@ -31,12 +31,9 @@ async function mountBar(path = '/') {
   return w
 }
 
-function hrefFor(w: ReturnType<typeof mount>, label: string) {
-  return w
-    .findAll('a')
-    .find((a) => a.text().includes(label))
-    ?.attributes('href')
-}
+const tab = (w: ReturnType<typeof mount>, label: string) => w.findAll('a').find((a) => a.text().includes(label))
+const hrefFor = (w: ReturnType<typeof mount>, label: string) => tab(w, label)?.attributes('href')
+const currentFor = (w: ReturnType<typeof mount>, label: string) => tab(w, label)?.attributes('aria-current')
 
 describe('AppTabBar', () => {
   beforeEach(() => {
@@ -67,44 +64,42 @@ describe('AppTabBar', () => {
 
   it('marks the tab matching the current route', async () => {
     const w = await mountBar('/teams')
-    const teams = w.findAll('a').find((a) => a.text().includes('Teams'))
-    expect(teams?.attributes('aria-current')).toBe('page')
-    const history = w.findAll('a').find((a) => a.text().includes('History'))
-    expect(history?.attributes('aria-current')).toBeUndefined()
+    expect(currentFor(w, 'Teams')).toBe('page')
+    expect(currentFor(w, 'History')).toBeUndefined()
   })
 
-  // A profile still lives under /players, which is where the whole page used to live.
-  // Drilling into one from the teams must keep the tab it was reached from lit.
-  it('keeps Teams marked on a player profile', async () => {
-    const w = await mountBar('/players/p1')
-    const teams = w.findAll('a').find((a) => a.text().includes('Teams'))
-    expect(teams?.attributes('aria-current')).toBe('page')
+  // A profile is reached from two lists, and the bar has to agree with the back link the
+  // header offers on the same screen — otherwise one says Teams while the other says
+  // History and neither is wrong on its own.
+  it('keeps the tab a profile was opened from lit', async () => {
+    const fromTeams = await mountBar('/players/p1')
+    expect(currentFor(fromTeams, 'Teams')).toBe('page')
+
+    const fromHistory = await mountBar('/players/p1?from=history')
+    expect(currentFor(fromHistory, 'History')).toBe('page')
+    expect(currentFor(fromHistory, 'Teams')).toBeUndefined()
   })
 
   // Home is `/`, which every path is a prefix of. Marking it active everywhere would
   // leave two tabs lit at once on every other screen.
   it('marks Home active only on the dashboard', async () => {
     const w = await mountBar('/teams')
-    const home = w.findAll('a').find((a) => a.text().includes('Home'))
-    expect(home?.attributes('aria-current')).toBeUndefined()
+    expect(currentFor(w, 'Home')).toBeUndefined()
   })
 
   // Scores resolves to /tournaments/:id, which History (/tournaments) is a prefix
   // of — the same trap as Home, one level down.
   it('marks Scores but not History on a tournament page', async () => {
     const w = await mountBar('/tournaments/t2')
-    const scores = w.findAll('a').find((a) => a.text().includes('Scores'))
-    const history = w.findAll('a').find((a) => a.text().includes('History'))
-    expect(scores?.attributes('aria-current')).toBe('page')
-    expect(history?.attributes('aria-current')).toBeUndefined()
+    expect(currentFor(w, 'Scores')).toBe('page')
+    expect(currentFor(w, 'History')).toBeUndefined()
   })
 
   // A match sits under the tournament it belongs to, so the tab you arrived through
   // stays lit rather than the bar going blank as you drill in.
   it('keeps Scores active on a match page', async () => {
     const w = await mountBar('/tournaments/t2/matches/m1')
-    const scores = w.findAll('a').find((a) => a.text().includes('Scores'))
-    expect(scores?.attributes('aria-current')).toBe('page')
+    expect(currentFor(w, 'Scores')).toBe('page')
   })
 
   // Colour is the only other thing marking the current tab, and it is not enough on its

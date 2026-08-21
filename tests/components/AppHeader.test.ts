@@ -14,6 +14,7 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'dashboard', component: { template: '<div/>' } },
     { path: '/teams', name: 'teams', component: { template: '<div/>' } },
+    { path: '/players/:id', name: 'player', component: { template: '<div/>' } },
     { path: '/tournaments', name: 'tournaments', component: { template: '<div/>' } },
     { path: '/tournaments/:id', name: 'tournament', component: { template: '<div/>' } },
     { path: '/login', name: 'login', component: { template: '<div/>' } },
@@ -33,6 +34,12 @@ async function mountHeader(path = '/') {
   await flushPromises()
   return w
 }
+
+const currentFor = (w: ReturnType<typeof mount>, label: string) =>
+  w
+    .findAll('a')
+    .find((a) => a.text() === label)
+    ?.attributes('aria-current')
 
 describe('AppHeader', () => {
   beforeEach(() => {
@@ -62,6 +69,23 @@ describe('AppHeader', () => {
   // has two different answers for where it goes.
   it.each(['Scores', 'Teams', 'History'])('offers %s in the desktop nav', async (label) => {
     expect((await mountHeader()).text()).toContain(label)
+  })
+
+  it('marks the section the current screen belongs to', async () => {
+    const w = await mountHeader('/teams')
+    expect(currentFor(w, 'Teams')).toBe('page')
+    expect(currentFor(w, 'History')).toBeUndefined()
+  })
+
+  // RouterLink's isActive is a path prefix test and no nav link is a prefix of a profile,
+  // so the marking is the header's own to compute — and it has to land on the same section
+  // the bottom bar lights, or the app answers two ways for one screen.
+  it('keeps the list a profile was opened from marked', async () => {
+    const fromTeams = await mountHeader('/players/p1')
+    expect(currentFor(fromTeams, 'Teams')).toBe('page')
+
+    const fromHistory = await mountHeader('/players/p1?from=history')
+    expect(currentFor(fromHistory, 'History')).toBe('page')
   })
 
   it('points Scores at the most recent tournament', async () => {

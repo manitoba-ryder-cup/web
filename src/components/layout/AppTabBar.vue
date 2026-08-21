@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useScoresLink } from '@/composables/useScoresLink'
+import { navSection } from '@/lib/navSection'
 import HomeIcon from '@/components/icons/HomeIcon.vue'
 import ScoresIcon from '@/components/icons/ScoresIcon.vue'
 import GroupsIcon from '@/components/icons/GroupsIcon.vue'
@@ -10,26 +11,22 @@ import TrophyIcon from '@/components/icons/TrophyIcon.vue'
 const route = useRoute()
 const scoresTo = useScoresLink()
 
-// Each tab owns its own active rule rather than leaning on RouterLink's isActive, which
-// only lights a tab on the exact route it points at: drilling from the scores into a
-// match would blank the bar, and there'd be no way to say that a match still belongs to
-// Scores. Home and History are exact for the opposite reason — every path sits under
-// `/`, and a tournament sits under `/tournaments`, so a prefix test lights two at once.
+// Which tab is lit is navSection's call, not RouterLink's isActive, which only matches the
+// exact route a tab points at: drilling from the scores into a match would blank the bar,
+// with no way to say a match still belongs to Scores. The header asks the same function,
+// so the two navs always name the same section.
+const section = computed(() => navSection(route))
+
 const tabs = computed(() => [
-  { to: '/', label: 'Home', icon: HomeIcon, active: (p: string) => p === '/' },
-  {
-    to: scoresTo.value,
-    label: 'Scores',
-    icon: ScoresIcon,
-    active: (p: string) => /^\/tournaments\/[^/]/.test(p),
-  },
-  { to: '/teams', label: 'Teams', icon: GroupsIcon, active: (p: string) => /^\/(teams|players)(\/|$)/.test(p) },
-  { to: '/tournaments', label: 'History', icon: TrophyIcon, active: (p: string) => p === '/tournaments' },
+  { to: '/', label: 'Home', icon: HomeIcon, section: 'home' },
+  { to: scoresTo.value, label: 'Scores', icon: ScoresIcon, section: 'scores' },
+  { to: '/teams', label: 'Teams', icon: GroupsIcon, section: 'teams' },
+  { to: '/tournaments', label: 'History', icon: TrophyIcon, section: 'history' },
 ])
 
 // Resolved once here rather than three times per tab in the template, where the same
 // question drives the label, the colour and the pill.
-const resolved = computed(() => tabs.value.map((t) => ({ ...t, isActive: t.active(route.path) })))
+const resolved = computed(() => tabs.value.map((t) => ({ ...t, isActive: t.section === section.value })))
 </script>
 <template>
   <nav class="fixed inset-x-0 bottom-0 z-10 border-t border-white/10 bg-mrc-ink text-white md:hidden" aria-label="Primary">

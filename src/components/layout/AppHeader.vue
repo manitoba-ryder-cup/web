@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useScoresLink } from '@/composables/useScoresLink'
+import { navSection } from '@/lib/navSection'
 import NavLink from './NavLink.vue'
 import AccountMenu from './AccountMenu.vue'
 import ArrowLeftIcon from '@/components/icons/ArrowLeftIcon.vue'
@@ -14,12 +15,14 @@ const back = computed(() => route.meta.back?.(route) ?? null)
 
 const scoresTo = useScoresLink()
 
-// Only shown from md up, where there is no tab bar. Same destinations, so the two cannot
-// disagree about where the app goes.
+// Only shown from md up, where there is no tab bar. Same destinations and the same
+// navSection rule the bar uses, so the two cannot disagree about where the app goes or
+// about which screen you are on.
+const section = computed(() => navSection(route))
 const links = computed(() => [
-  { to: scoresTo.value, label: 'Scores' },
-  { to: '/teams', label: 'Teams' },
-  { to: '/tournaments', label: 'History' },
+  { to: scoresTo.value, label: 'Scores', section: 'scores' },
+  { to: '/teams', label: 'Teams', section: 'teams' },
+  { to: '/tournaments', label: 'History', section: 'history' },
 ])
 </script>
 <template>
@@ -38,7 +41,7 @@ const links = computed(() => [
 
         <div class="flex items-center">
           <nav class="mr-2 hidden items-center gap-5 text-sm md:flex">
-            <NavLink v-for="l in links" :key="l.to" :to="l.to">{{ l.label }}</NavLink>
+            <NavLink v-for="l in links" :key="l.to" :to="l.to" :active="l.section === section">{{ l.label }}</NavLink>
           </nav>
           <AccountMenu />
         </div>
