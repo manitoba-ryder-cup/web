@@ -18,14 +18,15 @@ import PlayerField from '@/components/tournament/PlayerField.vue'
 // who has ever played is on the history page, which is where an archive belongs.
 const cup = useCupStore()
 const { data, error, loading, retry } = useAsync(async () => {
-  // The store already resolved this when the shell mounted, so the roster request starts
-  // now rather than after a round trip spent asking which cup we are looking at.
+  // Which cup: resolved once by the shell, so the roster request starts now rather than
+  // after a round trip spent asking. The record rides along in the same batch, which costs
+  // no depth and keeps the eyebrow answering to edits.
   await cup.load()
-  const current = cup.current
-  const [roster, teams] = current
-    ? await Promise.all([scorecardApi.getTournamentPlayers(current.id), scorecardApi.getTournamentTeams(current.id)])
-    : [[], []]
-  return { tournament: current, roster, teams }
+  const id = cup.latestId
+  const [tournament, roster, teams] = id
+    ? await Promise.all([scorecardApi.getTournament(id), scorecardApi.getTournamentPlayers(id), scorecardApi.getTournamentTeams(id)])
+    : [null, [], []]
+  return { tournament, roster, teams }
 })
 
 // Which cup these teams belong to, and where it is played. The page is otherwise undated,

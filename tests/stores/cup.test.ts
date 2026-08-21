@@ -46,16 +46,7 @@ describe('the cup store', () => {
 
     release(CUPS)
     await first
-    expect(cup.current?.id).toBe('latest')
-  })
-
-  it('gives a view the cup itself, not only its id', async () => {
-    vi.mocked(scorecardApi.listTournaments).mockResolvedValue(CUPS)
-    const cup = useCupStore()
-
-    await cup.load()
-
-    expect(cup.current?.location).toBe('Buffalo Point')
+    expect(cup.latestId).toBe('latest')
   })
 
   it('asks once however many callers there are', async () => {
