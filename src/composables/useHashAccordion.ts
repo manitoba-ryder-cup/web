@@ -16,7 +16,14 @@ export function useHashAccordion(ids: () => string[]) {
     [ids, () => route.hash],
     async () => {
       const id = route.hash.replace('#', '')
-      if (!id || openId.value === id || !ids().includes(id)) return
+      // The hash says which row is open, in both directions: following a link off this
+      // page onto another profile leaves it behind, and the row the last one had open
+      // must not still be open under a URL that no longer names it.
+      if (!id) {
+        openId.value = ''
+        return
+      }
+      if (openId.value === id || !ids().includes(id)) return
       openId.value = id
       // `nearest` rather than `start`: the row is usually the current cup, which sits at
       // the top of the list, and pinning it to the top of the viewport would push the
