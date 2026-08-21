@@ -10,7 +10,6 @@ import TrophyIcon from '@/components/icons/TrophyIcon.vue'
 
 const route = useRoute()
 const cup = useCupStore()
-// A failed lookup leaves Scores on the list — a worse link, never a broken header.
 cup.load().catch(() => {})
 const scoresTo = computed(() => cup.scoresTo)
 

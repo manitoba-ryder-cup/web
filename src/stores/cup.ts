@@ -14,15 +14,15 @@ export const useCupStore = defineStore('cup', () => {
 
   const latestId = computed(() => current.value?.id ?? null)
 
-  /** Where "Scores" points: this cup, or the list until it is known. */
+  /** Where "Scores" points: this cup, or the list until it is known — so a lookup that
+   * failed leaves a worse link rather than a broken one, and the shell can ignore it. */
   const scoresTo = computed(() => (latestId.value ? `/tournaments/${latestId.value}` : '/tournaments'))
 
-  // Reads are public, so this runs signed out too. Callers await it for the value, so a
-  // second one has to join the request in flight — returning early would hand it the null
-  // it reads as "there is no cup". Failure propagates for the same reason: a view that
-  // swallowed it would render "no cup yet", which is a claim about data it never got. The
-  // shell catches instead, since a worse link beats a broken header. Nothing is latched
-  // either way, so the next caller retries.
+  // A second caller joins the request in flight rather than returning early, which would
+  // hand it the null it reads as "there is no cup"; failure propagates for the same reason.
+  // Resolved, the cup is then fixed for the session: a caller wanting the record fresh
+  // re-reads it by id. A retry arriving while a request is stalled joins that one rather
+  // than issuing its own, so recovery waits on the stall.
   async function load(): Promise<void> {
     if (current.value) return
     inFlight ??= scorecardApi

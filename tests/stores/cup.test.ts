@@ -42,8 +42,6 @@ describe('the cup store', () => {
     void cup.load().then(() => (joinedResolved = true))
     await new Promise((r) => setTimeout(r, 0))
 
-    // The point of the test: it must still be waiting. Resolving here would resolve to the
-    // null a view renders as "there is no cup".
     expect(joinedResolved).toBe(false)
 
     release(CUPS)

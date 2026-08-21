@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import type { MatchResult, TournamentTeam } from '@/api/types'
+import type { MatchResult, Tournament, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useCupStore } from '@/stores/cup'
@@ -26,14 +26,22 @@ const cup = useCupStore()
 // (the live standing), and after (the final standing). Polls live.
 const { data, error, loading, retry } = useAsync(
   async () => {
-    // Resolved once by the shell; the standing is what this polls for, not which cup it is.
+    // Which cup: resolved once by the shell. The record itself is re-read on every poll
+    // alongside the standing — the phase this page renders is derived from its start date,
+    // so a tab left open through an edit would otherwise show the wrong one all day.
     await cup.load()
-    const tournament = cup.current
+    const id = cup.latestId
+    let tournament: Tournament | null = null
     let teams: TournamentTeam[] = []
     let results: MatchResult[] = []
-    if (tournament) {
-      const [t, r] = await Promise.all([scorecardApi.getTournamentTeams(tournament.id), scorecardApi.getTournamentResults(tournament.id)])
-      teams = t
+    if (id) {
+      const [t, tm, r] = await Promise.all([
+        scorecardApi.getTournament(id),
+        scorecardApi.getTournamentTeams(id),
+        scorecardApi.getTournamentResults(id),
+      ])
+      tournament = t
+      teams = tm
       results = r
     }
     return { tournament, teams, results }
