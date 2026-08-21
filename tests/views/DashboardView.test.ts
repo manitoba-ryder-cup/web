@@ -117,6 +117,33 @@ describe('DashboardView', () => {
 
   // Nothing is next once the cup is over, and a card headed "Next out" with an empty body
   // is worse than no card.
+  // Once the cup is under way the hero is the standing, and nothing else. It used to end
+  // in a button to the scores, from when the navigation sat behind a hamburger — the tab
+  // bar reaches that same page now, and the session card below reaches a single match.
+  it('leads with the standing once the cup is under way', async () => {
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
+      { ...TEAMS[0], points: 6.5 },
+      { ...TEAMS[1], points: 3.5 },
+    ])
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([{ ...match(FRI, 'Fourball'), hole_results: ['blue-1'] }])
+    const w = mountDashboard()
+    await flushPromises()
+
+    const hero = w.get('section')
+    expect(hero.text()).toContain('Jones')
+    expect(hero.text()).toContain('6½')
+    expect(hero.text()).toContain('3½')
+  })
+
+  it('sends nobody from the hero to a page the tab bar already reaches', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([{ ...match(FRI, 'Fourball'), hole_results: ['blue-1'] }])
+    const w = mountDashboard()
+    await flushPromises()
+
+    const hero = w.get('section')
+    expect(hero.findAll('a').map((a) => a.attributes('href'))).not.toContain('/tournaments/t1')
+  })
+
   it('drops the session card when every match has finished', async () => {
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles', true)])
     const w = mountDashboard()

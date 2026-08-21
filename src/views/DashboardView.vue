@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import type { MatchResult, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
@@ -135,7 +135,11 @@ const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 
             </div>
           </template>
 
-          <!-- Live / finished: the standing. -->
+          <!-- Live / finished: the standing, and only the standing. It used to carry a
+               button to the scores, from when the navigation was behind a hamburger; the
+               tab bar resolves to that same page now, and the session card below reaches a
+               particular match rather than the list. No other hero in the app asks you to
+               go anywhere. -->
           <template v-else-if="left && right">
             <div class="mt-6 grid grid-cols-[1fr_auto_1fr] items-end gap-x-3">
               <p class="truncate font-display text-xl font-bold uppercase tracking-wide">
@@ -153,13 +157,6 @@ const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 
                 {{ pointsText(right.points) }}
               </p>
             </div>
-            <RouterLink
-              v-if="tournament"
-              :to="{ name: 'tournament', params: { id: tournament.id } }"
-              class="mt-8 inline-block rounded-md bg-mrc-accent-tint px-6 py-3 font-semibold text-mrc-accent shadow-lg"
-            >
-              View scores
-            </RouterLink>
           </template>
 
           <!-- No tournament to describe — a failed load lands here too, and the body below
