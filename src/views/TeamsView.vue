@@ -5,6 +5,8 @@ import { useAsync } from '@/composables/useAsync'
 import { tournamentEyebrow } from '@/lib/tournament'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
+import CapsLabel from '@/components/typography/CapsLabel.vue'
+import CaptainMatchup from '@/components/tournament/CaptainMatchup.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import Rosters from '@/components/tournament/Rosters.vue'
 import PlayerField from '@/components/tournament/PlayerField.vue'
@@ -31,9 +33,21 @@ const teams = computed(() => data.value?.teams ?? [])
 // The captains are on teams from the start, so "some assigned" is not the draft being
 // done — it counts as drafted only once every entered player has a team.
 const drafted = computed(() => roster.value.length > 0 && roster.value.every((p) => !!p.team_id))
+const hasCaptains = computed(() => !!(teams.value[0]?.captain && teams.value[1]?.captain))
 </script>
 <template>
-  <PageLayout title="Teams" image="/img/mountain-green.webp" :above="eyebrow">
+  <PageLayout image="/img/mountain-green.webp">
+    <template #hero>
+      <template v-if="loading">
+        <SkeletonBlock tone="inverse" class="mx-auto mb-3 h-3 w-40" />
+        <SkeletonBlock tone="inverse" radius="md" class="mx-auto h-8 w-72" />
+      </template>
+      <template v-else>
+        <CapsLabel v-if="eyebrow" size="sm" class="mb-3 text-white/80">{{ eyebrow }}</CapsLabel>
+        <CaptainMatchup v-if="hasCaptains" :teams="teams" white />
+        <h1 v-else class="text-white">Teams</h1>
+      </template>
+    </template>
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
         <!-- Hand-built rather than SkeletonList: this page is two columns of faced rows

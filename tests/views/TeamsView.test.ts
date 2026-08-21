@@ -77,6 +77,35 @@ describe('TeamsView', () => {
     expect(w.text()).toContain('2026 · Winnipeg')
   })
 
+  // The same heading the dashboard and the scores page lead with, so the three pages about
+  // this cup open the same way.
+  it('heads the page with the matchup', async () => {
+    const w = await loaded()
+
+    expect(w.text()).toContain('Jones')
+    expect(w.text()).toContain('Reid')
+  })
+
+  // White, not team colour: the sheet right below heads each column in blue and red, and
+  // the hero saying it again in the same two colours is one statement wearing two coats.
+  it('leaves the colour to the sheet below', async () => {
+    const w = await loaded()
+
+    const names = w.findAll('.h-36 span').filter((n) => /Jones|Reid/.test(n.text()))
+    expect(names).toHaveLength(2)
+    expect(names.every((n) => n.classes().includes('text-white'))).toBe(true)
+  })
+
+  it('falls back to the page name before the captains are known', async () => {
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
+      { id: 'blue-1', color: 'Blue', captain: null, points: 0 },
+      { id: 'red-1', color: 'Red', captain: null, points: 0 },
+    ])
+    const w = await loaded()
+
+    expect(w.get('h1').text()).toBe('Teams')
+  })
+
   it('shows the field by team once the draft is done', async () => {
     vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([entrant({ team_id: 'blue-1' })])
     const w = await loaded()

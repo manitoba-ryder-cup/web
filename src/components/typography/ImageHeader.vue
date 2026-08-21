@@ -1,9 +1,4 @@
 <script setup lang="ts">
-import CapsLabel from './CapsLabel.vue'
-
-// `above` is the eyebrow naming the cup — "2026 · Buffalo Point" — so it takes the small
-// caps the dashboard and the scores page give the same line. `below` is a line of prose
-// under the title and stays set as prose.
 withDefaults(defineProps<{ image?: string; above?: string; below?: string }>(), {
   image: '/img/ocean-flag.webp',
   above: '',
@@ -17,7 +12,7 @@ withDefaults(defineProps<{ image?: string; above?: string; below?: string }>(), 
   >
     <!-- `hero` replaces the whole title block for rich content (e.g. a coloured matchup). -->
     <slot name="hero">
-      <CapsLabel v-if="above" size="sm" class="mb-3 text-white/80">{{ above }}</CapsLabel>
+      <p v-if="above" class="text-base text-white md:text-lg mb-2">{{ above }}</p>
       <h1 class="text-white"><slot /></h1>
       <p v-if="below" class="text-base text-white md:text-lg mt-2">{{ below }}</p>
     </slot>
