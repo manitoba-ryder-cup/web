@@ -46,8 +46,6 @@ function render(m: MatchResult) {
 describe('OrderOfPlay live status', () => {
   // The leader and the margin both come from the server, so the row never has to count
   // hole_results to work out who is ahead.
-  // Through resultText, the same as a finished margin: "2 up" here and "2 up" everywhere
-  // else, rather than an arrow that only this row understands.
   it('shows the leader and margin of a match in progress', () => {
     const w = render(match({ leader_team_id: 't-red', lead: 2, hole_results: ['t-red', null, 't-red', null, null] }))
     expect(w.text()).toContain('2 up')
@@ -55,7 +53,7 @@ describe('OrderOfPlay live status', () => {
     expect(w.text()).not.toContain('↑')
   })
 
-  // "thru 5" is already what says a match is under way, so a dot beside it said it twice.
+  // The holes played are already what say a match is under way, so a dot said it twice.
   it('marks a live match with the holes played, not a coloured dot', () => {
     const w = render(match({ leader_team_id: 't-red', lead: 2, hole_results: ['t-red', null] }))
 

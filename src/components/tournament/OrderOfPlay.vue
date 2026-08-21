@@ -42,9 +42,6 @@ function rowOf(m: MatchResult): Row {
     status = { text: resultText(m), cls: strongId ? teamMeta(strongId).text : 'text-mrc-muted' }
   } else if (played > 0) {
     strongId = m.leader_team_id
-    // Through resultText like every other margin in the app, rather than a hand-rolled
-    // arrow: it already answers for an unfinished match, and a margin rendered two ways is
-    // how "1 up" and "1↑" end up meaning the same thing in two places.
     status = { text: `${resultText(m)} · thru ${played}`, cls: strongId ? teamMeta(strongId).text : 'text-mrc-muted' }
   }
   const decided = strongId != null

@@ -135,11 +135,7 @@ const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 
             </div>
           </template>
 
-          <!-- Live / finished: the standing, and only the standing. It used to carry a
-               button to the scores, from when the navigation was behind a hamburger; the
-               tab bar resolves to that same page now, and the session card below reaches a
-               particular match rather than the list. No other hero in the app asks you to
-               go anywhere. -->
+          <!-- Live / finished: the standing. -->
           <template v-else-if="left && right">
             <div class="mt-6 grid grid-cols-[1fr_auto_1fr] items-end gap-x-3">
               <p class="truncate font-display text-xl font-bold uppercase tracking-wide">
