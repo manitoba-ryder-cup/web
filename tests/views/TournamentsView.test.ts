@@ -97,6 +97,17 @@ describe('TournamentsView', () => {
     expect(w.text().indexOf('Bygone')).toBeLessThan(w.text().indexOf('Winterhalt'))
   })
 
+  // The profile's back link is a pure function of the route, so the card has to say where
+  // it was tapped for the header to offer History rather than this year's roster.
+  it('marks a participant link with where it came from', async () => {
+    const w = await loaded()
+
+    await clickTab(w, 'Participants')
+
+    const link = w.findAll('a').find((a) => a.text().includes('Bygone'))
+    expect(link?.attributes('href')).toContain('from=history')
+  })
+
   it('opens on the tab the hash names', async () => {
     router.push('/tournaments#participants')
     await router.isReady()

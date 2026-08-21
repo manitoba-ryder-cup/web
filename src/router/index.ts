@@ -49,7 +49,15 @@ const router = createRouter({
       name: 'player',
       component: () => import('@/views/PlayerView.vue'),
       props: true,
-      meta: { back: () => ({ to: { name: 'players' }, label: 'Players' }) },
+      // A profile is reached from this year's roster and from the history page's
+      // participants, so the back link reads the `from` its card put in the URL. Route in,
+      // link out: a refresh or a shared link answers the same as the tap did.
+      meta: {
+        back: (r) =>
+          r.query.from === 'history'
+            ? { to: { name: 'tournaments', hash: '#participants' }, label: 'History' }
+            : { to: { name: 'players' }, label: 'Players' },
+      },
     },
     {
       // The per-cup page is gone — a player's cups open in place on their profile instead.

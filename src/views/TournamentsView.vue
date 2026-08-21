@@ -93,6 +93,7 @@ const run = computed(() => {
                     :photo-path="p.photo_path"
                     :record="p.record"
                     :cups="p.cups_won"
+                    from="history"
                   />
                 </CardGrid>
               </template>
