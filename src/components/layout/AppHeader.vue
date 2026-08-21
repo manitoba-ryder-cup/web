@@ -20,6 +20,9 @@ const scoresTo = useScoresLink()
 // about which screen you are on.
 const section = computed(() => navSection(route))
 const links = computed(() => [
+  // Home is here and not left to the wordmark: a detail page replaces the wordmark with
+  // its back link, so without this the only way home from a profile is to leave it first.
+  { to: '/', label: 'Home', section: 'home' },
   { to: scoresTo.value, label: 'Scores', section: 'scores' },
   { to: '/teams', label: 'Teams', section: 'teams' },
   { to: '/tournaments', label: 'History', section: 'history' },

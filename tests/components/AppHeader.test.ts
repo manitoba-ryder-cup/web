@@ -67,7 +67,17 @@ describe('AppHeader', () => {
 
   // Only shown from md up, where the tab bar is hidden. If these two ever disagree the app
   // has two different answers for where it goes.
-  it.each(['Scores', 'Teams', 'History'])('offers %s in the desktop nav', async (label) => {
+  // The wordmark is the way home everywhere else, but a route with a back link replaces it
+  // — so without Home in the nav, a detail page has no link to the dashboard at all. Uses
+  // /deep because that is the route in this table declaring a back link.
+  it('offers Home in the desktop nav where the wordmark has been replaced', async () => {
+    const w = await mountHeader('/deep')
+
+    expect(w.find('img[alt="MRC logo"]').exists()).toBe(false)
+    expect(w.findAll('nav a').map((a) => a.attributes('href'))).toContain('/')
+  })
+
+  it.each(['Home', 'Scores', 'Teams', 'History'])('offers %s in the desktop nav', async (label) => {
     expect((await mountHeader()).text()).toContain(label)
   })
 
