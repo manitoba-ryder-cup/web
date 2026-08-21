@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useScoresLink } from '@/composables/useScoresLink'
-import { navSection } from '@/lib/navSection'
+import { navSection, type NavSection } from '@/lib/navSection'
 import HomeIcon from '@/components/icons/HomeIcon.vue'
 import ScoresIcon from '@/components/icons/ScoresIcon.vue'
 import GroupsIcon from '@/components/icons/GroupsIcon.vue'
@@ -17,7 +17,7 @@ const scoresTo = useScoresLink()
 // so the two navs always name the same section.
 const section = computed(() => navSection(route))
 
-const tabs = computed(() => [
+const tabs = computed((): { to: string; label: string; icon: Component; section: NavSection }[] => [
   { to: '/', label: 'Home', icon: HomeIcon, section: 'home' },
   { to: scoresTo.value, label: 'Scores', icon: ScoresIcon, section: 'scores' },
   { to: '/teams', label: 'Teams', icon: GroupsIcon, section: 'teams' },
