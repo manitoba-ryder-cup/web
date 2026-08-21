@@ -1,5 +1,8 @@
 import type { TeamColorClasses } from '@/lib/teamColor'
 
+// Which scores the card shows: each side's best ball, or one side's two players.
+export type ScorecardView = 'match' | 'left' | 'right'
+
 // One rendered scorecard row: the two best-ball scores, who won each, the tee-set figures
 // (par/hdcp/yards), and the running match state after the hole ("2 UP" / "AS").
 export interface HoleRow {
@@ -15,8 +18,8 @@ export interface HoleRow {
 }
 
 // A won hole gets a faint team-colour tint behind the coloured digit — scannable down the
-// column, softer than a solid fill. A played-but-lost hole is plain ink; an unplayed hole
-// (no score) is faint.
+// column, softer than a solid fill. In a side's own view the same mark falls on the score
+// that took it. A played-but-unmarked hole is plain ink; an unplayed one is faint.
 export function scoreClass(won: boolean, val: number | null, meta: TeamColorClasses): string {
   if (won) return `${meta.tint} ${meta.text} font-bold`
   return val != null ? 'text-mrc-ink' : 'text-mrc-faint'

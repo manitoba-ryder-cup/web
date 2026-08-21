@@ -87,6 +87,8 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
           :result-label="match.finished ? resultText(match) : undefined"
           :tournament-id="tournamentId"
           :match-id="matchId"
+          :left-players="left?.players"
+          :right-players="right?.players"
           :tappable="hasStarted(match)"
         />
       </template>
