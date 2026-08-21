@@ -76,10 +76,11 @@ const run = computed(() => {
                   <CapsLabel v-if="players.length" class="mb-2 tabular-nums text-mrc-muted">
                     {{ players.length }} {{ players.length === 1 ? 'player' : 'players' }}
                   </CapsLabel>
-                  <h2 class="mb-4">Everyone Who's Played</h2>
+                  <h2 class="mb-4">The Usual Suspects</h2>
                   <p class="text-mrc-muted">
-                    Every player who has taken part in a Manitoba Ryder Cup, with the record they've built across the years. This year's
-                    field lives on the players page.
+                    Everyone who has ever teed it up in a Manitoba Ryder Cup, and the record they have to show for it. Careers here are
+                    built one weekend a year, so a bad round can take a decade to live down. Some of these names turn up year after year;
+                    others played once and are still spoken of, for one reason or another.
                   </p>
                 </div>
                 <p v-if="!players.length" class="text-center text-mrc-muted">No players yet.</p>
