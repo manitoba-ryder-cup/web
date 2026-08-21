@@ -142,13 +142,43 @@ describe('ScoreWheel', () => {
     }
   })
 
-  // Golf names them as far as golf has names for them.
+  // Golf names them as far as golf has names for them, and no further than a tile holds:
+  // "Double Bogey" overran 84px and was cut off mid-word.
   it('names the score over par the way the game does', () => {
-    const terms = (modelValue: number) => mount(ScoreWheel, { props: { ...base, modelValue } })
-    expect(terms(5).findAll('[data-tile]')[4].text()).toContain('Bogey')
-    expect(terms(6).findAll('[data-tile]')[5].text()).toContain('Double Bogey')
-    expect(terms(7).findAll('[data-tile]')[6].text()).toContain('Triple Bogey')
-    expect(terms(8).findAll('[data-tile]')[7].text()).toContain('Quadruple Bogey')
-    expect(terms(9).findAll('[data-tile]')[8].text()).toContain('+5')
+    const w = mount(ScoreWheel, { props: base })
+    const labels = w.findAll('[data-tile]').map((t) => t.text())
+
+    expect(labels[4]).toContain('Bogey')
+    expect(labels[5]).toContain('Double')
+    expect(labels[6]).toContain('Triple')
+    expect(labels[7]).toContain('Quadruple')
+    expect(labels[8]).toContain('+5')
+    expect(labels.some((l) => l.includes('Double Bogey'))).toBe(false)
+  })
+
+  // The numbers you are aiming past are dimmed, not erased. They used to be #e0e0e0 on
+  // white — 1.32:1, nothing to aim at in sunlight — where the tile's own colour would put
+  // them at 4.61:1 and barely tell them from the selection. The number carries the lighter
+  // grey because at 63px it is large text; the word under it keeps the darker one.
+  it('dims the strokes it is not sitting on without erasing them', () => {
+    const w = mount(ScoreWheel, { props: base })
+    const number = (t: typeof tiles extends (w: never) => (infer U)[] ? U : never) => t.findAll('span')[0]
+
+    const selected = tiles(w).filter((t) => t.attributes('aria-checked') === 'true')
+    const unselected = tiles(w).filter((t) => t.attributes('aria-checked') === 'false')
+
+    expect(number(selected[0]).classes()).not.toContain('text-mrc-faint')
+    expect(unselected.every((t) => number(t).classes().includes('text-mrc-faint'))).toBe(true)
+    // Every number stays bold: weight is not what separates them.
+    expect(tiles(w).every((t) => number(t).classes().includes('font-bold'))).toBe(true)
+  })
+
+  // Not colour alone: the bar under the chosen number is there or it is not.
+  it('marks the selection with a bar as well as the ink', () => {
+    const w = mount(ScoreWheel, { props: base })
+    const bar = (i: number) => tiles(w)[i].findAll('span')[2]
+
+    expect(bar(3).classes()).toContain('bg-mrc-accent')
+    expect(bar(4).classes()).toContain('bg-transparent')
   })
 })

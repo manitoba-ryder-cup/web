@@ -36,7 +36,9 @@ const rel = computed(() => {
   const d = total.value - (props.priorPar + (props.unscored ? 0 : props.par))
   return d === 0 ? 'E' : d > 0 ? `+${d}` : `${d}`
 })
-const OVER = ['Bogey', 'Double Bogey', 'Triple Bogey', 'Quadruple Bogey']
+// Just the multiplier past bogey: "Double Bogey" overruns a tile, and the number it sits
+// under already says which score it is — golfers say "he made double" anyway.
+const OVER = ['Bogey', 'Double', 'Triple', 'Quadruple']
 function term(s: number): string {
   if (s === 1) return 'Ace'
   const d = s - props.par
@@ -150,7 +152,10 @@ watch(
         :class="!unscored && s === modelValue ? 'text-mrc-ink' : 'text-mrc-muted'"
         @click="select(s)"
       >
-        <span class="block text-7xl font-bold leading-none">{{ s }}</span>
+        <!-- The number is large text, so it clears its contrast bar at a lighter grey than
+             the word beneath it can — and dimming what you are aiming past is the point of
+             a wheel. The label keeps the darker one because it is small. -->
+        <span class="block text-7xl font-bold leading-none" :class="!unscored && s === modelValue ? '' : 'text-mrc-faint'">{{ s }}</span>
         <span class="mt-1 block whitespace-nowrap text-lg">{{ term(s) }}</span>
         <!-- Always rendered so selecting can't shift the row, and a second cue besides the
              weight of the ink: the numbers differ only in how dark they are. -->
