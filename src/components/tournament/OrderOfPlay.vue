@@ -10,7 +10,7 @@ import { formatTeeTime as fmtTime, teeDayLabel as dayLabel, teeDayKey as dayKeyO
 // The event grouped into sessions (a day + a format, like a real order of play): the
 // session header carries the day and format, so multi-day fields don't repeat per row and
 // each match only needs its tee time. Every match shows its status — a finished result, a
-// live state (with a dot), or just its time before it starts.
+// live state, or just its time before it starts.
 // `flat` drops the outer border/rounding for embedding inside a SectionCard.
 const props = defineProps<{ matches: MatchResult[]; teams: TournamentTeam[]; tournamentId: string; flat?: boolean }>()
 
@@ -29,7 +29,7 @@ interface Row {
   id: string
   sides: Side[]
   time: string
-  status: { text: string; cls: string; live: boolean } | null
+  status: { text: string; cls: string } | null
 }
 function rowOf(m: MatchResult): Row {
   const sorted = orderSides(m.sides, props.teams)
@@ -39,11 +39,10 @@ function rowOf(m: MatchResult): Row {
   let status: Row['status'] = null
   if (m.finished) {
     strongId = m.winner_team_id
-    status = { text: resultText(m), cls: strongId ? teamMeta(strongId).text : 'text-mrc-muted', live: false }
+    status = { text: resultText(m), cls: strongId ? teamMeta(strongId).text : 'text-mrc-muted' }
   } else if (played > 0) {
     strongId = m.leader_team_id
-    const state = strongId ? `${m.lead}↑` : 'AS'
-    status = { text: `${state} · thru ${played}`, cls: strongId ? teamMeta(strongId).text : 'text-mrc-muted', live: true }
+    status = { text: `${resultText(m)} · thru ${played}`, cls: strongId ? teamMeta(strongId).text : 'text-mrc-muted' }
   }
   const decided = strongId != null
   return {
@@ -104,7 +103,7 @@ const sessions = computed<Session[]>(() => {
           </div>
           <div class="shrink-0 whitespace-nowrap text-right font-bold text-lg uppercase">
             <span v-if="r.status" :class="r.status.cls">
-              <span v-if="r.status.live" class="mr-1 inline-block h-2 w-2 rounded-full bg-mrc-gold align-middle" />{{ r.status.text }}
+              {{ r.status.text }}
             </span>
             <span v-else class="text-mrc-faint">–</span>
           </div>

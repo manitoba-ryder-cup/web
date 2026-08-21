@@ -48,8 +48,17 @@ describe('OrderOfPlay live status', () => {
   // hole_results to work out who is ahead.
   it('shows the leader and margin of a match in progress', () => {
     const w = render(match({ leader_team_id: 't-red', lead: 2, hole_results: ['t-red', null, 't-red', null, null] }))
-    expect(w.text()).toContain('2↑')
+    expect(w.text()).toContain('2 up')
     expect(w.text()).toContain('thru 5')
+    expect(w.text()).not.toContain('↑')
+  })
+
+  // The holes played are already what say a match is under way, so a dot said it twice.
+  it('marks a live match with the holes played, not a coloured dot', () => {
+    const w = render(match({ leader_team_id: 't-red', lead: 2, hole_results: ['t-red', null] }))
+
+    expect(w.text()).toContain('thru 2')
+    expect(w.findAll('.bg-mrc-gold')).toHaveLength(0)
   })
 
   it('shows AS when nobody is ahead', () => {

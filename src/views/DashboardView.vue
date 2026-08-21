@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import type { MatchResult, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
@@ -153,13 +153,6 @@ const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 
                 {{ pointsText(right.points) }}
               </p>
             </div>
-            <RouterLink
-              v-if="tournament"
-              :to="{ name: 'tournament', params: { id: tournament.id } }"
-              class="mt-8 inline-block rounded-md bg-mrc-accent-tint px-6 py-3 font-semibold text-mrc-accent shadow-lg"
-            >
-              View scores
-            </RouterLink>
           </template>
 
           <!-- No tournament to describe — a failed load lands here too, and the body below

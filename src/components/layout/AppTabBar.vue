@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, type Component } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { useScoresLink } from '@/composables/useScoresLink'
+import { useCupStore } from '@/stores/cup'
 import { navSection, type NavSection } from '@/lib/navSection'
 import HomeIcon from '@/components/icons/HomeIcon.vue'
 import ScoresIcon from '@/components/icons/ScoresIcon.vue'
@@ -9,7 +9,9 @@ import GroupsIcon from '@/components/icons/GroupsIcon.vue'
 import TrophyIcon from '@/components/icons/TrophyIcon.vue'
 
 const route = useRoute()
-const scoresTo = useScoresLink()
+const cup = useCupStore()
+cup.load()
+const scoresTo = computed(() => cup.scoresTo)
 
 // Which tab is lit is navSection's call, not RouterLink's isActive, which only matches the
 // exact route a tab points at: drilling from the scores into a match would blank the bar,

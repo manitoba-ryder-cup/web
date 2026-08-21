@@ -124,4 +124,29 @@ describe('DashboardView', () => {
     expect(w.text()).not.toContain('Next out')
     expect(w.text()).not.toContain('On the course')
   })
+
+  it('leads with the standing once the cup is under way', async () => {
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
+      { ...TEAMS[0], points: 6.5 },
+      { ...TEAMS[1], points: 3.5 },
+    ])
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([{ ...match(FRI, 'Fourball'), hole_results: ['blue-1'] }])
+    const w = mountDashboard()
+    await flushPromises()
+
+    const hero = w.get('section')
+    expect(hero.text()).toContain('Jones')
+    expect(hero.text()).toContain('6½')
+    expect(hero.text()).toContain('3½')
+  })
+
+  // The tab bar reaches the same page, so the hero does not need to.
+  it('sends nobody from the hero to a page the tab bar already reaches', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([{ ...match(FRI, 'Fourball'), hole_results: ['blue-1'] }])
+    const w = mountDashboard()
+    await flushPromises()
+
+    const hero = w.get('section')
+    expect(hero.findAll('a').map((a) => a.attributes('href'))).not.toContain('/tournaments/t1')
+  })
 })

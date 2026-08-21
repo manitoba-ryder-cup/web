@@ -3,10 +3,10 @@ import { mount, flushPromises } from '@vue/test-utils'
 
 vi.mock('@/api/scorecard', () => ({ scorecardApi: { listTournaments: vi.fn() } }))
 
+import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import AppTabBar from '@/components/layout/AppTabBar.vue'
-import { resetScoresLink } from '@/composables/useScoresLink'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -37,8 +37,8 @@ const currentFor = (w: ReturnType<typeof mount>, label: string) => tab(w, label)
 
 describe('AppTabBar', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
-    resetScoresLink()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([OLDER, LATEST])
   })
 
