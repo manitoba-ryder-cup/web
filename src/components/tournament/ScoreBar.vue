@@ -6,8 +6,8 @@ import { splitPoints } from '@/lib/points'
 
 // The signature standings bar. Two bars per match (each = ½ a point) so halved matches
 // paint cleanly. From each end a team fills its DECIDED points in solid colour, then its
-// PROJECTED points (in-progress matches it currently leads) in a lighter shade; genuine
-// toss-ups (all-square, in-progress) stay grey. Order and colour come from the caller.
+// PROJECTED points from the matches under way in a lighter shade; matches still to tee
+// off stay grey. Order and colour come from the caller.
 // `flat` drops the self-stick wrapper so the bar can be embedded in a caller's own sticky
 // header (e.g. the hole-entry page); on its own it sticks under the hero.
 const props = withDefaults(defineProps<{ results: MatchResult[]; teams: TournamentTeam[]; flat?: boolean }>(), {
@@ -17,15 +17,19 @@ const props = withDefaults(defineProps<{ results: MatchResult[]; teams: Tourname
 const { left, right, leftColors, rightColors } = useTeamPair(() => props.teams)
 const numBars = computed(() => props.results.length * 2)
 
-// Projected points = in-progress matches each side currently leads. Finished matches are
-// already in the teams' points totals.
+// Projected points from the matches under way: a lead projects the point, all square the
+// half each side would take. One not yet teed off is level too, but projects nothing.
 const projected = computed(() => {
   let l = 0
   let r = 0
   for (const m of props.results) {
-    if (m.finished || !m.leader_team_id) continue
-    if (m.leader_team_id === left.value?.id) l++
-    else if (m.leader_team_id === right.value?.id) r++
+    if (m.finished || m.hole_results.length === 0) continue
+    if (m.leader_team_id === left.value?.id) l += 1
+    else if (m.leader_team_id === right.value?.id) r += 1
+    else {
+      l += 0.5
+      r += 0.5
+    }
   }
   return { l, r }
 })
