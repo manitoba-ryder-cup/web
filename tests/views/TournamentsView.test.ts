@@ -91,7 +91,8 @@ describe('TournamentsView', () => {
 
     await clickTab(w, 'Participants')
 
-    expect(w.text()).toContain('2 players')
+    // Anchored to the first cup's year, so the two tabs' headings read as a pair.
+    expect(w.text()).toContain('2 players since 2019')
     expect(w.text()).not.toContain('Gimli')
     // Sorted by surname, not the order the server happened to return.
     expect(w.text().indexOf('Bygone')).toBeLessThan(w.text().indexOf('Winterhalt'))

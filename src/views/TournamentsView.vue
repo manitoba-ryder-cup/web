@@ -5,7 +5,6 @@ import { useAsync } from '@/composables/useAsync'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
 import CardGrid from '@/components/layout/CardGrid.vue'
-import CapsLabel from '@/components/typography/CapsLabel.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import BaseTabs from '@/components/base/BaseTabs.vue'
 import SkeletonTabs from '@/components/skeleton/SkeletonTabs.vue'
@@ -28,13 +27,19 @@ const players = computed(() =>
   [...(data.value?.players ?? [])].sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)),
 )
 
-// The run of the thing, which is the one fact only this page can state. Both halves are
-// load-bearing: the span and the count disagree by exactly the years no cup was played,
-// so "2008 – 2026 · 18 cups" says a year was missed without spending a sentence on it.
+// Each tab's heading is its own totals line — the one fact only this page can state, and
+// with the tabs above it there is nothing left for a standfirst to explain. Both halves of
+// the run are load-bearing: the span and the count disagree by exactly the years no cup was
+// played, so "2008 – 2026 · 18 cups" says a year was missed without spending a sentence on
+// it. The players line is anchored to the same first year so the two read as a pair.
+const firstYear = computed(() => cups.value[cups.value.length - 1]?.tournament.start_date.slice(0, 4) ?? '') // sorted newest first
 const run = computed(() => {
   if (!cups.value.length) return ''
-  const year = (i: number) => cups.value[i].tournament.start_date.slice(0, 4)
-  return `${year(cups.value.length - 1)} – ${year(0)} · ${cups.value.length} cups` // sorted newest first
+  return `${firstYear.value} – ${cups.value[0].tournament.start_date.slice(0, 4)} · ${cups.value.length} cups`
+})
+const played = computed(() => {
+  if (!players.value.length) return ''
+  return firstYear.value ? `${players.value.length} players since ${firstYear.value}` : `${players.value.length} players`
 })
 </script>
 <template>
@@ -55,34 +60,14 @@ const run = computed(() => {
           <template #default="{ index }">
             <div class="px-4">
               <template v-if="index === 0">
-                <div class="mx-auto mb-8 max-w-2xl text-center">
-                  <CapsLabel v-if="run" class="mb-2 tabular-nums text-mrc-muted">{{ run }}</CapsLabel>
-                  <h2 class="mb-4">An Event Like No Other</h2>
-                  <p class="text-mrc-muted">
-                    The Manitoba Ryder Cup has become one of the province's greatest sporting events. Every year, a handful of
-                    <span class="line-through">the best</span> players from across the province go head to head in match play competition.
-                    Drama, tension, incredible golf, camaraderie, sportsmanship, and alcohol are served in equal measure, captivating an
-                    audience of dozens around the world. It's an event that transcends sport, yet remains true to the spirit of its founder,
-                    Samuel Ryder.
-                  </p>
-                </div>
+                <h2 v-if="run" class="mb-6 text-center tabular-nums">{{ run }}</h2>
                 <p v-if="!cups.length" class="text-center text-mrc-muted">No tournaments yet.</p>
                 <CardGrid v-else>
                   <TournamentCard v-for="x in cups" :key="x.tournament.id" :tournament="x.tournament" :teams="x.teams" />
                 </CardGrid>
               </template>
               <template v-else>
-                <div class="mx-auto mb-8 max-w-2xl text-center">
-                  <CapsLabel v-if="players.length" class="mb-2 tabular-nums text-mrc-muted">
-                    {{ players.length }} {{ players.length === 1 ? 'player' : 'players' }}
-                  </CapsLabel>
-                  <h2 class="mb-4">The Usual Suspects</h2>
-                  <p class="text-mrc-muted">
-                    Everyone who has ever teed it up in a Manitoba Ryder Cup, and the record they have to show for it. Careers here are
-                    built one weekend a year, so a bad round can take a decade to live down. Some of these names turn up year after year;
-                    others played once and are still spoken of, for one reason or another.
-                  </p>
-                </div>
+                <h2 v-if="played" class="mb-6 text-center tabular-nums">{{ played }}</h2>
                 <p v-if="!players.length" class="text-center text-mrc-muted">No players yet.</p>
                 <CardGrid v-else>
                   <PlayerCard
