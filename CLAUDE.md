@@ -133,7 +133,9 @@ alternative rejected. Look at `dev/bootstrap.sh` or `lib/scoringWindow.ts` for t
 style. Don't add narration that restates the code, and write for someone who never saw the
 change: "used to" earns its place only where it warns off a path they might take again, as
 `scoringWindow.ts` does with the constants it once held. Anything else about how the code
-got this way is a commit message.
+got this way is a commit message. Keep it to a line or two: a longer block earns its place
+only where it names the alternative that was rejected or the failure that cost something,
+and needing a paragraph usually means the code under it is what wants changing.
 
 Prose and infra are **prettier-ignored** (`*.md`, `docker-compose.yml`) because its quote
 and wrapping rules churn them and un-align hand-spaced lists. Hand-format those; run
