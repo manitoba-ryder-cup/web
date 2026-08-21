@@ -115,6 +115,34 @@ describe('TournamentsView', () => {
     expect(link?.attributes('href')).toContain('from=history')
   })
 
+  // Two fetches, so the tab that opens does not wait on — or go down with — the list on the
+  // other one. The cups are the page's primary content and have no dependency on the roll.
+  it('keeps the cups readable when the participants list fails', async () => {
+    vi.mocked(scorecardApi.listPlayers).mockRejectedValue(new Error('offline'))
+    const w = await loaded()
+
+    expect(w.text()).toContain('Gimli')
+
+    await clickTab(w, 'Participants')
+
+    expect(w.text()).toContain('offline')
+    expect(w.text()).not.toContain('No players yet.')
+  })
+
+  // And the other way: a failure on the cups leaves a working page rather than an empty
+  // one, with the retry the field needs on it.
+  it('offers a retry on the half that failed', async () => {
+    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new Error('offline'))
+    const w = await loaded()
+
+    expect(w.text()).not.toContain('No tournaments yet.')
+    expect(w.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
+
+    await clickTab(w, 'Participants')
+
+    expect(w.text()).toContain('Bygone')
+  })
+
   it('opens on the tab the hash names', async () => {
     router.push('/tournaments#participants')
     await router.isReady()
