@@ -7,3 +7,18 @@
 if (typeof Element !== 'undefined' && !Element.prototype.scrollTo) {
   Element.prototype.scrollTo = () => {}
 }
+
+// jsdom implements no media queries either, and the score wheel asks whether the reader
+// wants less motion before it animates. Answering "no" is the default a browser gives.
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = ((q: string) => ({
+    matches: false,
+    media: q,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
