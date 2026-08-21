@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import StrokePicker from '@/components/tournament/StrokePicker.vue'
 
@@ -6,10 +7,27 @@ const base = { modelValue: 4, par: 4, name: 'Justin Rabe' }
 const tiles = (w: ReturnType<typeof mount>) => w.findAll('[data-stroke]')
 const chosen = (w: ReturnType<typeof mount>) => tiles(w).filter((t) => t.attributes('aria-checked') === 'true')
 
-// Not covered here: that the strips line up on par across players, which is what lets a
-// hole be read down the column. It is a layout fact, and jsdom reports every offsetLeft as
-// 0 — anchoring on par and anchoring on the score compute the same number under test. It
-// is checked in a browser instead; see the commit that introduced it.
+// jsdom has no layout, so every offsetLeft and clientWidth reads 0 and the strip has
+// nothing to position against. It does keep a scrollLeft that was assigned, so giving the
+// tiles measurements makes where the strip parks observable — which is the one thing about
+// this control that cannot be inferred from its markup.
+const TILE = 90
+const VIEWPORT = 390
+async function withLayout(w: ReturnType<typeof mount>) {
+  const track = w.get('[role="radiogroup"]').element as HTMLElement
+  Object.defineProperty(track, 'clientWidth', { value: VIEWPORT, configurable: true })
+  tiles(w).forEach((t, i) => {
+    Object.defineProperty(t.element, 'offsetLeft', { value: i * TILE, configurable: true })
+    Object.defineProperty(t.element, 'offsetWidth', { value: TILE, configurable: true })
+  })
+  // Mount settled against a layout of zeroes; a resize is how the strip is told there is
+  // one now, and it is the same path a rotation takes.
+  window.dispatchEvent(new Event('resize'))
+  await nextTick()
+  return track
+}
+const centreOf = (stroke: number) => (stroke - 1) * TILE + TILE / 2 - VIEWPORT / 2
+
 describe('StrokePicker', () => {
   it('fills the chosen stroke and leaves the rest plain', () => {
     const picked = chosen(mount(StrokePicker, { props: base }))
@@ -138,6 +156,67 @@ describe('StrokePicker', () => {
     // Past triple the number says it: "Quadruple" overruns the tile and is 0.2% of scores.
     expect(labels[7]).toContain('+4')
     expect(labels.some((l) => l.includes('Quadruple'))).toBe(false)
+  })
+
+  // Par, not the score: it is what makes every player's strip share a column, so a hole
+  // can be read down it. Anchoring on the score would line the fills up instead, which is
+  // exactly the information the layout is meant to carry.
+  it('pins the strip to par, wherever the score sits', async () => {
+    // A birdie, which is on screen once par is centred — so nothing nudges it afterwards
+    // and the offset is purely the anchor. Anchored on the score it would be centreOf(3).
+    const w = mount(StrokePicker, { props: { ...base, par: 4, modelValue: 3 } })
+
+    const track = await withLayout(w)
+
+    expect(track.scrollLeft).toBe(centreOf(4))
+    expect(track.scrollLeft).not.toBe(centreOf(3))
+  })
+
+  // The same component is reused from hole to hole — same player, new par — so a strip
+  // that only pinned itself on mount would drift out of column at the first par change.
+  it('re-pins when the hole changes', async () => {
+    const w = mount(StrokePicker, { props: { ...base, par: 4 } })
+    const track = await withLayout(w)
+
+    await w.setProps({ par: 3, modelValue: 3 })
+    await nextTick()
+
+    expect(track.scrollLeft).toBe(centreOf(3))
+  })
+
+  it('re-pins when the strip is resized', async () => {
+    const w = mount(StrokePicker, { props: { ...base, par: 4 } })
+    const track = await withLayout(w)
+    track.scrollLeft = 0
+
+    window.dispatchEvent(new Event('resize'))
+    await nextTick()
+
+    expect(track.scrollLeft).toBe(centreOf(4))
+  })
+
+  // The property the column-reading rests on: choosing a stroke already on screen leaves
+  // the strip exactly where it is.
+  it('does not move when a visible stroke is chosen', async () => {
+    const w = mount(StrokePicker, { props: { ...base, par: 4 } })
+    const track = await withLayout(w)
+    const parked = track.scrollLeft
+
+    await w.setProps({ modelValue: 5 })
+    await nextTick()
+
+    expect(track.scrollLeft).toBe(parked)
+  })
+
+  it('brings a stroke off the end into view, no further', async () => {
+    const w = mount(StrokePicker, { props: { ...base, par: 4 } })
+    const track = await withLayout(w)
+
+    await w.setProps({ modelValue: 12 })
+    await nextTick()
+
+    // Flush to the right edge rather than centred — the least the strip can move.
+    expect(track.scrollLeft).toBe(11 * TILE + TILE - VIEWPORT)
   })
 
   it('names a score under par by the shot that made it', () => {

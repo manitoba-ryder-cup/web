@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, nextTick, watch, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, nextTick, watch, ref } from 'vue'
+import { centreOffset, nudgeOffset } from '@/lib/strokeStrip'
 
 // One player's strokes for one hole: a strip of numbered tiles pinned to par, with the
 // chosen one filled. Par sits in the same place in every player's strip, so the fill's
@@ -57,17 +58,29 @@ function term(s: number): string {
 function tileAt(s: number): HTMLElement | undefined {
   return track.value?.querySelectorAll<HTMLElement>('[data-stroke]')[s - 1]
 }
-// Par centred, because par is what lines the strips up with one another.
+// Par centred, because par is what lines the strips up with one another. Re-run whenever
+// par changes or the strip is resized: the same component is reused from hole to hole, so
+// without this the strips drift out of column the first time the par does.
 function anchor() {
   const el = track.value
   const tile = tileAt(props.par)
   if (!el || !tile) return
-  el.scrollLeft = tile.offsetLeft + tile.offsetWidth / 2 - el.clientWidth / 2
+  el.scrollLeft = centreOffset(tile.offsetLeft, tile.offsetWidth, el.clientWidth)
 }
-// Nudged into view, never centred: choosing must not shift the strip under the finger
-// that chose, and a score far enough from par to load off-screen still has to be seen.
+// Nudged into view, never centred: choosing must not shift the strip under the finger that
+// chose, and a score far enough from par to load off-screen still has to be seen. The
+// track's own scrollLeft rather than scrollIntoView, which walks every ancestor scrollport
+// including the document — on mount that scrolls the page to the last player, and on a tap
+// it drags the chosen tile up under the sticky header.
 function reveal(s: number) {
-  tileAt(s)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  const el = track.value
+  const tile = tileAt(s)
+  if (!el || !tile) return
+  el.scrollLeft = nudgeOffset(el.scrollLeft, el.clientWidth, tile.offsetLeft, tile.offsetWidth)
+}
+function settle() {
+  anchor()
+  reveal(props.modelValue)
 }
 function select(s: number) {
   if (props.readonly) return
@@ -94,12 +107,15 @@ function onKeydown(e: KeyboardEvent) {
   nextTick(() => tileAt(to)?.focus({ preventScroll: true }))
 }
 
-onMounted(() =>
-  nextTick(() => {
-    anchor()
-    reveal(props.modelValue)
-  }),
-)
+onMounted(() => {
+  nextTick(settle)
+  window.addEventListener('resize', settle)
+})
+onBeforeUnmount(() => window.removeEventListener('resize', settle))
+
+// Par first: walking to the next hole reuses this component with a new par and a new
+// default, and re-pinning has to happen before the score is brought into view.
+watch(() => props.par, settle)
 watch(
   () => props.modelValue,
   (v) => reveal(v),
