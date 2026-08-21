@@ -4,11 +4,13 @@ import { mount, flushPromises } from '@vue/test-utils'
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     listTournaments: vi.fn(),
+    getTournament: vi.fn(),
     getTournamentTeams: vi.fn(),
     getTournamentResults: vi.fn(),
   },
 }))
 
+import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import DashboardView from '@/views/DashboardView.vue'
@@ -55,10 +57,26 @@ function mountDashboard() {
 
 describe('DashboardView', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([TOURNAMENT])
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue(TOURNAMENT)
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue(TEAMS)
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([])
+  })
+
+  // The cup's identity is resolved once per session and then fixed, so the record has to
+  // be re-read by id. Taking it from the store instead would leave a tab open through an
+  // edit showing the phase the old start date implied.
+  it('reads the cup record itself rather than the one the session resolved with', async () => {
+    vi.mocked(scorecardApi.listTournaments).mockResolvedValue([{ ...TOURNAMENT, location: 'Stale City' }])
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, location: 'Current City' })
+
+    const wrapper = mountDashboard()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Current City')
+    expect(wrapper.text()).not.toContain('Stale City')
   })
 
   it('shows skeletons rather than a session card while loading', async () => {

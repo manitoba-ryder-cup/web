@@ -4,9 +4,10 @@ import { mount, flushPromises } from '@vue/test-utils'
 // No listPlayers: the archive moved to the history page, and leaving it off the mock means
 // a view that reached for it again would fail here rather than quietly widen the page.
 vi.mock('@/api/scorecard', () => ({
-  scorecardApi: { listTournaments: vi.fn(), getTournamentPlayers: vi.fn(), getTournamentTeams: vi.fn() },
+  scorecardApi: { listTournaments: vi.fn(), getTournament: vi.fn(), getTournamentPlayers: vi.fn(), getTournamentTeams: vi.fn() },
 }))
 
+import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import type { TournamentPlayer } from '@/api/types'
@@ -45,16 +46,46 @@ async function loaded() {
 
 describe('TeamsView', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
     router.push('/teams')
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
       { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Winnipeg' },
     ])
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({
+      id: 't1',
+      name: 'Summer Cup',
+      start_date: '2026-07-01',
+      end_date: '2026-07-03',
+      location: 'Winnipeg',
+    })
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
       { id: 'blue-1', color: 'Blue', captain: { id: 'c1', first_name: 'Bo', last_name: 'Jones' }, points: 0 },
       { id: 'red-1', color: 'Red', captain: { id: 'c2', first_name: 'Cal', last_name: 'Reid' }, points: 0 },
     ])
     vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([entrant()])
+  })
+
+  // The store resolves which cup this is and then holds it for the session, so the record
+  // has to be read by id — taking it from there would leave the eyebrow on the name and
+  // dates the session opened with, for the whole session.
+  it('reads the cup record itself rather than the one the session resolved with', async () => {
+    vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
+      { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Stale City' },
+    ])
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({
+      id: 't1',
+      name: 'Summer Cup',
+      start_date: '2026-07-01',
+      end_date: '2026-07-03',
+      location: 'Current City',
+    })
+
+    const w = mount(TeamsView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    expect(w.text()).toContain('Current City')
+    expect(w.text()).not.toContain('Stale City')
   })
 
   it('shows a team-sheet skeleton while loading', async () => {
