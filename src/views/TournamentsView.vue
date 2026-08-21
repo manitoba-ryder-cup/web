@@ -30,7 +30,7 @@ const players = computed(() =>
 <template>
   <!-- The hero says what the tab bar already says, so it carries the line the page used to
        spend a paragraph on and earns the height that way. -->
-  <PageLayout title="History" image="/img/oceanside.webp" below="An event like no other">
+  <PageLayout title="History" image="/img/oceanside.webp" below="An Event Like No Other">
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
         <!-- Same full-bleed wrapper and pt-6 panel gap BaseTabs uses, so the grid doesn't

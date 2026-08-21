@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
+import { tournamentEyebrow } from '@/lib/tournament'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -18,9 +19,12 @@ const { data, error, loading, retry } = useAsync(async () => {
   const [roster, teams] = current
     ? await Promise.all([scorecardApi.getTournamentPlayers(current.id), scorecardApi.getTournamentTeams(current.id)])
     : [[], []]
-  return { roster, teams }
+  return { tournament: current, roster, teams }
 })
 
+// Which cup these teams belong to, and where it is played. The page is otherwise undated,
+// and the same address shows a different two dozen names every year.
+const eyebrow = computed(() => tournamentEyebrow(data.value?.tournament))
 const roster = computed(() => data.value?.roster ?? [])
 const teams = computed(() => data.value?.teams ?? [])
 
@@ -29,7 +33,7 @@ const teams = computed(() => data.value?.teams ?? [])
 const drafted = computed(() => roster.value.length > 0 && roster.value.every((p) => !!p.team_id))
 </script>
 <template>
-  <PageLayout title="Teams" image="/img/mountain-green.webp">
+  <PageLayout title="Teams" image="/img/mountain-green.webp" :above="eyebrow">
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
         <!-- Hand-built rather than SkeletonList: this page is two columns of faced rows

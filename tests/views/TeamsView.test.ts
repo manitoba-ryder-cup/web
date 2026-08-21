@@ -70,6 +70,13 @@ describe('TeamsView', () => {
     expect(w.text()).toContain('Smith')
   })
 
+  // The page is otherwise undated, and the same address shows a different roster each year.
+  it('names the cup these teams belong to', async () => {
+    const w = await loaded()
+
+    expect(w.text()).toContain('2026 · Winnipeg')
+  })
+
   it('shows the field by team once the draft is done', async () => {
     vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([entrant({ team_id: 'blue-1' })])
     const w = await loaded()

@@ -82,7 +82,7 @@ describe('TournamentsView', () => {
   it("carries the event's line in the hero from the first frame", () => {
     const w = mount(TournamentsView, { global: { plugins: [router] } })
 
-    expect(w.text()).toContain('An event like no other')
+    expect(w.text()).toContain('An Event Like No Other')
   })
 
   it('opens on the cups, newest first', async () => {
