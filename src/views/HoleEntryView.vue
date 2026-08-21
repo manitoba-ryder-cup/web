@@ -25,8 +25,8 @@ const holeNumber = computed(() => Number(props.hole))
 
 // Loads once — walking to the next hole only re-derives from what is already here.
 const { error, loading, retry, refresh, teams, results, holeStates, holes, match, left, right } = useMatchContext(
-  props.tournamentId,
-  props.matchId,
+  () => props.tournamentId,
+  () => props.matchId,
 )
 // Before a match tees off there is nothing to show and nothing to record, so the strips
 // aren't offered — the server refuses the write too. Afterwards there is everything to

@@ -24,15 +24,18 @@ const props = defineProps<{ id: string }>()
 
 // Results carry each match's sides + tee time (for the list); match-formats map a format
 // name to its id (for creating); courses feed the add-match picker.
-const { data, error, loading, refresh, retry } = useAsync(async () => {
-  const [tournament, matches, matchFormats, courses] = await Promise.all([
-    scorecardApi.getTournament(props.id),
-    scorecardApi.getTournamentResults(props.id),
-    scorecardApi.listMatchFormats(),
-    scorecardApi.listCourses(),
-  ])
-  return { tournament, matches, matchFormats, courses }
-})
+const { data, error, loading, refresh, retry } = useAsync(
+  () => ['admin', 'tournament', props.id],
+  async () => {
+    const [tournament, matches, matchFormats, courses] = await Promise.all([
+      scorecardApi.getTournament(props.id),
+      scorecardApi.getTournamentResults(props.id),
+      scorecardApi.listMatchFormats(),
+      scorecardApi.listCourses(),
+    ])
+    return { tournament, matches, matchFormats, courses }
+  },
+)
 const tournament = computed(() => data.value?.tournament ?? null)
 const matches = computed(() => data.value?.matches ?? [])
 const matchFormats = computed(() => data.value?.matchFormats ?? [])

@@ -18,15 +18,21 @@ import BaseLabel from '@/components/base/BaseLabel.vue'
 
 const props = defineProps<{ id: string; matchId: string }>()
 
-const { data, error, loading, refresh, retry } = useAsync(async () => {
-  const [matches, teams, roster, courses] = await Promise.all([
-    scorecardApi.getTournamentResults(props.id),
-    scorecardApi.getTournamentTeams(props.id),
-    scorecardApi.getTournamentPlayers(props.id),
-    scorecardApi.listCourses(),
-  ])
-  return { matches, teams, roster, courses }
-})
+const { data, error, loading, refresh, retry } = useAsync(
+  // Tournament-scoped, not match-scoped: every request below is about the tournament, and
+  // the match only selects from the result. Keyed by match, an admin setting eight lineups
+  // would fetch the same four endpoints eight times.
+  () => ['admin', 'lineup', props.id],
+  async () => {
+    const [matches, teams, roster, courses] = await Promise.all([
+      scorecardApi.getTournamentResults(props.id),
+      scorecardApi.getTournamentTeams(props.id),
+      scorecardApi.getTournamentPlayers(props.id),
+      scorecardApi.listCourses(),
+    ])
+    return { matches, teams, roster, courses }
+  },
+)
 
 const matches = computed(() => data.value?.matches ?? [])
 const match = computed(() => matches.value.find((m) => m.match_id === props.matchId) ?? null)

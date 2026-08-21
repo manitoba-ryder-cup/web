@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useHashAccordion } from '@/composables/useHashAccordion'
@@ -20,19 +20,17 @@ const props = defineProps<{ id: string }>()
 // One useAsync over both fetches so the page has a single loading/error state. Career
 // profile (record + cups) comes from the player; the per-event history — including each
 // year's flight and scouting report — from its own endpoint.
-const { data, error, loading, retry } = useAsync(async () => {
-  const [player, history, stats] = await Promise.all([
-    scorecardApi.getPlayer(props.id),
-    scorecardApi.getPlayerTournaments(props.id),
-    scorecardApi.getPlayerStats(props.id),
-  ])
-  return { player, history, stats }
-})
-
-// A profile links to other profiles — partners and opponents — and vue-router reuses this
-// component across a change of :id, so nothing would refetch: the URL would name one player
-// while the page kept showing the last one, with no way out but a reload.
-watch(() => props.id, retry)
+const { data, error, loading, retry } = useAsync(
+  () => ['player', props.id],
+  async () => {
+    const [player, history, stats] = await Promise.all([
+      scorecardApi.getPlayer(props.id),
+      scorecardApi.getPlayerTournaments(props.id),
+      scorecardApi.getPlayerStats(props.id),
+    ])
+    return { player, history, stats }
+  },
+)
 
 const player = computed(() => data.value?.player ?? null)
 const history = computed(() => data.value?.history ?? [])

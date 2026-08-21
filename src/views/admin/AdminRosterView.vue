@@ -4,6 +4,7 @@ import { scorecardApi } from '@/api/scorecard'
 import type { TournamentPlayer } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
+import { useAfterWrite } from '@/composables/useAfterWrite'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -22,10 +23,13 @@ import FullBleed from '@/components/layout/FullBleed.vue'
 // can be edited, and it is scoped to a tournament for the same reason.
 const props = defineProps<{ id: string }>()
 
-const { data, error, loading, refresh, retry } = useAsync(async () => {
-  const [roster, players] = await Promise.all([scorecardApi.getTournamentPlayers(props.id), scorecardApi.listPlayers()])
-  return { roster, players }
-})
+const { data, error, loading, refresh, retry } = useAsync(
+  () => ['admin', 'roster', props.id],
+  async () => {
+    const [roster, players] = await Promise.all([scorecardApi.getTournamentPlayers(props.id), scorecardApi.listPlayers()])
+    return { roster, players }
+  },
+)
 
 const byName = (a: { last_name: string; first_name: string }, b: { last_name: string; first_name: string }) =>
   a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)
@@ -45,6 +49,7 @@ const available = computed(() => {
 const TIERS = ['gold', 'blue', 'white', 'black', 'silver']
 
 const { isBusy, run } = useBusy()
+const afterWrite = useAfterWrite()
 
 const openId = ref('')
 const toggle = (playerId: string) => (openId.value = openId.value === playerId ? '' : playerId)
@@ -77,6 +82,7 @@ const save = (entry: TournamentPlayer) =>
     entry.player_id,
     async () => {
       await scorecardApi.updateTournamentPlayer(props.id, entry.player_id, changes(entry))
+      await afterWrite()
       await refresh()
       openId.value = ''
     },

@@ -9,7 +9,7 @@ import PlayerCard from '@/components/player/PlayerCard.vue'
 
 // Everyone who has ever played, by surname. See CupArchive for why the fetch sits in the
 // panel: this one is the half most visitors never open, and it is the longer list.
-const { data, error, loading, retry } = useAsync(async () => {
+const { data, error, loading, retry } = useAsync(['players', 'all'], async () => {
   const list = await scorecardApi.listPlayers()
   return [...list].sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name))
 })
