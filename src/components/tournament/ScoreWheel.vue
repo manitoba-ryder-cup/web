@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 
 // v2's score wheel, reproduced: a horizontal row of big number tiles, each labelled with
-// its scoring term; the centred tile is the selection (dark), the rest are faded — no
+// its scoring term; the centred tile is the selection (dark), the rest are quieter — no
 // highlight box. The mechanism is rebuilt to measure tile positions from the DOM rather
 // than deriving them from screen width.
 // `unscored` still centres on modelValue but picks out nothing: a selected par would
@@ -36,22 +36,16 @@ const rel = computed(() => {
   const d = total.value - (props.priorPar + (props.unscored ? 0 : props.par))
   return d === 0 ? 'E' : d > 0 ? `+${d}` : `${d}`
 })
+const OVER = ['Bogey', 'Double Bogey', 'Triple Bogey', 'Quadruple Bogey']
 function term(s: number): string {
   if (s === 1) return 'Ace'
-  switch (s - props.par) {
-    case -3:
-      return 'Albatross'
-    case -2:
-      return 'Eagle'
-    case -1:
-      return 'Birdie'
-    case 0:
-      return 'Par'
-    case 1:
-      return 'Bogey'
-    default:
-      return `${s - props.par} Bogey`
-  }
+  const d = s - props.par
+  if (d === -3) return 'Albatross'
+  if (d === -2) return 'Eagle'
+  if (d === -1) return 'Birdie'
+  if (d === 0) return 'Par'
+  // Named as far as the names go, then the number — nobody says "sextuple bogey".
+  return OVER[d - 1] ?? `+${d}`
 }
 
 // The stroke whose tile is nearest the scroll viewport's centre.
@@ -70,6 +64,11 @@ function centred(): number {
   })
   return best
 }
+// Animated unless the reader asked for less; read per call because the setting can change
+// while the page is open.
+function behavior(): ScrollBehavior {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+}
 function scrollToStrokes(s: number, behavior: ScrollBehavior) {
   const el = track.value
   const tile = el?.querySelectorAll<HTMLElement>('[data-tile]')[s - 1]
@@ -86,15 +85,40 @@ function onScroll() {
 }
 function select(s: number) {
   if (props.readonly) return
+  // Emit only. The watch below owns the scrolling, so a tap and an arrow key move the
+  // wheel the same way and neither races the other to it.
   emit('update:modelValue', s)
-  scrollToStrokes(s, 'smooth')
+}
+// One tab stop per wheel, and the arrows move the selection — the tiles are radios, not
+// twenty buttons. Focus alone must never record a score: it used to, because focusing a
+// tile scrolls it into view and the scroll handler reads whatever it centres, so tabbing
+// towards Save rewrote every player's score on the way past.
+function onKeydown(e: KeyboardEvent) {
+  if (props.readonly) return
+  const to =
+    e.key === 'ArrowRight' || e.key === 'ArrowDown'
+      ? Math.min(MAX, props.modelValue + 1)
+      : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+        ? Math.max(1, props.modelValue - 1)
+        : e.key === 'Home'
+          ? 1
+          : e.key === 'End'
+            ? MAX
+            : 0
+  if (!to) return
+  e.preventDefault()
+  select(to)
+  // preventScroll: the browser would otherwise pull the tile to the nearest edge, and that
+  // scroll lands after ours and wins — the selection changed but the wheel stayed put with
+  // the new number hanging off the side.
+  nextTick(() => track.value?.querySelectorAll<HTMLElement>('[data-tile]')[to - 1]?.focus({ preventScroll: true }))
 }
 
 onMounted(() => nextTick(() => scrollToStrokes(props.modelValue, 'auto')))
 watch(
   () => props.modelValue,
   (v) => {
-    if (centred() !== v) scrollToStrokes(v, 'auto')
+    if (centred() !== v) scrollToStrokes(v, behavior())
   },
 )
 </script>
@@ -107,6 +131,9 @@ watch(
     <div
       ref="track"
       @scroll="onScroll"
+      @keydown="onKeydown"
+      role="radiogroup"
+      :aria-label="`Strokes for ${name}`"
       class="relative flex snap-x snap-mandatory py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       :class="readonly ? 'overflow-x-hidden' : 'overflow-x-auto'"
     >
@@ -116,12 +143,21 @@ watch(
         :key="s"
         type="button"
         data-tile
+        role="radio"
+        :aria-checked="!unscored && s === modelValue"
+        :tabindex="s === modelValue ? 0 : -1"
         class="w-24 shrink-0 snap-center text-center transition-colors"
-        :class="!unscored && s === modelValue ? 'text-mrc-ink' : 'text-mrc-line'"
+        :class="!unscored && s === modelValue ? 'text-mrc-ink' : 'text-mrc-muted'"
         @click="select(s)"
       >
         <span class="block text-7xl font-bold leading-none">{{ s }}</span>
         <span class="mt-1 block whitespace-nowrap text-lg">{{ term(s) }}</span>
+        <!-- Always rendered so selecting can't shift the row, and a second cue besides the
+             weight of the ink: the numbers differ only in how dark they are. -->
+        <span
+          class="mx-auto mt-1.5 block h-1 w-8 rounded-full"
+          :class="!unscored && s === modelValue ? 'bg-mrc-accent' : 'bg-transparent'"
+        />
       </button>
       <div class="w-[calc(50%-3rem)] shrink-0" />
     </div>
