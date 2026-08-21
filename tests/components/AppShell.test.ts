@@ -11,7 +11,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'dashboard', component: { template: '<div/>' } },
-    { path: '/wheel', name: 'wheel', component: { template: '<div/>' }, meta: { hidesNav: true } },
+    { path: '/hole', name: 'hole', component: { template: '<div/>' }, meta: { hidesNav: true } },
   ],
 })
 
@@ -28,7 +28,7 @@ describe('AppShell', () => {
 
   // Score entry is a full-height control; a fixed bar would sit under the thumb using it.
   it('hides the tab bar where the route asks it to', async () => {
-    expect((await mountShell('/wheel')).find('nav[aria-label="Primary"]').exists()).toBe(false)
+    expect((await mountShell('/hole')).find('nav[aria-label="Primary"]').exists()).toBe(false)
   })
 
   // The bar is fixed, so without this the last of a page sits underneath it. The padding
@@ -41,6 +41,6 @@ describe('AppShell', () => {
   })
 
   it('adds no padding where there is no bar', async () => {
-    expect((await mountShell('/wheel')).get('main').classes()).not.toContain('pb-24')
+    expect((await mountShell('/hole')).get('main').classes()).not.toContain('pb-24')
   })
 })

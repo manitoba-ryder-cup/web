@@ -14,7 +14,7 @@ import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
-import ScoreWheel from '@/components/tournament/ScoreWheel.vue'
+import StrokePicker from '@/components/tournament/StrokePicker.vue'
 import FlagIcon from '@/components/icons/FlagIcon.vue'
 import { useAuthStore } from '@/stores/auth'
 import { SCOPE_SCORES_WRITE } from '@/api/scopes'
@@ -28,7 +28,7 @@ const { error, loading, retry, refresh, teams, results, holeStates, holes, match
   props.tournamentId,
   props.matchId,
 )
-// Before a match tees off there is nothing to show and nothing to record, so the wheels
+// Before a match tees off there is nothing to show and nothing to record, so the strips
 // aren't offered — the server refuses the write too. Afterwards there is everything to
 // show: a played match still reads, it just reads read-only.
 const auth = useAuthStore()
@@ -39,10 +39,10 @@ const scoreable = computed(() => scoringOpen(match.value))
 const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
 // A finished match is read-only (the write flow only makes sense for a live round). The
 // loaded result is a snapshot from mount, so a save that ends the match sets this too —
-// otherwise walking to the next hole would still offer an editable wheel.
+// otherwise walking to the next hole would still offer an editable strip.
 const finishedByWrite = ref(false)
 // Reading a hole is public; recording one is not. Without the scope the page still shows
-// what was scored, which is what a spectator came for, and offers no wheel to turn.
+// what was scored, which is what a spectator came for, and offers nothing to tap.
 const readonly = computed(
   () => finishedByWrite.value || !scoreable.value || (match.value?.finished ?? false) || !auth.hasScope(SCOPE_SCORES_WRITE),
 )
@@ -128,8 +128,8 @@ async function saveAndNext() {
       <template #loading>
         <!-- This page has no hero, so loading is otherwise a blank screen — and it's the one
              most likely to be opened on a weak connection, standing on a tee box. Mirrors
-             the real layout: sticky context block, a wheel per player, then Save. Two
-             wheels, not four: the team formats use two, and under-promising closes up
+             the real layout: sticky context block, a strip per player, then Save. Two
+             strips, not four: the team formats use two, and under-promising closes up
              rather than leaving a gap. -->
         <div data-testid="skeleton">
           <div class="-mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 pb-3 shadow">
@@ -146,7 +146,7 @@ async function saveAndNext() {
           <SkeletonBlock radius="md" class="mt-6 h-14 w-full" />
         </div>
       </template>
-      <!-- Before the cup, say so rather than offering wheels the server would refuse.
+      <!-- Before the cup, say so rather than offering a strip the server would refuse.
            The match's own page still shows its tee time, format and lineup. -->
       <div v-if="match && !started" class="mx-auto mt-6 max-w-2xl text-center">
         <p class="text-mrc-muted">
@@ -179,7 +179,7 @@ async function saveAndNext() {
 
         <div class="mt-6 -mx-4 divide-y divide-mrc-line border-b border-mrc-line">
           <!-- Only blank once the match is over: while it's live, par is what Save records. -->
-          <ScoreWheel
+          <StrokePicker
             v-for="e in entries"
             :key="e.key"
             v-model="e.strokes"
