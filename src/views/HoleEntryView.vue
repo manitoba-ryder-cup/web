@@ -6,7 +6,7 @@ import { ApiError, type MatchSide } from '@/api/types'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
 import { matchCompleteMessage } from '@/lib/matchResult'
-import { hasStarted, scoringOpen } from '@/lib/scoringWindow'
+import { hasStarted, holeOpen } from '@/lib/scoringWindow'
 import { formatTeeTime, teeDayLabel } from '@/lib/teeTime'
 import { toast } from '@/composables/useToast'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -33,18 +33,50 @@ const { error, loading, retry, refresh, teams, results, holeStates, holes, match
 // show: a played match still reads, it just reads read-only.
 const auth = useAuthStore()
 const started = computed(() => hasStarted(match.value))
-// Read-only outside the match's scoring window as well as once it is decided, matching
-// the server: a score entered for last year's match would be refused.
-const scoreable = computed(() => scoringOpen(match.value))
 const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
-// A finished match is read-only (the write flow only makes sense for a live round). The
-// loaded result is a snapshot from mount, so a save that ends the match sets this too —
-// otherwise walking to the next hole would still offer an editable strip.
+// The loaded result is a snapshot from mount, so a save that ends the match sets this too
+// — otherwise walking forward would still offer a strip on a hole the match never reached.
 const finishedByWrite = ref(false)
-// Reading a hole is public; recording one is not. Without the scope the page still shows
-// what was scored, which is what a spectator came for, and offers nothing to tap.
-const readonly = computed(
-  () => finishedByWrite.value || !scoreable.value || (match.value?.finished ?? false) || !auth.hasScope(SCOPE_SCORES_WRITE),
+const finished = computed(() => finishedByWrite.value || (match.value?.finished ?? false))
+const scoredHoles = computed(() => holeStates.value.map((h) => h.hole_number))
+// This page is the wheel. Everything it showed a reader is on the scorecard, so a hole
+// that cannot be recorded sends you back there rather than rendering a card with its
+// controls switched off. The strips still render inert for the frame between the data
+// landing and the redirect, which is why `readonly` outlives the reason it was added.
+const editable = computed(
+  () =>
+    auth.hasScope(SCOPE_SCORES_WRITE) &&
+    holeOpen(match.value, holeNumber.value, { finished: finished.value, scoredHoles: scoredHoles.value }),
+)
+const saveError = ref('')
+// Which hole the refusal was about. A message that outlived its hole would keep the
+// redirect switched off for every hole after it, and describe the wrong one while it did.
+// Declared above the watch below, which reads it on its immediate run.
+const refusedHole = ref<number | null>(null)
+const readonly = computed(() => !editable.value)
+// A hole outside the card's eighteen has nothing behind it either, and dead-ended on
+// "Hole not found." rather than going anywhere useful.
+const onTheCard = computed(() => Number.isInteger(holeNumber.value) && holeNumber.value >= 1 && holeNumber.value <= 18)
+watch(
+  // holeNumber in its own right: walking from a hole that could not be recorded onto
+  // another one leaves `editable` false throughout, so nothing else here changes and the
+  // walk would never be checked.
+  [loading, match, editable, onTheCard, holeNumber],
+  () => {
+    if (loading.value || !match.value) return
+    // A match that has not gone off is a different answer from one that will not take this
+    // hole, and the page below says when it tees off. Leave that reachable.
+    if (!started.value) return
+    if (editable.value && onTheCard.value) return
+    // Not over a refusal the scorer has yet to read — but only the one about the hole they
+    // are on. Carried forward, a single 409 would switch the redirect off for the rest of
+    // the walk and leave the inert wheel this exists to remove.
+    if (saveError.value && refusedHole.value === holeNumber.value) return
+    router.replace({ name: 'match', params: { tournamentId: props.tournamentId, matchId: props.matchId } })
+  },
+  // A warm cache resolves before the first render, so nothing here would ever change and
+  // the arrival this guards — a shared link, a typed URL — is exactly the one that skips it.
+  { immediate: true },
 )
 
 // Singles/Fourball record a score per player; one-ball formats (Alt Shot/Scramble/Scotch)
@@ -66,7 +98,6 @@ function rebuild() {
 watch([() => props.hole, left, right, holeInfo], rebuild, { immediate: true })
 
 const saving = ref(false)
-const saveError = ref('')
 const buttonLabel = computed(() => {
   const last = holeNumber.value >= 18
   if (readonly.value) return last ? 'Back to Scorecard' : 'Next Hole'
@@ -110,10 +141,14 @@ async function saveAndNext() {
     await refresh()
     await goNext()
   } catch (err) {
-    // 409 means the match was already over — a tab that went stale before this hole.
+    // 409 means the match ended before this hole — a tab that went stale walking forward.
+    // The server answers 409 for two different refusals — a shut scoring window, and a
+    // decided match asked for a hole it never reached — and this cannot tell them apart, so
+    // the sentence has to hold for both. Naming one of them describes the other wrongly.
     if (err instanceof ApiError && err.status === 409) {
       finishedByWrite.value = true
-      saveError.value = 'This match is already complete — its scores can no longer be changed.'
+      refusedHole.value = holeNumber.value
+      saveError.value = 'This hole is closed to scoring — the match finished before it, or its window has shut.'
     } else {
       saveError.value = err instanceof ApiError ? `Save failed — ${err.message}` : 'Save failed. Please try again.'
     }

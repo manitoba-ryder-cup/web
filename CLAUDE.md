@@ -80,8 +80,11 @@ for the stroke picker. The scopes are read off the access token (`lib/token.ts`)
 decides what to *offer*; the services decide what is *allowed*, and an unreadable token
 yields none. Gating a route is `requiresScope` in its meta, which implies a session: an
 anonymous visitor reaches login, a signed-in one without the scope reaches the dashboard.
-A read stays public even where the write beside it does not — the hole page shows a
-spectator every score and nothing to tap.
+The hole page is the exception, and not by scope: it is the wheel, and a hole that cannot
+be recorded sends you to the scorecard rather than rendering the wheel with its controls
+off. `holeOpen` in `lib/scoringWindow.ts` is that rule and both the card and the page use
+it — stated twice, rows start offering a tap the page turns straight back. It is per hole,
+not per match: a decided match still takes corrections to the holes it was played over.
 
 ## Domain invariants
 

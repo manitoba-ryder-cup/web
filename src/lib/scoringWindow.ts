@@ -30,3 +30,22 @@ export function scoringOpen(match: MatchResult | null, now: Date = new Date()): 
   const closes = instant(match.scoring_closes_at)
   return closes === null || now.getTime() <= closes
 }
+
+// Whether a given hole can still be recorded — the rule the entry page enforces and the
+// scorecard uses to decide whether tapping a row leads anywhere. One function because it
+// is one rule: stated in both places, a change to either leaves rows inviting a tap the
+// page turns straight back.
+//
+// `finished` is passed rather than read off the match: a save that closes the match out
+// knows before the reloaded match does.
+export function holeOpen(
+  match: MatchResult | null,
+  hole: number,
+  state: { finished: boolean; scoredHoles: number[] },
+  now: Date = new Date(),
+): boolean {
+  if (!scoringOpen(match, now)) return false
+  // A decided match still takes corrections to the holes it was played over — a typo can
+  // be what closed it out early — and refuses only the holes past them, as the server does.
+  return !(state.finished && !state.scoredHoles.includes(hole))
+}
