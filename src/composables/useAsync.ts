@@ -14,14 +14,23 @@ export function useAsync<T>(fetcher: () => Promise<T>, options: UseAsyncOptions 
   const error = ref('')
   const loading = ref(true)
   let inFlight = false
+  // Every visible load takes the next ticket. A response holding an old one is answering a
+  // question the view has stopped asking — the id in its route changed underneath it — so
+  // it is dropped rather than written over a newer answer. Without this, two loads in
+  // flight land in whatever order the network returns them.
+  let ticket = 0
 
   // Background refresh: no loading flicker, no overlapping requests, and a transient
   // failure keeps the last good data on screen rather than blanking the view.
   async function refresh() {
     if (inFlight) return
     inFlight = true
+    const mine = ticket
     try {
-      data.value = await fetcher()
+      const fresh = await fetcher()
+      // A visible load started while this poll was out and owns the state now.
+      if (mine !== ticket) return
+      data.value = fresh
       error.value = ''
     } catch {
       // Keep existing data — a poll blip shouldn't disrupt the view.
@@ -34,15 +43,25 @@ export function useAsync<T>(fetcher: () => Promise<T>, options: UseAsyncOptions 
   // retry runs, so a request that dropped on a bad connection is one tap from recovering
   // instead of needing the page reloaded.
   async function load() {
+    const mine = ++ticket
     loading.value = true
+    // Whatever is on screen answers the request this one just replaced. Keeping it would
+    // leave the last player's hero standing under the new player's URL when this load
+    // fails — the view renders its identity outside the error branch.
+    data.value = null
     try {
-      data.value = await fetcher()
+      const fresh = await fetcher()
+      if (mine !== ticket) return
+      data.value = fresh
       error.value = ''
     } catch (e) {
+      if (mine !== ticket) return
       // Never empty: an empty error renders as a loaded page with nothing in it.
       error.value = displayError(e)
     } finally {
-      loading.value = false
+      // Only the newest load may end the loading state; an older one finishing would
+      // uncover a page still waiting for its own answer.
+      if (mine === ticket) loading.value = false
     }
   }
 
