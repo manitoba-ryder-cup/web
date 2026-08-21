@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Hole, HoleStatus, MatchPlayer, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
+import { recordsScorePerPlayer } from '@/lib/matchFormat'
+import { playerInitials } from '@/lib/matchResult'
 import type { HoleRow, ScorecardView } from './scorecard'
 import ScorecardRow from './ScorecardRow.vue'
 import ScorecardSummaryRow from './ScorecardSummaryRow.vue'
@@ -28,9 +30,7 @@ const props = defineProps<{
   // Whether a hole taps through to its entry page. False before the cup is played, when
   // that page would only turn you straight back.
   tappable?: boolean
-  // A fourball's two players a side. Given, the card offers their individual scores in
-  // place of the side's best ball; a format that records one score a side gives nothing
-  // and the card stays as it is.
+  // A fourball's two players a side; without them the card stays on the best ball.
   leftPlayers?: MatchPlayer[]
   rightPlayers?: MatchPlayer[]
 }>()
@@ -40,13 +40,9 @@ const byHole = computed(() => new Map(props.holeStates.map((h) => [h.hole_number
 const leftMeta = computed(() => teamColor(props.leftTeam.color))
 const rightMeta = computed(() => teamColor(props.rightTeam.color))
 
-// The two score columns, as the chosen view defines them. Both columns belong to one side
-// in a side view, so both are painted in that side's colour and the header names a player
-// rather than a pairing.
+// Left, match, right — the order the card is in, so the control matches the columns.
 const VIEWS: ScorecardView[] = ['left', 'match', 'right']
 const view = ref<ScorecardView>('match')
-// Left, match, right — the order the card itself is in, so the control's geometry matches
-// the columns it drives.
 const viewIndex = computed({
   get: () => VIEWS.indexOf(view.value),
   set: (i: number) => (view.value = VIEWS[i] ?? 'match'),
@@ -54,15 +50,21 @@ const viewIndex = computed({
 const viewLabels = computed(() => [props.leftLabel, 'Match', props.rightLabel])
 const sideOf = (v: ScorecardView) => (v === 'right' ? props.rightTeam : props.leftTeam)
 const playersOf = (v: ScorecardView) => (v === 'right' ? props.rightPlayers : props.leftPlayers) ?? []
-const canSplit = computed(() => (props.leftPlayers?.length ?? 0) > 1 && (props.rightPlayers?.length ?? 0) > 1)
-const columnMeta = computed(() => {
-  if (view.value === 'match') return [leftMeta.value, rightMeta.value] as const
-  const m = teamColor(sideOf(view.value).color)
-  return [m, m] as const
-})
-const columnLabels = computed(() => {
-  if (view.value === 'match') return [props.leftLabel, props.rightLabel]
-  return playersOf(view.value).map((p) => `${p.first_name.charAt(0)}${p.last_name.charAt(0)}`.toUpperCase())
+// Not "has two players": Alt Shot and Scotch field two and record one ball, so a split
+// column would be eighteen dashes.
+const canSplit = computed(
+  () => recordsScorePerPlayer(props.formatName) && props.leftPlayers?.length === 2 && props.rightPlayers?.length === 2,
+)
+// Label and colour together, so the header cannot outrun its colours.
+const columns = computed(() => {
+  if (view.value === 'match') {
+    return [
+      { label: props.leftLabel, meta: leftMeta.value },
+      { label: props.rightLabel, meta: rightMeta.value },
+    ]
+  }
+  const meta = teamColor(sideOf(view.value).color)
+  return playersOf(view.value).map((p) => ({ label: playerInitials([p]), meta }))
 })
 
 function makeHole(n: number): HoleRow {
@@ -79,9 +81,8 @@ function makeHole(n: number): HoleRow {
     leftWon = left != null && right != null && left < right
     rightWon = left != null && right != null && right < left
   } else {
-    // One side's two players. The mark still means the hole was won — the same thing it
-    // means between sides — and within a won hole it falls on the score that took it. A
-    // low score in a hole the side halved or lost took nothing, so it is left plain.
+    // The mark still means the hole was won, so a low score in one the side halved or
+    // lost took nothing and stays plain.
     const team = sideOf(view.value)
     const other = view.value === 'right' ? props.leftTeam : props.rightTeam
     const held = scored(team)
@@ -174,10 +175,10 @@ function open(hole: number) {
           <tr class="divide-x divide-mrc-line bg-mrc-muted text-white">
             <th class="w-10 py-2.5 text-sm font-semibold uppercase tracking-wide">Hole</th>
             <th class="w-11 py-2.5 text-sm font-semibold uppercase tracking-wide">Yds</th>
-            <th v-for="(label, i) in columnLabels" :key="i" class="w-14 py-2.5">
+            <th v-for="(col, i) in columns" :key="i" class="w-14 py-2.5">
               <span class="mx-auto flex max-w-full items-center justify-center gap-1">
-                <span class="inline-block h-2 w-2 shrink-0 rounded-full" :style="{ background: columnMeta[i].cssVar }" />
-                <span class="truncate text-sm font-semibold">{{ label }}</span>
+                <span class="inline-block h-2 w-2 shrink-0 rounded-full" :style="{ background: col.meta.cssVar }" />
+                <span class="truncate text-sm font-semibold">{{ col.label }}</span>
               </span>
             </th>
             <th class="w-16 py-2.5 text-sm font-semibold uppercase tracking-wide">Match</th>
@@ -190,8 +191,8 @@ function open(hole: number) {
             v-for="r in front"
             :key="r.hole"
             :row="r"
-            :left-meta="columnMeta[0]"
-            :right-meta="columnMeta[1]"
+            :left-meta="columns[0].meta"
+            :right-meta="columns[1].meta"
             :tappable="tappable !== false"
             @open="open"
           />
@@ -200,8 +201,8 @@ function open(hole: number) {
             v-for="r in back"
             :key="r.hole"
             :row="r"
-            :left-meta="columnMeta[0]"
-            :right-meta="columnMeta[1]"
+            :left-meta="columns[0].meta"
+            :right-meta="columns[1].meta"
             :tappable="tappable !== false"
             @open="open"
           />

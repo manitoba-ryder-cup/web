@@ -113,6 +113,7 @@ function card(props: Record<string, unknown> = {}) {
       rightTeam,
       leftLabel: 'JR / KV',
       rightLabel: 'HB / CM',
+      formatName: 'Fourball',
       holeInfo,
       tournamentId: 't1',
       matchId: 'm1',
@@ -212,10 +213,28 @@ describe('MatchScorecard', () => {
     ).toEqual(['12', '11'])
   })
 
-  // Every other format records one score a side, so there is no other view to offer.
-  it('offers no switch where a side records one score', () => {
-    const w = card({ leftPlayers: [leftPlayers[0]], rightPlayers: [rightPlayers[0]] })
+  // Singles fields one a side, so there is nothing to split.
+  it('offers no switch where a side is one player', () => {
+    const w = card({ formatName: 'Singles', leftPlayers: [leftPlayers[0]], rightPlayers: [rightPlayers[0]] })
 
     expect(w.find('[role="radiogroup"]').exists()).toBe(false)
+  })
+
+  // Alt Shot and Scotch field two a side and record one ball, so player_scores comes back
+  // empty. Splitting on player count alone offered the switch and then showed 18 dashes.
+  it('offers no switch for a one-ball format, whatever the side size', () => {
+    const w = card({ formatName: 'Alt Shot' })
+
+    expect(w.find('[role="radiogroup"]').exists()).toBe(false)
+  })
+
+  // The admin UI caps a side at two, but the API does not, and a third player used to
+  // render a third header against a two-colour list — a TypeError that killed the page.
+  it('offers no switch, and renders, when a side has more than two', () => {
+    const third = { player_id: 'p5', first_name: 'Sam', last_name: 'Extra' }
+    const w = card({ leftPlayers: [...leftPlayers, third] })
+
+    expect(w.find('[role="radiogroup"]').exists()).toBe(false)
+    expect(w.findAll('thead th')).toHaveLength(7)
   })
 })
