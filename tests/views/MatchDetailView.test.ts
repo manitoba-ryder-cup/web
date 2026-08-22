@@ -56,6 +56,7 @@ vi.mock('@/api/scorecard', () => ({
   },
 }))
 
+import { scorecardApi } from '@/api/scorecard'
 import MatchDetailView from '@/views/MatchDetailView.vue'
 import { tokenWithScopes } from '../support/token'
 import { SCOPE_TOURNAMENTS_WRITE, SCOPE_SCORES_WRITE } from '@/api/scopes'
@@ -69,9 +70,9 @@ const router = createRouter({
   ],
 })
 
-async function open({ loggedIn = true } = {}) {
+async function open({ loggedIn = true, scopes = [SCOPE_TOURNAMENTS_WRITE] } = {}) {
   setActivePinia(createPinia())
-  if (loggedIn) useAuthStore().accessToken = tokenWithScopes([SCOPE_TOURNAMENTS_WRITE])
+  if (loggedIn) useAuthStore().accessToken = tokenWithScopes(scopes)
   router.push('/t/t1/m/m1')
   await router.isReady()
   const w = mount(MatchDetailView, { props: { tournamentId: 't1', matchId: 'm1' }, global: { plugins: [router] } })
@@ -80,6 +81,12 @@ async function open({ loggedIn = true } = {}) {
 }
 
 describe('MatchDetailView', () => {
+  // Reset here rather than at the end of the test that changes it: any expect above can
+  // throw first, and a scored hole would then leak into every test after it.
+  beforeEach(() => {
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
+  })
+
   beforeEach(() => match.mockReturnValue(withLineup))
 
   it('reserves the standings bar and scorecard while loading', async () => {
@@ -134,10 +141,11 @@ describe('MatchDetailView', () => {
 
   it('does not make holes tappable before the cup is played', async () => {
     // The entry page would only turn them straight back — it refuses to score a match
-    // that has not teed off.
+    // that has not teed off. Scoped explicitly, or this passes on the scope check alone
+    // and would go on passing with the tee time never consulted.
     match.mockReturnValue(withWindow(withLineup, teeingOffIn60Days))
 
-    const w = await open()
+    const w = await open({ scopes: [SCOPE_SCORES_WRITE] })
     await w.get('tbody tr').trigger('click')
     await flushPromises()
 
@@ -145,25 +153,71 @@ describe('MatchDetailView', () => {
     expect(w.get('tbody tr').classes()).not.toContain('cursor-pointer')
   })
 
-  it('taps a hole through to its scores once the cup is under way', async () => {
+  // The window opens with the clock, not with a refetch, so the rows have to notice on
+  // their own — a scorer on the tee otherwise waits for something unrelated to move.
+  it('lets the rows open when the window does, without new data arriving', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const opensInAMinute = new Date(Date.now() + 60_000).toISOString()
+    match.mockReturnValue({ ...withLineup, scoring_opens_at: opensInAMinute, scoring_closes_at: hoursFromNow(12) })
+
+    const w = await open({ scopes: [SCOPE_SCORES_WRITE] })
+    expect(w.get('tbody tr').classes()).not.toContain('cursor-pointer')
+
+    await vi.advanceTimersByTimeAsync(91_000)
+    await flushPromises()
+
+    expect(w.get('tbody tr').classes()).toContain('cursor-pointer')
+    vi.useRealTimers()
+  })
+
+  it('taps a hole through to the wheel for someone who can record one', async () => {
     match.mockReturnValue(withWindow(withLineup, teeingOffNow))
 
-    const w = await open()
+    const w = await open({ scopes: [SCOPE_SCORES_WRITE] })
     await w.get('tbody tr').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.name).toBe('hole')
   })
 
-  it('keeps a played cup tappable, so its holes can still be read', async () => {
-    // Scoring is shut for last year's cup, but every hole of it has something to show.
-    match.mockReturnValue(withWindow(withLineup, playedLastYear))
+  // The card carries every score, both sides' players and the stroke index, so a reader
+  // sent to the entry page would be leaving the fuller view for a thinner one.
+  it('leaves the rows inert for a spectator', async () => {
+    match.mockReturnValue(withWindow(withLineup, teeingOffNow))
 
-    const w = await open()
+    const w = await open({ loggedIn: false })
+    await w.get('tbody tr').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('match')
+    expect(w.get('tbody tr').classes()).not.toContain('cursor-pointer')
+  })
+
+  // A typo can be what closed a match out early, so the holes it was played over stay
+  // open to a correction while the window is. Only the holes it never reached are shut.
+  it('still taps through to a played hole of a decided match', async () => {
+    match.mockReturnValue(withWindow({ ...withLineup, finished: true }, teeingOffNow))
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([
+      { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false },
+    ])
+
+    const w = await open({ scopes: [SCOPE_SCORES_WRITE] })
     await w.get('tbody tr').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.name).toBe('hole')
+  })
+
+  // Being signed in is not the test either: scoring shut is scoring shut.
+  it('leaves them inert once the cup is played, signed in or not', async () => {
+    match.mockReturnValue(withWindow(withLineup, playedLastYear))
+
+    const w = await open({ scopes: [SCOPE_SCORES_WRITE] })
+    await w.get('tbody tr').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('match')
+    expect(w.get('tbody tr').classes()).not.toContain('cursor-pointer')
   })
 
   it('never offers it to a logged-out viewer', async () => {

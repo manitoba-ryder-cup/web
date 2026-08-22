@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { playerInitials, resultText } from '@/lib/matchResult'
 import { formatTeeTime } from '@/lib/teeTime'
-import { hasStarted } from '@/lib/scoringWindow'
+import { holeOpen } from '@/lib/scoringWindow'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import MatchScorecard from '@/components/tournament/MatchScorecard.vue'
-import { SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
+import { SCOPE_SCORES_WRITE, SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
 
 const props = defineProps<{ tournamentId: string; matchId: string }>()
 
@@ -31,6 +31,24 @@ const { error, loading, retry, teams, results, holeStates, holes, match, left, r
 const holeInfo = computed(() => new Map(holes.value.map((h) => [h.number, h])))
 const leftTeam = computed(() => teams.value.find((t) => t.id === left.value?.team_id) ?? null)
 const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.team_id) ?? null)
+// Which rows lead to the wheel. A row that taps through to a page offering nothing to
+// record invites a spectator away from the card that already shows more than that page
+// does, so it stays inert — for a signed-in scorer too, once the hole is closed to writes.
+// Whether a row leads anywhere turns on the scoring window, which passes with time rather
+// than with data — so it needs a clock of its own, or a scorer waiting on the tee for the
+// window to open sits on inert rows until something else in the results happens to move.
+const now = ref(new Date())
+let clock: ReturnType<typeof setInterval> | undefined
+onMounted(() => (clock = setInterval(() => (now.value = new Date()), 30_000)))
+onUnmounted(() => clearInterval(clock))
+
+const openHoles = computed(() => {
+  if (!auth.hasScope(SCOPE_SCORES_WRITE) || !match.value) return new Set<number>()
+  const state = { finished: match.value.finished, scoredHoles: holeStates.value.map((h) => h.hole_number) }
+  // Over the eighteen the card draws, not the tee set: par is optional here, and a match
+  // whose tee set failed to load still has every hole on the card and every one recordable.
+  return new Set(Array.from({ length: 18 }, (_, i) => i + 1).filter((n) => holeOpen(match.value, n, state, now.value)))
+})
 const leftLabel = computed(() => (left.value ? playerInitials(left.value.players) : ''))
 const rightLabel = computed(() => (right.value ? playerInitials(right.value.players) : ''))
 </script>
@@ -89,7 +107,7 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
           :match-id="matchId"
           :left-players="left?.players"
           :right-players="right?.players"
-          :tappable="hasStarted(match)"
+          :open-holes="openHoles"
         />
       </template>
       <!-- The match exists on the schedule but has no lineup yet — show its context and say

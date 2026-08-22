@@ -27,9 +27,10 @@ const props = defineProps<{
   holeInfo?: Map<number, Hole>
   tournamentId: string
   matchId: string
-  // Whether a hole taps through to its entry page. False before the cup is played, when
-  // that page would only turn you straight back.
-  tappable?: boolean
+  // Which holes tap through to the wheel. Per hole, not per card: a decided match still
+  // takes corrections to the holes it was played over. Omitted, nothing taps — the page
+  // behind them would only turn you straight back.
+  openHoles?: Set<number>
   // A fourball's two players a side; without them the card stays on the best ball.
   leftPlayers?: MatchPlayer[]
   rightPlayers?: MatchPlayer[]
@@ -193,7 +194,7 @@ function open(hole: number) {
             :row="r"
             :left-meta="columns[0].meta"
             :right-meta="columns[1].meta"
-            :tappable="tappable !== false"
+            :tappable="openHoles?.has(r.hole) ?? false"
             @open="open"
           />
           <ScorecardSummaryRow label="Out" :yards="out.yards" :left="out.left" :right="out.right" :par="out.par" />
@@ -203,7 +204,7 @@ function open(hole: number) {
             :row="r"
             :left-meta="columns[0].meta"
             :right-meta="columns[1].meta"
-            :tappable="tappable !== false"
+            :tappable="openHoles?.has(r.hole) ?? false"
             @open="open"
           />
           <ScorecardSummaryRow label="In" :yards="inc.yards" :left="inc.left" :right="inc.right" :par="inc.par" />

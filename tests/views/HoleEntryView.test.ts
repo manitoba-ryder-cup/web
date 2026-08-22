@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { createRouter, createWebHistory } from 'vue-router'
-import { ApiError, type MatchResult, type MatchStatus } from '@/api/types'
+import { createRouter, createWebHistory, useRoute } from 'vue-router'
+import { defineComponent, h } from 'vue'
+import { ApiError, type HoleStatus, type MatchResult, type MatchStatus } from '@/api/types'
 
 const teams = [
   { id: 'blue', color: 'Blue', captain: null, points: 0 },
@@ -42,6 +43,19 @@ const match: MatchResult = {
   course_name: 'Clear Lake',
 }
 const holes = Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, hdcp: i + 1, yards: 400 }))
+// The 15th as it was played: a hole the match already carries a score for, which is what
+// separates correcting one from extending a decided match onto a hole it never reached.
+const scoredFifteenth: HoleStatus = {
+  hole_number: 15,
+  team_scores: [
+    { team_id: 'blue', strokes: 5, player_scores: [{ player_id: 'p1', strokes: 5 }] },
+    { team_id: 'red', strokes: 4, player_scores: [{ player_id: 'p2', strokes: 4 }] },
+  ],
+  leader_team_id: 'red',
+  lead: 4,
+  holes_remaining: 3,
+  decided: true,
+}
 const open: MatchStatus = { finished: false, winner_team_id: null, leader_team_id: 'blue', lead: 1, holes_remaining: 10 }
 const closedOut: MatchStatus = { finished: true, winner_team_id: 'blue', leader_team_id: 'blue', lead: 4, holes_remaining: 3 }
 
@@ -51,7 +65,8 @@ vi.mock('@/composables/useToast', () => ({
 }))
 
 const submitScore = vi.fn()
-const getMatchScores = vi.fn(() => Promise.resolve([]))
+let holeStates: HoleStatus[] = []
+const getMatchScores = vi.fn(() => Promise.resolve(holeStates))
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
@@ -98,6 +113,7 @@ describe('HoleEntryView saving', () => {
     Object.assign(match, withWindow(match, teeingOffNow))
     submitScore.mockReset()
     getMatchScores.mockClear()
+    holeStates = []
     toasts.length = 0
     match.finished = false
   })
@@ -243,13 +259,17 @@ describe('HoleEntryView saving', () => {
     await saveButton(w).trigger('click')
     await flushPromises()
 
-    expect(w.text()).toContain('already complete')
+    // The match takes corrections to the holes it was played over, so the refusal is
+    // about this hole being past the end, not about the match being shut.
+    // True of both refusals the server answers 409 with — a shut window, and a hole a
+    // decided match never reached — because this cannot tell them apart.
+    expect(w.text()).toContain('closed to scoring')
     expect(router.currentRoute.value.params.hole).toBe('16')
     // The button stops offering to save once the view knows the match is over.
     expect(saveButton(w).text()).toBe('Next Hole')
   })
 
-  it('does not write at all for a match that was already finished on load', async () => {
+  it('does not extend a finished match onto a hole it never played', async () => {
     match.finished = true
     const w = await openHole('16')
 
@@ -257,5 +277,113 @@ describe('HoleEntryView saving', () => {
     await flushPromises()
 
     expect(submitScore).not.toHaveBeenCalled()
+  })
+
+  it('still corrects a hole a finished match was played over', async () => {
+    // The server takes corrections to the holes a decided match was played over until its
+    // window shuts, and a typo can be what closed it out early — so the strips stay live.
+    match.finished = true
+    holeStates = [scoredFifteenth]
+    submitScore.mockResolvedValue(closedOut)
+    const w = await openHole('15')
+
+    expect(saveButton(w).text()).toContain('Save')
+
+    await saveButton(w).trigger('click')
+    await flushPromises()
+
+    expect(submitScore).toHaveBeenCalledTimes(1)
+  })
+
+  // Everything this page showed a reader is on the card, so a hole that cannot be recorded
+  // sends them there instead of rendering the wheel with its controls switched off. That
+  // covers arriving by a shared link or a typed URL, not just a tap on the card.
+  it('sends someone away from a hole a finished match never reached', async () => {
+    match.finished = true
+    holeStates = [scoredFifteenth]
+
+    await openHole('16')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('match')
+  })
+
+  it('sends a spectator to the card rather than a wheel they cannot turn', async () => {
+    setActivePinia(createPinia())
+
+    await openHole('15')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('match')
+  })
+
+  // A hole off the card has nothing behind it either, and used to dead-end on "Hole not
+  // found." rather than going anywhere.
+  it('sends someone away from a hole that is not on the card', async () => {
+    await openHole('25')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('match')
+  })
+
+  // "Not yet" and "not ever" are different answers. A link to a match that has not gone off
+  // should say when it does, not bounce to a card with nothing on it.
+  it('keeps the tee time reachable for a match that has not started', async () => {
+    match.scoring_opens_at = new Date(Date.now() + 60 * 24 * 3600000).toISOString()
+    const w = await openHole('15')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('hole')
+    expect(w.text()).toContain("hasn't started yet")
+  })
+})
+
+// Mounted the way the router does it, so `hole` follows the URL. Walking forward reuses
+// the component, which is the path a test with a fixed prop cannot see.
+describe('HoleEntryView walking forward', () => {
+  const Host = defineComponent({
+    setup() {
+      const route = useRoute()
+      return () =>
+        route.name === 'hole'
+          ? h(HoleEntryView, {
+              tournamentId: String(route.params.tournamentId),
+              matchId: String(route.params.matchId),
+              hole: String(route.params.hole),
+            })
+          : h('div', 'card')
+    },
+  })
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    useAuthStore().accessToken = tokenWithScopes([SCOPE_SCORES_WRITE])
+    vi.clearAllMocks()
+    toasts.length = 0
+    holeStates = []
+    match.finished = false
+    match.scoring_opens_at = new Date(new Date(teeingOffNow).getTime() - 2 * 3600000).toISOString()
+  })
+
+  // A refusal belongs to the hole it happened on. Carried forward, one 409 switches the
+  // redirect off for the rest of the walk and leaves the inert wheel behind.
+  it('does not let one refusal keep the wheel open on every hole after it', async () => {
+    // The stale tab: the match was live when this hole was opened and finished underneath.
+    submitScore.mockRejectedValue(new ApiError(409, 'match is complete'))
+    router.push('/t/t1/m/m1/h/16')
+    await router.isReady()
+    const w = mount(Host, { global: { plugins: [router] } })
+    await flushPromises()
+
+    await saveButton(w).trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('closed to scoring')
+    expect(router.currentRoute.value.name).toBe('hole') // the refusal stays readable
+
+    // "Next Hole" walks to 17, which the match never reached and cannot take.
+    await saveButton(w).trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('match')
   })
 })
