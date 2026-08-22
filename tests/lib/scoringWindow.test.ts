@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hasStarted, scoringOpen } from '@/lib/scoringWindow'
+import { cupInPlay, hasStarted, scoringOpen } from '@/lib/scoringWindow'
 import type { MatchResult } from '@/api/types'
 
 // The API sends the window as two instants, so these need no timezone: every case below
@@ -101,5 +101,46 @@ describe('a window the API did not send', () => {
   it('still reports an unknown match as shut', () => {
     expect(hasStarted(null, at(0))).toBe(false)
     expect(scoringOpen(null, at(0))).toBe(false)
+  })
+})
+
+// Whether a cup is being played is what decides that a view keeps polling, so the gap
+// between sessions matters: it is the case that looks over and is not.
+describe('a cup in play', () => {
+  const morning = matchAt(teeOff)
+  const afternoon = matchAt(at(5))
+  const nextDay = matchAt(at(24))
+  const cup = [morning, afternoon, nextDay]
+
+  it('is being played from the moment the first window opens', () => {
+    expect(cupInPlay(cup, at(-3))).toBe(false)
+    expect(cupInPlay(cup, at(-2))).toBe(true)
+  })
+
+  it('stays in play between sessions, when nothing is under way', () => {
+    // The morning is done and the afternoon has not gone off. Stopping here is how a page
+    // sits still through the whole of the second session.
+    expect(cupInPlay([morning, afternoon], at(3.5))).toBe(true)
+  })
+
+  it('closes itself once the last window shuts', () => {
+    expect(cupInPlay([morning, afternoon], at(16.5))).toBe(true)
+    expect(cupInPlay([morning, afternoon], at(17.5))).toBe(false)
+  })
+
+  it('is not being played a year either side of itself', () => {
+    expect(cupInPlay(cup, at(-24 * 365))).toBe(false)
+    expect(cupInPlay(cup, at(24 * 365))).toBe(false)
+  })
+
+  // The permissive reading of a missing bound is inherited from the file above, where it
+  // protects a write. Here it runs the other way, so it is pinned rather than assumed.
+  it('reads a bound it cannot parse as in play, the same way the rest of the file does', () => {
+    const broken = { ...morning, scoring_closes_at: 'not a date' } as MatchResult
+    expect(cupInPlay([broken], at(24 * 365))).toBe(true)
+  })
+
+  it('reports a cup with no matches as not in play', () => {
+    expect(cupInPlay([], at(0))).toBe(false)
   })
 })

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
+import { useCoarseClock } from '@/composables/useCoarseClock'
+import { cupInPlay } from '@/lib/scoringWindow'
 import { tournamentEyebrow } from '@/lib/tournament'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
@@ -15,6 +17,10 @@ import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue
 
 const props = defineProps<{ id: string }>()
 // Poll so the standings + results stay live during a round without a manual refresh.
+// Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
+// request turns that empty list full — so a page open on the morning of would never see it.
+const clock = useCoarseClock()
+const inPlay = ref(false)
 const { data, error, loading, retry } = useAsync(
   () => ['tournament', props.id],
   async () => {
@@ -25,12 +31,13 @@ const { data, error, loading, retry } = useAsync(
     ])
     return { tournament, teams, results }
   },
-  { intervalMs: 20000 },
+  { intervalMs: () => (inPlay.value ? 20_000 : 300_000) },
 )
 
 const tournament = computed(() => data.value?.tournament ?? null)
 const teams = computed(() => data.value?.teams ?? [])
 const results = computed(() => data.value?.results ?? [])
+watchEffect(() => (inPlay.value = cupInPlay(results.value, clock.value)))
 
 const heroEyebrow = computed(() => tournamentEyebrow(tournament.value))
 // Both captains needed for the matchup; otherwise the eyebrow stands alone.

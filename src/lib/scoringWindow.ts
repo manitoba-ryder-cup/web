@@ -49,3 +49,9 @@ export function holeOpen(
   // be what closed it out early — and refuses only the holes past them, as the server does.
   return !(state.finished && !state.scoredHoles.includes(hole))
 }
+
+// Inherits the permissive reading above, where the bias protects a write. Here it runs the
+// other way: one bound that will not parse reads as in play all year.
+export function cupInPlay(matches: MatchResult[], now: Date = new Date()): boolean {
+  return matches.some((m) => scoringOpen(m, now))
+}

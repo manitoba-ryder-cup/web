@@ -47,7 +47,11 @@ empty, suspect the tenant before the code.
 `{ data, error, loading, retry }`, rendered through `<AsyncState>`. Pass `retry` wherever
 there's something to re-run — this gets used on a phone in a field, and a dropped request
 should be one tap from recovering. `useAsync`'s `intervalMs` polls live views and
-deliberately keeps stale data on a failed poll rather than blanking the page.
+deliberately keeps stale data on a failed poll rather than blanking the page. It takes a
+getter, and the live views drop from twenty seconds to a five-minute heartbeat unless
+`cupInPlay` says the cup is being played — that cadence is right on the two days a year it
+means something and pure cost on the other 363. Not silence, though: a schedule that has
+yet to be published reads as not in play, and only a request turns that empty list full.
 
 TanStack Query is underneath, so a view renders what it already had and revalidates behind
 it. Three things about that are invisible until they bite. **The key must name everything
@@ -56,8 +60,9 @@ param is how the last player's name ends up under the next player's URL, which t
 now the only thing preventing. **A key that depends on a prop is a getter**; an array is
 captured once. And **optimistic updates go through `patch`** — `data` is a readonly view of
 the cache, so assigning into it is dropped rather than refused: the write lands and the row
-never moves. `useAfterWrite` says which pages a write has to reach, and why the polling ones
-aren't among them.
+never moves. `useAfterWrite` marks everything stale after a write except the
+match context, which hole entry must not have refetched under it — a predicate rather than
+a list of keys, because a list is right only until the next view is added.
 
 Pass a skeleton through `AsyncState`'s `#loading` slot rather than letting a view collapse
 to a line of text — and check whether the view renders anything *outside* `AsyncState`

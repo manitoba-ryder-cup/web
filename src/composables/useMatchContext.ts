@@ -4,12 +4,10 @@ import { useAsync } from '@/composables/useAsync'
 import { useMatchSides } from '@/composables/useMatchSides'
 
 interface Options {
-  // Poll, for a view watching a round happen. The hole-entry flow loads once instead:
-  // it writes the scores itself, and a refetch mid-entry would fight the strips — which
-  // is why the absence of this also turns off the refetch on tab focus. Left on, coming
-  // back to the app with strokes dialled in can decide the match is over and send the
-  // scorer to the card without a word.
-  intervalMs?: number
+  // Poll, for a view watching a round happen. The hole-entry flow loads once instead: it
+  // writes the scores itself, and a refetch mid-entry would fight the strips. Omitting this
+  // turns off the refetch on tab focus too, which is that same refetch by another name.
+  intervalMs?: MaybeRefOrGetter<number | false>
   // Treat a missing tee set as empty rather than an error. The scorecard renders without
   // par; the entry page cannot, so it lets the failure surface.
   parOptional?: boolean
@@ -41,7 +39,8 @@ export function useMatchContext(
       ])
       return { teams, results, holeStates, holes: tee }
     },
-    intervalMs ? { intervalMs } : { refetchOnFocus: false },
+    // Given, not truthy: `false` and `() => false` say the same thing and split otherwise.
+    intervalMs !== undefined ? { intervalMs } : { refetchOnFocus: false },
   )
 
   const teams = computed(() => data.value?.teams ?? [])
