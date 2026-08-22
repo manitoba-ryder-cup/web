@@ -1,4 +1,5 @@
 import { parseResponse } from './response'
+import { fetchWithTimeout } from './timeout'
 
 type TokenGetter = () => string | null
 type Refresher = () => Promise<void>
@@ -34,7 +35,7 @@ export class ApiClient {
     const token = this.getToken()
     if (token) headers.Authorization = `Bearer ${token}`
 
-    const res = await fetch(this.base + path, {
+    const res = await fetchWithTimeout(this.base + path, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),

@@ -7,6 +7,7 @@ import router from './router'
 import { useAuthStore } from './stores/auth'
 import { reloadOnceForStaleChunk } from './lib/staleChunk'
 import { registerSW } from 'virtual:pwa-register'
+import { shouldRetry } from './api/timeout'
 
 // A lazily imported route whose chunk the latest deploy replaced fails to load; without
 // this the user is left on a dead route with nothing to act on.
@@ -26,10 +27,12 @@ app.use(VueQueryPlugin, {
         // between tabs is free and short enough that the draft never sits stale for long.
         staleTime: 30_000,
         refetchOnWindowFocus: true,
-        // One. The default of three puts ~7s of backoff behind the skeleton before the
-        // error and its Try again exist, and a dropped request should be one tap from
-        // recovering — a save on the hole page waits on this refresh too.
-        retry: 1,
+        // One, and none for a request that already waited out its own deadline: retrying
+        // that spends a second fifteen seconds before the view can offer Try again, which
+        // is the opposite of what bounding the request was for. Anything else gets the one
+        // retry a blip deserves — the default of three puts ~7s of backoff behind the
+        // skeleton, and a save on the hole page waits on this refresh too.
+        retry: shouldRetry,
       },
     },
   }),
