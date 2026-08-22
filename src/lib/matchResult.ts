@@ -32,8 +32,7 @@ export function resultText(m: MatchStatus): string {
   }
 }
 
-// Announces a match that just ended, e.g. "Match complete — Bale / Phin win 3 & 2". The
-// prefix carries the news the scorecard can't: that the save is why you landed there
+// The prefix carries the news the scorecard cannot: that the save is why you landed there
 // instead of on the next hole.
 export function matchCompleteMessage(state: MatchStatus, sides: MatchSide[]): string {
   if (matchOutcome(state).kind === 'tied') return 'Match complete — halved'
@@ -42,9 +41,8 @@ export function matchCompleteMessage(state: MatchStatus, sides: MatchSide[]): st
   return `Match complete — ${playerSurnames(winner.players)} win ${resultText(state)}`
 }
 
-// Placeholder pairing for a match with no players assigned yet (the slot exists, the
-// lineup doesn't). One "Player One" for Singles, plus "Player Two" for the 2-a-side
-// formats — mirrors the old app so an unassigned card still reads as a pairing.
+// The slot exists, the lineup does not — mirrors the old app so an unassigned card still
+// reads as a pairing.
 export function placeholderPairing(format: string): MatchPlayer[] {
   const players: MatchPlayer[] = [{ player_id: 'placeholder-1', first_name: 'Player', last_name: 'One' }]
   if (format !== 'Singles') {

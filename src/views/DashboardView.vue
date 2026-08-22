@@ -24,18 +24,15 @@ import CaptainMatchup from '@/components/tournament/CaptainMatchup.vue'
 const route = useRoute()
 const cup = useCupStore()
 
-// The landing adapts to the event's phase: before it (the draft + schedule), during it
-// (the live standing), and after (the final standing). Polls live.
 // Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
-// request turns that empty list full — so a page open on the morning of would never see it.
+// request turns that empty list full — a page open on the morning of would never see it.
 const clock = useCoarseClock()
 const inPlay = ref(false)
 const { data, error, loading, retry } = useAsync(
   ['dashboard'],
   async () => {
-    // Which cup: resolved once by the shell. The record itself is re-read on every poll
-    // alongside the standing — it carries the phase this page renders, so a tab left open
-    // across the first score would otherwise sit on the draft all day.
+    // Re-read on every poll: the record carries the phase, so a tab left open across the
+    // first score would otherwise sit on the draft all day.
     await cup.load()
     const id = cup.latestId
     let tournament: Tournament | null = null
@@ -62,16 +59,13 @@ const results = computed(() => data.value?.results ?? [])
 watchEffect(() => (inPlay.value = cupInPlay(results.value, clock.value)))
 const { left, right, leftColors, rightColors } = useTeamPair(teams)
 
-// The hero fills in as data lands: the site name until there is a tournament, then the
-// captains' matchup once both are named. `?captains=false` forces the earlier state for
-// previewing against the (fully-populated) demo.
+// `?captains=false` forces the earlier state for previewing against the populated demo.
 const showMatchup = computed(() => {
   if (route.query.captains === 'false') return false
   return !!(left.value?.captain && right.value?.captain)
 })
-// `?phase=` previews a mode against real data. The phase itself is the record's — deriving
-// it here from the results called a match started later than the API does. The default
-// covers the moment before a record has loaded, not an API that fails to send the field.
+// The phase is the record's: deriving it here called a match started later than the API does.
+// The default covers the moment before the record loads, not an API that omits the field.
 const phase = computed<TournamentPhase>(() => {
   const override = route.query.phase
   if (override === 'upcoming' || override === 'live' || override === 'finished') return override
@@ -99,11 +93,8 @@ const teeOffAt = computed<number | null>(() => {
 
 const { segments } = useCountdown(teeOffAt)
 
-// The landing page shows the session being played or the next to tee off, and links to the
-// rest. It used to print the whole order of play, which before the event is mostly rows
-// carrying a time and nothing else, because the lineups are not set yet.
-// `?session=N` steps to a later one, matching the other overrides here — a demo whose
-// earliest session is a stray single match cannot show what a real slate looks like.
+// The session in play, not the whole order: before the event that is mostly rows carrying a
+// time and nothing else. `?session=N` steps to a later one for a demo.
 const session = computed(() => {
   const skip = Number(route.query.session)
   if (typeof route.query.session === 'string' && Number.isFinite(skip)) {
@@ -122,10 +113,8 @@ const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 
       <img src="/img/crowd.webp" alt="" fetchpriority="high" class="absolute inset-0 h-full w-full object-cover" />
       <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/60 to-black/80" />
       <div class="relative w-full max-w-2xl">
-        <!-- Loading: placeholders sized like the centrepiece, not a spinner — the hero is
-             what the page is, and it shouldn't collapse and then shove itself back open.
-             Deliberately phase-agnostic: a wide bar over a row of three reads as either the
-             countdown or the score, which is all we can honestly promise before data lands. -->
+        <!-- Placeholders sized like the centrepiece, and phase-agnostic: a wide bar over a row of three
+             reads as either the countdown or the score, which is all we can promise before data lands. -->
         <div v-if="loading" data-testid="hero-skeleton">
           <SkeletonBlock tone="inverse" class="mx-auto h-3 w-32" />
           <SkeletonBlock tone="inverse" radius="md" class="mx-auto mt-6 h-9 w-3/4 md:h-11" />
@@ -181,9 +170,8 @@ const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 
 
     <ContentContainer>
       <div class="space-y-8 py-6">
-        <!-- Gated on loaded data: the session card is inferred from absence, so an
-             unloaded page looks exactly like a cup with nothing left to play and would
-             quietly drop the one thing this page is for. -->
+        <!-- Gated on loaded data: inferred from absence, so an unloaded page looks exactly like a cup
+             with nothing left to play. -->
         <AsyncState :loading="loading" :error="error" :retry="retry">
           <template #loading>
             <SkeletonSectionCard data-testid="body-skeleton" />

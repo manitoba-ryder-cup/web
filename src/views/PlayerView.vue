@@ -17,9 +17,7 @@ import PlayerStats from '@/components/player/PlayerStats.vue'
 
 const props = defineProps<{ id: string }>()
 
-// One useAsync over both fetches so the page has a single loading/error state. Career
-// profile (record + cups) comes from the player; the per-event history — including each
-// year's flight and scouting report — from its own endpoint.
+// One useAsync over all three, so the page has a single loading and error state.
 const { data, error, loading, retry } = useAsync(
   () => ['player', props.id],
   async () => {
@@ -38,24 +36,19 @@ const stats = computed(() => data.value?.stats ?? null)
 const fullName = computed(() => (player.value ? `${player.value.first_name} ${player.value.last_name}` : ''))
 const cupsPlayed = computed(() => history.value.length)
 
-// Keyed by tournament id, not year. There has been exactly one cup a year since 2008, but
-// nothing enforces it: tournaments are unique on (name, start_date, end_date), so a second
-// cup in a year is legal, and keyed by year one of them would be unreachable. The player
-// id in the path is already a uuid, so a readable hash was buying very little.
+// By id, not year: tournaments are unique on (name, start_date, end_date), so a second cup in
+// a year is legal and keyed by year one of them would be unreachable.
 const { openId, toggle } = useHashAccordion(() => history.value.map((h) => h.tournament_id))
 
 const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)), url('/img/mountain-green.webp')`)
 </script>
 <template>
   <PageLayout>
-    <!-- The old app opened a player with a header carrying the same line as their card,
-         only rounder — the headshot as a circular portrait. This is that, over the dark
-         mountain band, with the career line set in the scorecard's letterhead idiom. -->
+    <!-- The headshot as a circular portrait over the dark mountain band, with the career line in
+         the scorecard's letterhead idiom. -->
     <template #top>
-      <!-- The hero is the page's identity and it's gated on `player`, so without this the
-           profile is a nav bar over white until all three requests land and then the whole
-           thing appears at once. Same band, same avatar size, same three cells — the point
-           is that the band holds its height rather than opening up under the reader. -->
+      <!-- The band has to hold its height: gated on `player`, the profile is otherwise a nav bar over
+           white until all three requests land, then the whole thing appears at once. -->
       <div v-if="loading" data-testid="hero-skeleton" class="relative overflow-hidden bg-mrc-ink text-white">
         <div class="absolute inset-0 bg-cover bg-center" :style="{ backgroundImage: heroBg }" />
         <div class="relative mx-auto flex max-w-3xl flex-col items-center px-4 py-8 text-center md:max-w-4xl md:py-12 lg:max-w-5xl">
@@ -71,10 +64,8 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
         <div class="relative mx-auto flex max-w-3xl flex-col items-center px-4 py-8 text-center md:max-w-4xl md:py-12 lg:max-w-5xl">
           <PlayerAvatar :photo-path="player.photo_path" :alt="fullName" size="hero" />
           <h1 class="mt-4 text-white">{{ fullName }}</h1>
-          <!-- Proportional tracks rather than a width per cell: the outer two are equal to
-               each other by definition, and the record gets half again as much room because
-               it carries the longest string. A ratio states that relationship; three
-               hand-picked widths only happen to produce it. -->
+          <!-- A ratio states the relationship — the outer two equal, the record half again for the longest
+               string. Three hand-picked widths only happen to produce it. -->
           <div
             class="mt-5 inline-grid grid-cols-[1fr_1.5fr_1fr] divide-x divide-white/15 overflow-hidden rounded-sm bg-black/25 ring-1 ring-white/15"
           >

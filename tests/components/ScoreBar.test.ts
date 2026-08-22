@@ -60,9 +60,8 @@ describe('ScoreBar', () => {
   })
 
   it('fills decided points solid from each end, projections inside them', () => {
-    // Blue won one (2 solid bars from the left), red leads the second (2 soft from the
-    // right), the third is level after a hole (a soft half to each side, meeting in the
-    // middle) and the fourth has not started.
+    // Blue won one, red leads the second, the third is level after a hole and the fourth has not
+    // started — so a soft half from each end meets in the middle.
     const results = [
       match({ match_id: 'm1', finished: true, winner_team_id: 't-blue', leader_team_id: 't-blue', hole_results: ['t-blue'] }),
       match({ match_id: 'm2', leader_team_id: 't-red', lead: 1, hole_results: ['t-red'] }),

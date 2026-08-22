@@ -2,15 +2,8 @@
 import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-// Generic tab bar: labels across the top, the active one underlined in the accent
-// color (like the old app's Tabs). The default slot receives the active tab label so
-// the caller renders only the active panel.
-//
-// The active tab is mirrored in the URL hash (e.g. #alt-shot) so a refresh or a shared
-// link reopens the same tab. The hash is a single slot, so a page can have one owner of
-// it: syncHash: false leaves the tab in local state, for a page that already spends its
-// hash on something else (the player profile keeps the open cup there, which is what the
-// roster links to).
+// The active tab lives in the URL hash so a refresh or a shared link reopens it. One page
+// can own the hash, so syncHash: false is for a page already spending it elsewhere.
 const props = withDefaults(defineProps<{ tabs: string[]; syncHash?: boolean }>(), { syncHash: true })
 
 const route = useRoute()
@@ -32,9 +25,7 @@ function indexFromHash(): number {
 const active = ref(props.syncHash ? indexFromHash() : 0)
 
 if (props.syncHash) {
-  // Reflect the active tab in the hash (replace, not push — refresh restores the tab
-  // without piling up history entries). No scrollBehavior is configured, so this won't
-  // jump the page.
+  // replace, not push: a refresh restores the tab without piling up history entries.
   watch(active, (i) => {
     const target = `#${slugs.value[i]}`
     if (route.hash !== target) router.replace({ path: route.path, query: route.query, hash: target })

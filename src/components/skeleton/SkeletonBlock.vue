@@ -6,16 +6,12 @@ withDefaults(defineProps<{ radius?: 'none' | 'sm' | 'md' | 'full'; tone?: 'surfa
   tone: 'surface',
 })
 
-// Radius is a prop rather than a passed class because `rounded` and `rounded-md` set the
-// same property: which one wins in a merged :class depends on Tailwind's stylesheet order,
-// not on the call site. Width and height stay as passed classes — those never collide.
+// A prop, because `rounded` and `rounded-md` set the same property and which wins in a
+// merged :class depends on stylesheet order, not the call site.
 const RADIUS: Record<string, string> = { none: '', sm: 'rounded', md: 'rounded-md', full: 'rounded-full' }
 
-// Two backgrounds exist in this app. `inverse` covers both dark ones — the crowd photo
-// behind the dashboard hero and SectionCard's header band. Translucent white alone can't
-// work over the photo: an alpha that reads over the bright fairway is invisible over the
-// dark stands, and a full-width bar spans both. The blur flattens the backdrop into a
-// single tone, and the alpha stays high enough to read where backdrop-filter doesn't apply.
+// Translucent white alone cannot span the crowd photo: an alpha that reads over the bright
+// fairway is invisible over the dark stands. The blur flattens it to one tone.
 const TONE: Record<string, string> = { surface: 'bg-mrc-line', inverse: 'bg-white/30 backdrop-blur-md' }
 </script>
 <template>

@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import SkeletonBlock from './SkeletonBlock.vue'
 
-// Mirrors BaseTabs' bar: equal-width labels over a 4px bottom border, so the tab strip
-// doesn't jump height when the real one arrives. Pass the count where the page knows it —
-// placeholders at thirds snapping to halves is the jump this component exists to avoid.
-// Three is the default for a bar whose tabs come from the data still loading.
-//
-// Comment placed here, not above the root: a leading template comment makes the component
-// multi-root and silently breaks attribute fallthrough.
+// Pass the count where the page knows it: placeholders at thirds snapping to halves is the
+// jump this exists to avoid. Here, not above the root: that makes it multi-root.
 withDefaults(defineProps<{ tabs?: number }>(), { tabs: 3 })
 </script>
 <template>

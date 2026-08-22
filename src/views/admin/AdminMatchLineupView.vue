@@ -19,9 +19,8 @@ import BaseLabel from '@/components/base/BaseLabel.vue'
 const props = defineProps<{ id: string; matchId: string }>()
 
 const { data, error, loading, refresh, retry } = useAsync(
-  // Tournament-scoped, not match-scoped: every request below is about the tournament, and
-  // the match only selects from the result. Keyed by match, an admin setting eight lineups
-  // would fetch the same four endpoints eight times.
+  // Tournament-scoped: every request below is about the tournament and the match only selects
+  // from the result. Keyed by match, eight lineups would fetch the same four endpoints eight times.
   () => ['admin', 'lineup', props.id],
   async () => {
     const [matches, teams, roster, courses] = await Promise.all([
@@ -42,10 +41,8 @@ const roster = computed(() => data.value?.roster ?? [])
 // One slot per side for Singles, two for every pairs format (Fourball, Alt Shot, …).
 const slots = computed(() => (match.value?.format_name === 'Singles' ? 1 : 2))
 
-// A panel per side (Blue then Red): who's assigned now, and which drafted players are
-// available to add. A player plays at most once per round, so availability is scoped to the
-// whole format: every drafted player is eligible except those already placed in any match of
-// this round (including this one — those show in the assigned list, not as available).
+// A player plays at most once per round, so availability is scoped to the whole format: every
+// drafted player except those already placed in any match of this round.
 const panels = computed(() => {
   const m = match.value
   if (!m) return []
@@ -94,15 +91,13 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
   return team.captain ? `Team ${team.captain.last_name}` : team.color
 }
 
-// A tee time is typed as the wall clock the tee sheet says, so it is read at the course
-// being played rather than wherever the admin happens to be. Courses are unique by name
-// per tenant, which is what makes matching the result's course_name to a course sound.
+// Courses are unique by name per tenant, which is what makes matching the result's
+// course_name to a course sound.
 const courses = computed(() => data.value?.courses ?? [])
 const courseZone = computed(() => courses.value.find((c) => c.name === match.value?.course_name)?.time_zone ?? 'America/Winnipeg')
 
-// The stored tee time as the course's wall clock, which is both what the input starts on
-// and what "unchanged" is measured against. Syncing on a watcher rather than initialising
-// once: the match arrives after mount, and the value has to re-settle after each save.
+// A watcher, not an initial value: the match arrives after mount, and this has to re-settle
+// after each save.
 const storedTeeTime = computed(() => (match.value ? utcToEventInput(match.value.tee_time, courseZone.value) : ''))
 const teeTimeInput = ref('')
 watch(storedTeeTime, (wall) => (teeTimeInput.value = wall), { immediate: true })
@@ -136,10 +131,8 @@ const saveTeeTime = () =>
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
 
-        <!-- The tee time lives here rather than in the header because it is editable: a
-             group goes out late and someone moves it. Typed as the wall clock the tee
-             sheet says and read at the course, so an admin entering it from another
-             province still gets the round's own morning. -->
+        <!-- Here rather than the header because it is editable. Typed as the tee sheet's wall clock and
+             read at the course, so an admin in another province still gets the round's own morning. -->
         <form class="mb-6 flex items-end gap-2" @submit.prevent="saveTeeTime">
           <div class="flex-1">
             <BaseLabel for="tee-time">Tee time</BaseLabel>

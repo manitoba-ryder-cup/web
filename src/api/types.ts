@@ -34,9 +34,8 @@ export interface MatchFormat {
 export interface Course {
   id: string
   name: string
-  // Where the course is, as an IANA name. Used when entering a tee time — the wall clock
-  // off the tee sheet is converted against it. Times are displayed in the viewer's zone,
-  // so nothing reads this back to render.
+  // Used only when entering a tee time — the wall clock off the tee sheet is converted against
+  // it. Display is in the viewer's zone, so nothing reads this back.
   time_zone: string
 }
 // A course's configured tee set, colour name resolved — a valid (course, tee) option.
@@ -95,10 +94,8 @@ export interface PlayerProfile extends Player {
   record: PlayerRecord
   cups_won: number
 }
-// A player's entry in a specific tournament: their team (the draft), tier, and that
-// year's biography (per-tournament, so it isn't overwritten between events).
-// Body for entering a player in a tournament. Attributes default server-side when
-// omitted (tier "white", empty biography, hdcp 0).
+// Tier and biography are per-tournament, so they are not overwritten between events.
+// Attributes default server-side when omitted.
 export interface EnterTournamentPlayerBody {
   player_id: string
   tier?: string
@@ -131,9 +128,8 @@ export interface FormatRecord {
   format_name: string
   record: PlayerRecord
 }
-// A player's W-L-T alongside or against one other player. `matches` doubles as the
-// repeat-pairing signal: captains reuse partnerships, and the count says whether it has
-// been working.
+// `matches` doubles as the repeat-pairing signal: captains reuse partnerships, and the count
+// says whether it has been working.
 export interface PairRecord {
   player_id: string
   first_name: string
@@ -141,8 +137,7 @@ export interface PairRecord {
   matches: number
   record: PlayerRecord
 }
-// A career split the ways a captain and a player each read it. `points` is the cup's own
-// currency (a win is 1, a half is ½) reported next to the cups it was earned over, so the
+// `points` is the cup's own currency reported next to the cups it was earned over, so the
 // rate is ours to compute and round.
 export interface PlayerStats {
   by_format: FormatRecord[]
@@ -196,9 +191,8 @@ export interface MatchSide {
   team_id: string
   players: MatchPlayer[]
 }
-// A match's outcome state. The server's one shape for it: returned by the match status
-// read, by submitScore (so a client learns what a score did without re-deriving the
-// close-out rule), and flattened into every MatchResult.
+// One shape, returned by the status read and by submitScore too, so a client learns what a
+// score did without re-deriving the close-out rule.
 export interface MatchStatus {
   finished: boolean
   winner_team_id: string | null // the leader once finished, null while live or halved
@@ -223,9 +217,8 @@ export interface MatchResult extends MatchStatus {
   scoring_closes_at: string
 }
 
-// One team's (best-ball) gross score on a hole. In Fourball `strokes` is the better of
-// the two balls, so only player_scores says what each player shot. Empty for one-ball
-// formats (alt shot/scramble/scotch), where the score belongs to the team.
+// In Fourball `strokes` is the better ball, so only player_scores says what each player shot.
+// Empty for one-ball formats, where the score belongs to the team.
 export interface HoleScore {
   team_id: string
   strokes: number

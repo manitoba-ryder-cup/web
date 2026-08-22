@@ -35,11 +35,8 @@ describe('AccountMenu', () => {
     setActivePinia(createPinia())
   })
 
-  // Both states sit in the top corner, which is the hardest place on a phone to hit, so
-  // each has to be at least a finger tall — and they are two different elements.
-  // Sized in px, not rems. The root font-size is 14px below md, so min-h-11 renders 38.5
-  // there — a class that reads as 44 and misses it on exactly the screens the minimum is
-  // for, in the corner of the screen hardest to reach.
+  // Sized in px, not rems: the root font-size is 14px below md, so min-h-11 renders 38.5 there
+  // — a class reading as 44 that misses it on exactly the screens the minimum is for.
   it('gives the login link a full tap target', async () => {
     expect((await mountMenu()).get('a').classes()).toContain('min-h-[44px]')
   })
@@ -69,9 +66,8 @@ describe('AccountMenu', () => {
     expect(w.text()).not.toContain('Logout')
   })
 
-  // Being signed in is not the test for the admin area: a scorer holds a write scope and
-  // still has no business in tournament setup. Offering the link and having the API refuse
-  // is a worse answer than not offering it.
+  // A scorer holds a write scope and still has no business in tournament setup. Offering the
+  // link and having the API refuse is a worse answer than not offering it.
   it('hides Admin from a signed-in user whose token lacks the scope', async () => {
     const w = await signedIn([SCOPE_SCORES_WRITE])
     expect(w.text()).toContain('Logout')

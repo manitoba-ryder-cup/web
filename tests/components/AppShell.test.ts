@@ -31,9 +31,8 @@ describe('AppShell', () => {
     expect((await mountShell('/hole')).find('nav[aria-label="Primary"]').exists()).toBe(false)
   })
 
-  // The bar is fixed, so without this the last of a page sits underneath it. The padding
-  // has to clear the bar's real height — `pb-16` did not, because this app's rem is 14px
-  // below md and 4rem came out at 56px against a 71px bar.
+  // Has to clear the bar's real height: pb-16 did not, because the rem is 14px below md so 4rem
+  // came out at 56px against a 71px bar.
   it('keeps the end of a page clear of the bar', async () => {
     const main = (await mountShell('/')).get('main')
     expect(main.classes()).toContain('pb-24')

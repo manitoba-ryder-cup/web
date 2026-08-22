@@ -4,9 +4,8 @@ import { computed, ref } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import type { MatchResult, TournamentTeam } from '@/api/types'
 
-// The arrival a shared link or a typed URL actually makes once the cache is warm:
-// everything is resolved before the first render, so nothing the redirect watches ever
-// changes. A suite where every mount is cold cannot see this — which is the whole point.
+// Everything resolves before the first render, so nothing the redirect watches ever changes.
+// A suite where every mount is cold cannot see it.
 const teams: TournamentTeam[] = [
   { id: 'blue', color: 'Blue', captain: null, points: 0 },
   { id: 'red', color: 'Red', captain: null, points: 0 },

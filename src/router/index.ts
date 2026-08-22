@@ -2,9 +2,8 @@ import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded, typ
 import { useAuthStore } from '@/stores/auth'
 import { SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
 
-// Some detail routes declare a contextual back link. The app header renders it (replacing
-// the wordmark) purely from the current route's meta, so it never lingers across a
-// navigation — there's no per-component lifecycle to race.
+// Rendered purely from route meta, so it never lingers across a navigation — there is no
+// per-component lifecycle to race.
 declare module 'vue-router' {
   interface RouteMeta {
     back?: (route: RouteLocationNormalizedLoaded) => { to: RouteLocationRaw; label: string }
@@ -52,9 +51,8 @@ const router = createRouter({
       name: 'player',
       component: () => import('@/views/PlayerView.vue'),
       props: true,
-      // A profile is reached from this year's roster and from the history page's
-      // participants, so the back link reads the `from` its card put in the URL. Route in,
-      // link out: a refresh or a shared link answers the same as the tap did.
+      // Route in, link out: the back link reads the `from` its card put in the URL, so a refresh or
+      // a shared link answers the same as the tap did.
       meta: {
         back: (r) =>
           r.query.from === 'history'
@@ -63,9 +61,8 @@ const router = createRouter({
       },
     },
     {
-      // The per-cup page is gone — a player's cups open in place on their profile instead.
-      // Kept as a redirect because this URL was shareable and is what the roster linked to,
-      // and the hash lands on the same cup the old page showed.
+      // Kept as a redirect because the URL was shareable and is what the roster linked to; the hash
+      // lands on the same cup the old page showed.
       path: '/players/:id/tournaments/:tournamentId',
       redirect: (to) => ({ name: 'player', params: { id: to.params.id }, hash: `#${to.params.tournamentId}` }),
     },
@@ -128,9 +125,8 @@ router.beforeEach((to) => {
   // Referenced inside the guard (not at module scope) so Pinia is active when this runs.
   const auth = useAuthStore()
 
-  // A scope is only ever held by someone signed in, so requiring one requires a session.
-  // Deriving it means a route cannot ask for a scope and forget to ask for the login,
-  // which would send an anonymous visitor to the dashboard with no way forward.
+  // Derived, so a route cannot ask for a scope and forget the login — which would send an
+  // anonymous visitor to the dashboard with no way forward.
   if ((to.meta.requiresAuth || to.meta.requiresScope) && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }

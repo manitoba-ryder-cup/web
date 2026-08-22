@@ -3,9 +3,7 @@ import type { TournamentPlayer } from '@/api/types'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import TierDot from '@/components/base/TierDot.vue'
 
-// One player in the assign-teams list: avatar, name + tier swatch, an actionable captain
-// toggle, and a Blue/Red toggle. All state (which team, busy, captain) is owned by the
-// parent; this row just renders it and emits intent.
+// State is the parent's — the list enforces one captain a side, which a row cannot see.
 const props = defineProps<{
   player: TournamentPlayer
   blueId: string | null

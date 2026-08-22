@@ -7,11 +7,8 @@ export function centreOffset(tileLeft: number, tileWidth: number, viewportWidth:
 }
 
 /**
- * The least the strip has to move for a tile to be wholly visible — nothing at all if it
- * already is. Choosing must never shift the strip under the finger that chose, and the
- * strip must never scroll the page: this returns a new scrollLeft for the track and
- * touches nothing else, where scrollIntoView would walk every ancestor including the
- * document and drag the chosen tile under the sticky header.
+ * The least the strip must move for a tile to be wholly visible. Returns a scrollLeft for the
+ * track alone, where scrollIntoView walks every ancestor and drags it under the sticky header.
  */
 export function nudgeOffset(scrollLeft: number, viewportWidth: number, tileLeft: number, tileWidth: number): number {
   if (tileLeft < scrollLeft) return Math.max(0, tileLeft)

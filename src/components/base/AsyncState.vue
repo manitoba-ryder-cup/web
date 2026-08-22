@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import BaseAlert from '@/components/base/BaseAlert.vue'
-// `retry` re-runs the load. Optional, so a view with nothing to re-run doesn't render a
-// dead button — but pass it where you can: on a phone in the field a dropped request
-// otherwise leaves the page stuck until the user thinks to reload it.
+// Optional so a view with nothing to re-run doesn't render a dead button — but pass it
+// where you can: on a phone in a field, a dropped request otherwise needs a reload.
 withDefaults(defineProps<{ loading: boolean; error: string; empty?: boolean; emptyText?: string; retry?: () => void }>(), {
   empty: false,
   emptyText: 'Nothing here yet.',
@@ -10,10 +9,8 @@ withDefaults(defineProps<{ loading: boolean; error: string; empty?: boolean; emp
 })
 </script>
 <template>
-  <!-- The `loading` slot lets a view swap in a skeleton without also re-implementing the
-       error/retry half, which is the part worth keeping identical everywhere. A skeleton is
-       aria-hidden by construction, so the announcement lives here and is never skipped —
-       otherwise swapping one in silently removes the only thing a screen reader is told. -->
+  <!-- A skeleton is aria-hidden by construction, so the announcement lives here rather
+       than in the slot, where swapping one in would silently remove it. -->
   <template v-if="loading">
     <span class="sr-only" role="status">Loading…</span>
     <slot name="loading"><p class="text-mrc-muted" aria-hidden="true">Loading…</p></slot>

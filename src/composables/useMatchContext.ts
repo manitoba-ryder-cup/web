@@ -4,17 +4,14 @@ import { useAsync } from '@/composables/useAsync'
 import { useMatchSides } from '@/composables/useMatchSides'
 
 interface Options {
-  // Poll, for a view watching a round happen. The hole-entry flow loads once instead: it
-  // writes the scores itself, and a refetch mid-entry would fight the strips. Omitting this
-  // turns off the refetch on tab focus too, which is that same refetch by another name.
+  // The hole-entry flow loads once instead: a refetch mid-entry would fight the strips. Omitting
+  // this turns off the focus refetch too, which is the same refetch by another name.
   intervalMs?: MaybeRefOrGetter<number | false>
   // Treat a missing tee set as empty rather than an error. The scorecard renders without
   // par; the entry page cannot, so it lets the failure surface.
   parOptional?: boolean
 }
 
-// Everything a single match needs: the tournament's teams and results, the match's played
-// holes and tee set, and the match resolved out of the results with its two sides ordered.
 // Both match views need exactly this, and the same requests in flight at once.
 export function useMatchContext(
   tournamentId: MaybeRefOrGetter<string>,
@@ -24,10 +21,8 @@ export function useMatchContext(
   const tid = () => toValue(tournamentId)
   const mid = () => toValue(matchId)
   const { data, error, loading, refresh, retry } = useAsync(
-    // A getter, not a literal: vue-router reuses this component across a change of :matchId,
-    // and a key captured once would leave the previous match's card under the new URL.
-    // parOptional is in it because it changes what a failed tee-set fetch returns, so two
-    // callers asking about the same match on different terms must not share one answer.
+    // A getter, not a literal: vue-router reuses this across a change of :matchId, and a key
+    // captured once leaves the previous match's card under the new URL.
     () => ['match', tid(), mid(), parOptional],
     async () => {
       const holes = scorecardApi.getMatchHoles(mid())

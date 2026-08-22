@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 import pluginVue from 'eslint-plugin-vue'
+import commentCap from './tools/eslint-comment-cap.js'
 
 export default tseslint.config(
   // .claude holds git worktrees of this same repo. Linting into one gives every file a
@@ -16,6 +17,7 @@ export default tseslint.config(
   },
   {
     languageOptions: { globals: { ...globals.browser } },
+    plugins: { 'comment-cap': commentCap },
     rules: {
       // Single-word component names are the convention here (BaseCard, Rosters); the
       // filename already carries the namespace via its directory.
@@ -29,10 +31,8 @@ export default tseslint.config(
       'vue/attributes-order': 'off',
       'vue/first-attribute-linebreak': 'off',
       'vue/multiline-html-element-content-newline': 'off',
-      // Heading sizes come from the h1-h6 scale in main.css, so a per-heading text-* class
-      // silently forks it. Only a bare size is caught: a responsive bump (md:text-5xl) is
-      // something the level default cannot express, and a genuine one-off can still
-      // eslint-disable with a reason, which is what makes the exception reviewable.
+      // Bare sizes only: a responsive bump is something the level default cannot express,
+      // and a one-off can eslint-disable, which is what makes the exception reviewable.
       'vue/no-restricted-static-attribute': [
         'error',
         {
@@ -42,6 +42,9 @@ export default tseslint.config(
           message: 'Heading sizes come from the h1-h6 scale in src/assets/main.css — drop the text-* class or use the right level.',
         },
       ],
+      // Guidance about comment length never held on its own. This is the heading-scale
+      // bargain: longer is allowed, but only by saying so where a reviewer sees it.
+      'comment-cap/max-lines': 'error',
       // TypeScript already resolves identifiers, and no-undef does not know DOM lib types.
       'no-undef': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],

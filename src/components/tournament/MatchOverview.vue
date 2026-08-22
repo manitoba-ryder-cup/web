@@ -6,9 +6,7 @@ import { placeholderPairing } from '@/lib/matchResult'
 import TeamNames from './TeamNames.vue'
 import MatchDetails from './MatchDetails.vue'
 
-// Detailed match card: each side's players, the big result, and 18 hole dots coloured
-// by who won each hole. Sides/colour come from useMatchSides (by team id) — nothing here
-// hardcodes a colour.
+// Sides and colour come from useMatchSides by team id; nothing here hardcodes a colour.
 const props = defineProps<{ match: MatchResult; teams: TournamentTeam[] }>()
 const { left, right, colorFor } = useMatchSides(
   () => props.match,
@@ -20,15 +18,12 @@ const { left, right, colorFor } = useMatchSides(
 const leftPlayers = computed(() => (left.value?.players.length ? left.value.players : placeholderPairing(props.match.format_name)))
 const rightPlayers = computed(() => (right.value?.players.length ? right.value.players : placeholderPairing(props.match.format_name)))
 
-// Borders reflect the tournament's two sides, known from the draft even before this
-// match's lineup is assigned, so an unassigned card still shows the team colours. Teams
-// arrive in render order, so position is the side.
+// Teams are known from the draft, so an unassigned card still shows the colours. They arrive
+// in render order, so position is the side.
 const leftBorder = computed(() => `border-l-[5px] ${colorFor(left.value?.team_id ?? props.teams[0]?.id).border}`)
 const rightBorder = computed(() => `border-r-[5px] ${colorFor(right.value?.team_id ?? props.teams[1]?.id).border}`)
 
-// The team to emphasise: the winner once finished, the current leader while live — the big
-// status reads "3 UP" in that side's colour. All square (or tied) has neither side ahead
-// and reads softer than a coloured lead.
+// All square has neither side ahead, and reads softer than a coloured lead.
 const strongTextClass = computed(() => {
   const id = props.match.finished ? props.match.winner_team_id : props.match.leader_team_id
   return id ? colorFor(id).text : 'text-mrc-muted'

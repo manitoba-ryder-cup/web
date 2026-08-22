@@ -1,9 +1,6 @@
 <template>
-  <!-- The path strings are byte-identical to public/favicon.svg and icons/maskable.svg, so a
-       change to the cup is one find-and-replace across all three rather than three
-       conversions between coordinate systems. The wrapper carries that 64-unit drawing into
-       the 24-unit box the icons beside it use, with the padding they have built in — cropped
-       to its own bounds instead, the cup renders a quarter taller than the rest of the bar. -->
+  <!-- Paths byte-identical to favicon.svg and maskable.svg, so a change to the cup is one
+       find-and-replace. The wrapper carries its 64-unit drawing into the icons' 24-unit box. -->
   <svg class="h-8 w-8 fill-current" viewBox="0 0 24 24" aria-hidden="true">
     <g transform="translate(-2 -2.7) scale(0.4375)">
       <path

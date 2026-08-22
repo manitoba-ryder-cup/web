@@ -37,10 +37,8 @@ async function onSubmit() {
 }
 </script>
 <template>
-  <!-- The v2 "Welcome Back" screen: the form floats directly on a full-bleed course photo
-       below the site nav, no card. The dark gradient overlay is the site's signature hero
-       treatment (see ImageHeader) — it keeps white type legible and the mood consistent.
-       min-height fills the viewport under the 4rem header. -->
+  <!-- The form floats on the photo with no card. The gradient is the site's hero treatment (see
+       ImageHeader): it keeps white type legible. min-height fills the viewport under the header. -->
   <div
     class="flex min-h-[calc(100vh-4rem)] justify-center bg-cover bg-center px-4"
     :style="{ backgroundImage: `url('/img/empty-course.webp')` }"

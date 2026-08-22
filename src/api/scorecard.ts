@@ -55,9 +55,8 @@ export const scorecardApi = {
     sc().put<TournamentPlayer>(`/v1/tournaments/${tournamentId}/players/${playerId}`, body),
   getMatchScores: (id: string) => sc().get<HoleStatus[]>(`/v1/matches/${id}/scores`),
   getMatchHoles: (id: string) => sc().get<Hole[]>(`/v1/matches/${id}/holes`),
-  // Records a hole's scores (scores:write), all in one write. Returns the match's
-  // recomputed state, so the caller sees whether that hole closed the match out. 409 if
-  // the match is already complete and the hole was never played.
+  // One write. Returns the recomputed state, so the caller sees whether that hole closed the
+  // match out. 409 if the match is complete and the hole was never played.
   submitHoleScores: (matchId: string, body: ScoreSubmission) => sc().post<MatchStatus>(`/v1/matches/${matchId}/scores`, body),
   listPlayers: () => sc().get<PlayerProfile[]>('/v1/players'),
   getPlayer: (id: string) => sc().get<PlayerProfile>(`/v1/players/${id}`),
@@ -65,8 +64,7 @@ export const scorecardApi = {
   getPlayerStats: (id: string) => sc().get<PlayerStats>(`/v1/players/${id}/stats`),
 
   // --- Admin writes (tournaments:write scope) ---
-  // Draft an entered player onto a team, or undraft them (undraft cascades them out of
-  // any matches). Reassigning is undraft-then-draft.
+  // Undraft cascades a player out of any matches; reassigning is undraft-then-draft.
   draftPlayer: (teamId: string, playerId: string) => sc().post<void>(`/v1/teams/${teamId}/members`, { player_id: playerId }),
   undraftPlayer: (teamId: string, playerId: string) => sc().del<void>(`/v1/teams/${teamId}/members/${playerId}`),
   // Designate a team's captain (one per team — this replaces any previous captain), or

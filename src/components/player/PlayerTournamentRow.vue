@@ -9,12 +9,8 @@ import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import BaseAccordion from '@/components/base/BaseAccordion.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 
-// One cup in a player's history, which opens in place to show what was written about them
-// that year and the matches they played. Opening is the parent's business — only one row
-// is ever open, so the page can't grow into a wall of expanded years.
-//
-// The matches load on first open rather than with the list: eighteen cups would otherwise
-// be eighteen requests on a page where most rows are never opened.
+// Matches load on first open rather than with the list: eighteen cups would otherwise be
+// eighteen requests on a page where most rows are never opened.
 const props = defineProps<{ entry: PlayerTournamentHistory; playerId: string; open: boolean }>()
 defineEmits<{ toggle: [] }>()
 
@@ -35,10 +31,8 @@ const teams = ref<TournamentTeam[]>([])
 const loadingMatches = ref(false)
 let loaded = false
 
-// immediate, because the row is not always created closed. A deep link resolves the hash
-// before the history renders, so the row's first render already has open=true and there is
-// no false→true transition to watch — the matches would never load, while clicking the
-// same row by hand worked fine.
+// immediate: a deep link resolves the hash before the history renders, so the row's first
+// render is already open and there is no false→true transition to watch.
 watch(
   () => props.open,
   async (isOpen) => {

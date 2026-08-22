@@ -1,27 +1,6 @@
 /**
- * Same-origin API proxy for manitobarydercup.com.
- *
- * The SPA (served by Cloudflare Pages) calls relative paths — `/api/auth/*` and
- * `/api/scorecard/*` — so the browser never needs CORS and never sees the Cloud Run
- * URLs. This Worker is bound to the route `manitobarydercup.com/api/*` (see
- * wrangler.toml); everything else falls through to Pages.
- *
- * It mirrors the dev Vite proxy exactly (../vite.config.ts) and lives beside it for that
- * reason — the two have to agree, and a change to one is nearly always a change to both:
- *   - strips the `/api/<service>` prefix (the Go services are mounted at root), and
- *   - rewrites heimdall's refresh-token cookie Path from `/v1/refresh` (heimdall-
- *     relative) to `/api/auth/v1/refresh`, so the browser sends it back.
- *
- * Because bots hit this edge Worker before any origin, Cloudflare's Bot Fight Mode,
- * WAF, and rate-limit rules filter traffic before it can ever wake Cloud Run.
- *
- * Anonymous GETs the services mark public are also served from the edge cache. That
- * matters more than it sounds: the History page fans out to one request per cup, and a
- * hit skips both the Cloud Run cold start and the round trips to a database in another
- * region. What may be cached is the origin's decision, not this Worker's.
- *
- * The decisions themselves live in proxy.ts, which is free of Cloudflare globals and is
- * where the tests point. This file is only the edge wiring.
+ * Same-origin API proxy, mirroring the dev Vite proxy in ../vite.config.ts — the two have to
+ * agree, and a change to one is nearly always a change to both.
  */
 
 import { isCacheable, isStorable, resolveRoute, rewriteCookiePath, upstreamUrl } from './proxy'
@@ -32,11 +11,8 @@ export interface Env {
   /** Cloud Run URL for scorecard, e.g. https://scorecard-abc123-uc.a.run.app */
   SCORECARD_URL: string
   /**
-   * Shared secret added as `X-Proxy-Secret` on every upstream request. Both Cloud Run
-   * services enforce it (knowhere's RequireProxySecret middleware): requests missing or
-   * mismatching it get a 403, except the health check. Must equal the `proxy-secret` in
-   * Secret Manager that the services read. Leave unset only where the services also run
-   * without it (local dev).
+   * Enforced by both Cloud Run services, which 403 a request missing or mismatching it. Must
+   * equal the `proxy-secret` in Secret Manager that the services read.
    */
   PROXY_SECRET?: string
 }

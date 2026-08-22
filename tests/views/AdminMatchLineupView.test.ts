@@ -23,9 +23,8 @@ const router = createRouter({
 describe('AdminMatchLineupView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // The stored tee time is mutable and updateMatch writes to it, so a refetch after
-    // saving returns what was saved — otherwise the view looks permanently unsaved and the
-    // test would be asserting against a server that never persists anything.
+    // A refetch after saving has to return what was saved, or the view looks permanently unsaved
+    // and the test asserts against a server that never persists.
     let storedTeeTime = '2026-07-01T14:00:00Z'
     vi.mocked(scorecardApi.updateMatch).mockImplementation(async (_id, body) => {
       if (body.tee_time) storedTeeTime = body.tee_time
@@ -83,9 +82,8 @@ describe('AdminMatchLineupView', () => {
     expect(w.text()).toContain('Singles')
   })
 
-  // The tee time is entered as the wall clock the tee sheet says, read at the course. The
-  // stored instant 14:00Z is 09:00 at Elmhurst (CDT), so that is what the input shows —
-  // not 14:00, and not whatever the admin's own zone makes of it.
+  // Read at the course: 14:00Z is 09:00 at Elmhurst, so that is what the input shows — not
+  // 14:00, and not whatever the admin's own zone makes of it.
   it('shows the course wall clock, not UTC', async () => {
     const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
     await flushPromises()

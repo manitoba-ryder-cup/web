@@ -9,9 +9,8 @@ const email = ref('')
 const sending = ref(false)
 const emailSent = ref(false)
 
-// Stubbed for now: no reset email is actually sent. We flip to the confirmation either
-// way, which is also the right end state once it's wired up — the message never reveals
-// whether an address is on file.
+// Stubbed: no email is sent. The confirmation shows either way, which is also right once it
+// is wired up — the message never reveals whether an address is on file.
 function sendResetInstructions() {
   sending.value = true
   emailSent.value = true

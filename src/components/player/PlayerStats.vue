@@ -6,16 +6,13 @@ import { resultText } from '@/lib/matchResult'
 import BaseAccordion from '@/components/base/BaseAccordion.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 
-// A career read three ways: what they play well, who they play well with, and who they
-// play well against. The first is for the player, the other two are what a captain looks
-// at before setting pairings and matchups.
+// Who they play well with and against is what a captain reads before setting pairings.
 const props = defineProps<{ stats: PlayerStats; playerName: string }>()
 
 const wlt = (r: { wins: number; losses: number; ties: number }) => `${r.wins}–${r.losses}–${r.ties}`
 
-// Points per cup rather than a career total: everyone plays every format, so the total
-// only says how long someone has been coming. The rate is what compares a veteran to a
-// newcomer.
+// Per cup, not a career total: everyone plays every format, so a total only says how long
+// someone has been coming. The rate compares a veteran to a newcomer.
 const perCup = computed(() => (props.stats.cups_played ? props.stats.points / props.stats.cups_played : 0))
 
 // A pairing seen once says nothing — it's a coin toss, not a record. Two is the fewest
@@ -35,27 +32,22 @@ const profile = (id: string) => ({
   ...(route.query.from ? { query: { from: route.query.from } } : {}),
 })
 
-// Through resultText, so a margin here reads exactly as it does on a scorecard — "9 & 7",
-// or "1 up" for one settled on the last green. winner_team_id only has to be non-null for
-// the finished branch; which side won is already implied by the row it sits on.
+// Through resultText, so a margin reads as it does on a scorecard. Which side won is
+// implied by the row, so winner_team_id only has to be non-null.
 const margin = (m: NotableMatch) =>
   resultText({ finished: true, winner_team_id: 'them', leader_team_id: 'them', lead: m.lead, holes_remaining: m.holes_remaining })
 
-// Sections fold away, one open at a time, because the lists are long before any of the
-// stats still to come are added. Local state rather than useHashAccordion: this page
-// already spends its hash on the open cup, and a stats section isn't worth linking to.
+// Local state, not useHashAccordion: this page already spends its hash on the open cup.
 const openSection = ref('formats')
 const toggle = (id: string) => (openSection.value = openSection.value === id ? '' : id)
 </script>
 <template>
   <div class="space-y-6">
-    <!-- The headline pair, in the same divided strip the hero uses for the career line:
-         two numbers on their own read as unfinished, and the profile already has a
-         vocabulary for "a few key figures side by side" one screen up. -->
+    <!-- Two numbers alone read as unfinished, and the profile already has a vocabulary for a few
+         key figures side by side one screen up. -->
     <div class="text-center">
-      <!-- inline-grid with equal tracks rather than a fixed width on each cell: grid-cols-2
-           is minmax(0,1fr) twice, so the two match each other and both size to whichever
-           label is longer. A w-* would be a number to keep in step with the copy. -->
+      <!-- Equal tracks rather than a width on each cell: both size to the longer label, where a w-*
+           would be a number to keep in step with the copy. -->
       <div class="inline-grid grid-cols-2 divide-x divide-mrc-line overflow-hidden rounded border border-mrc-line">
         <div class="px-5 py-2">
           <p class="text-3xl font-bold tabular-nums">{{ perCup.toFixed(2) }}</p>

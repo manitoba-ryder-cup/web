@@ -2,9 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-// Nothing in the app registers or exercises this worker — its whole job is to retire the
-// one the previous site left behind. A browser is the only place it really runs, so these
-// guard the two properties that were got wrong rather than the behaviour itself.
+// A browser is the only place this really runs, so these guard the two properties that were
+// got wrong rather than the behaviour itself.
 const worker = readFileSync(resolve(__dirname, '../../public/service-worker.js'), 'utf8')
 
 describe('public/service-worker.js', () => {
@@ -12,9 +11,8 @@ describe('public/service-worker.js', () => {
     expect(worker).toContain('self.registration.unregister()')
   })
 
-  // Ordering is load-bearing and was wrong first time: unregistering first lets the worker
-  // be torn down before the caches are gone, leaving the old app shell on disk. Verified in
-  // a browser — the cache survived until these two swapped.
+  // Unregistering first lets the worker be torn down before the caches are gone, leaving the
+  // old app shell on disk. Verified in a browser: the cache survived until these swapped.
   it('empties the caches before unregistering, not after', () => {
     expect(worker.indexOf('caches.delete')).toBeLessThan(worker.indexOf('self.registration.unregister()'))
   })

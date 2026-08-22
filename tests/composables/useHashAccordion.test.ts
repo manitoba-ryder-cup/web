@@ -47,9 +47,8 @@ describe('useHashAccordion', () => {
     expect((w.vm as unknown as { openId: string }).openId).toBe('t2')
   })
 
-  // The reason for `nearest`: the current cup is the first row, and `start` would pin it
-  // to the top of the viewport, pushing the player's avatar and record off screen to
-  // reveal something the reader could already see.
+  // `start` would pin the first row to the viewport top, pushing the avatar and record off to
+  // reveal something already visible.
   it('scrolls by the least amount needed, never to the top', async () => {
     await mountAt('#t1', ['t1', 't2'])
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
@@ -61,9 +60,8 @@ describe('useHashAccordion', () => {
     expect(scrollIntoView).not.toHaveBeenCalled()
   })
 
-  // The profile's back link is a pure function of the route, so anything that rewrites the
-  // URL has to leave the rest of it alone: an omitted query resolves to empty, which would
-  // turn "back to History" into "back to Teams" on the first row anyone opened.
+  // An omitted query resolves to empty, which turns "back to History" into "back to Teams" on
+  // the first row anyone opened.
   it('keeps the query when it moves the hash', async () => {
     const w = await mountAt('', ['t1', 't2'])
     await router.replace({ path: '/players/p1', query: { from: 'history' } })

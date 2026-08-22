@@ -1,7 +1,5 @@
-// The single place a team's colour NAME maps to its visual classes. Teams are identified
-// by id everywhere else; this is only consulted to paint them. A Cup has exactly two
-// sides, Red and Blue — the schema CHECK-constrains it — so this registry is a lookup,
-// not an extension point; the admin filters name the two colours directly.
+// A Cup has exactly two sides and the schema CHECK-constrains it, so this is a lookup rather
+// than an extension point.
 export interface TeamColorClasses {
   solid: string // filled background (a decided win)
   soft: string // lighter fill (a projected / in-progress lead) — distinct from the grey toss-up

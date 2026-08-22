@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
 
-// Swaps what a view shows, where BaseTabs is a set of peer destinations. The caller holds
-// the value. Radios, not buttons: one choice out of a few, so one tab stop and the arrows
-// move between them. Keyed by index because two pairings can share initials.
+// Radios, not buttons: one choice of a few, so one tab stop and arrows between them.
+// Keyed by index because two pairings can share initials.
 const props = defineProps<{ options: string[]; modelValue: number; label: string }>()
 const emit = defineEmits<{ 'update:modelValue': [index: number] }>()
 

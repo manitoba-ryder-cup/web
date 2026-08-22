@@ -259,10 +259,8 @@ describe('HoleEntryView saving', () => {
     await saveButton(w).trigger('click')
     await flushPromises()
 
-    // The match takes corrections to the holes it was played over, so the refusal is
-    // about this hole being past the end, not about the match being shut.
-    // True of both refusals the server answers 409 with — a shut window, and a hole a
-    // decided match never reached — because this cannot tell them apart.
+    // True of both refusals the server answers 409 with — a shut window, and a hole a decided
+    // match never reached — because this cannot tell them apart.
     expect(w.text()).toContain('closed to scoring')
     expect(router.currentRoute.value.params.hole).toBe('16')
     // The button stops offering to save once the view knows the match is over.
@@ -295,9 +293,7 @@ describe('HoleEntryView saving', () => {
     expect(submitScore).toHaveBeenCalledTimes(1)
   })
 
-  // Everything this page showed a reader is on the card, so a hole that cannot be recorded
-  // sends them there instead of rendering the wheel with its controls switched off. That
-  // covers arriving by a shared link or a typed URL, not just a tap on the card.
+  // Covers arriving by a shared link or a typed URL, not just a tap on the card.
   it('sends someone away from a hole a finished match never reached', async () => {
     match.finished = true
     holeStates = [scoredFifteenth]

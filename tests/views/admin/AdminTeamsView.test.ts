@@ -51,8 +51,7 @@ const chip = (w: ReturnType<typeof mount>, label: string) =>
     .replace(/\s+/g, ' ')
 const teamButton = (w: ReturnType<typeof mount>, colour: string) => w.findAll('button').find((b) => b.text() === colour)!
 
-// The write invalidates this view's own key, so a refetch follows every change. Held here
-// so a test can decide whether the server has caught up yet: released, the list agrees
+// Held so a test can choose whether the server has caught up: released, the list agrees
 // because it was re-read; blocked, anything on screen got there optimistically.
 let releaseRefetch: (() => void) | null = null
 function blockRefetchesAfterTheFirst() {
@@ -78,9 +77,8 @@ describe('AdminTeamsView', () => {
     vi.mocked(scorecardApi.clearTeamCaptain).mockResolvedValue(undefined)
   })
 
-  // The write reaching the server is not the test — the row moving is. What a query hands
-  // back is a readonly view of the cache, so an optimistic update written through it is
-  // dropped in silence: the draft succeeds and the page still reads Unassigned 1, Blue 0.
+  // A query hands back a readonly view of the cache, so an optimistic update written through it
+  // is dropped in silence: the draft succeeds and the page still reads Unassigned 1.
   it('moves the row onto the team before the server has been re-read', async () => {
     blockRefetchesAfterTheFirst()
     const w = await mountIt()

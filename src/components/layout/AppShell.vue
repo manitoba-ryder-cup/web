@@ -11,10 +11,8 @@ const showNav = computed(() => !route.meta.hidesNav)
 <template>
   <div class="min-h-screen bg-mrc-surface text-mrc-ink">
     <AppHeader />
-    <!-- The bar is fixed, so this padding is what stops it covering the end of a page. It
-         has to exceed the bar's height, which is ~71px on a phone — `pb-16` is 4rem, and
-         this app puts 14px on `html` below md, so that came out at 56px and buried the
-         last 15px of every page. -->
+    <!-- Has to exceed the bar's height: pb-16 is 4rem, and this app puts 14px on html below md,
+         so it came out at 56px against a 71px bar and buried the last 15px of every page. -->
     <main :class="showNav ? 'pb-24 md:pb-0' : ''"><slot /></main>
     <AppTabBar v-if="showNav" />
     <AppToasts />

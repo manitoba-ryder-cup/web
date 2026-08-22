@@ -1,8 +1,5 @@
-// A deploy replaces the hashed chunks an already-loaded page still points at, so a lazily
-// imported route can fail partway through a session. Reloading picks up the new document.
-//
-// Once per session, though: if the fresh document still cannot load the chunk then the
-// problem is not staleness, and reloading again would spin rather than recover.
+// A deploy replaces the chunks a loaded page still points at. Once per session only: if the
+// fresh document still cannot load it, the problem is not staleness and reloading spins.
 
 const RELOADED_KEY = 'mrc:reloaded-for-stale-chunk'
 

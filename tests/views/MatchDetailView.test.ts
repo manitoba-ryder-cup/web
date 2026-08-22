@@ -143,9 +143,8 @@ describe('MatchDetailView', () => {
   })
 
   it('does not make holes tappable before the cup is played', async () => {
-    // The entry page would only turn them straight back — it refuses to score a match
-    // that has not teed off. Scoped explicitly, or this passes on the scope check alone
-    // and would go on passing with the tee time never consulted.
+    // Scoped explicitly, or this passes on the scope check alone and would go on passing with
+    // the tee time never consulted.
     match.mockReturnValue(withWindow(withLineup, teeingOffIn60Days))
 
     const w = await open({ scopes: [SCOPE_SCORES_WRITE] })

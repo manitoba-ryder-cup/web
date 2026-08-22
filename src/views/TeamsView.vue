@@ -12,15 +12,12 @@ import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import Rosters from '@/components/tournament/Rosters.vue'
 import PlayerField from '@/components/tournament/PlayerField.vue'
 
-// This year's two sides. Named for what people come looking for — the matchup, the
-// captains, who is in which flight — rather than for the list it is made of; before the
-// draft that list is all there is, so the field stands in until the teams exist. Everyone
-// who has ever played is on the history page, which is where an archive belongs.
+// Named for what people come looking for, not the list it is made of: before the draft that
+// list is all there is, so the field stands in until the teams exist.
 const cup = useCupStore()
 const { data, error, loading, retry } = useAsync(['teams'], async () => {
-  // Which cup: resolved once by the shell, so the roster request starts now rather than
-  // after a round trip spent asking. The record rides along in the same batch, which costs
-  // no depth and keeps the eyebrow answering to edits.
+  // Resolved once by the shell, so the roster request starts now. The record rides in the same
+  // batch, which costs no depth and keeps the eyebrow answering to edits.
   await cup.load()
   const id = cup.latestId
   const [tournament, roster, teams] = id

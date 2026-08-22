@@ -7,11 +7,8 @@ import { orderSides } from '@/lib/teamOrder'
 import { playerSurnames, resultText } from '@/lib/matchResult'
 import { formatTeeTime as fmtTime, teeDayLabel as dayLabel, teeDayKey as dayKeyOf } from '@/lib/teeTime'
 
-// The event grouped into sessions (a day + a format, like a real order of play): the
-// session header carries the day and format, so multi-day fields don't repeat per row and
-// each match only needs its tee time. Every match shows its status — a finished result, a
-// live state, or just its time before it starts.
-// `flat` drops the outer border/rounding for embedding inside a SectionCard.
+// The session header carries the day and format, so multi-day fields do not repeat it per row.
+// `flat` drops the outer border for embedding in a SectionCard.
 const props = defineProps<{ matches: MatchResult[]; teams: TournamentTeam[]; tournamentId: string; flat?: boolean }>()
 
 const teamById = computed(() => new Map(props.teams.map((t) => [t.id, t])))

@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { isCacheable, isStorable, resolveRoute, rewriteCookiePath, upstreamUrl } from '../../worker/src/proxy'
 
-// The Worker sits in front of every API request, so these are the decisions that a
-// regression would break silently: what gets proxied where, what may be served from a
-// shared cache, and whether the refresh cookie comes back to the browser at all.
+// These are the decisions a regression breaks silently: what is proxied where, what may be
+// shared-cached, and whether the refresh cookie reaches the browser.
 
 describe('resolveRoute', () => {
   it('routes each service prefix to its own origin', () => {
@@ -66,9 +65,8 @@ describe('isCacheable', () => {
     expect(isCacheable(new Request('https://x/api/scorecard/v1/players'))).toBe(true)
   })
 
-  // The edge cache is shared between every visitor, so anything identifying a caller must
-  // never reach it. A scorer submits a hole then immediately refetches; serving them their
-  // own pre-submission data is the one staleness that genuinely misleads.
+  // A scorer submits a hole then immediately refetches, so serving them their own pre-submission
+  // data is the one staleness that genuinely misleads.
   it('refuses a request carrying an Authorization header', () => {
     const req = new Request('https://x/api/scorecard/v1/players', { headers: { Authorization: 'Bearer token' } })
     expect(isCacheable(req)).toBe(false)
@@ -117,9 +115,8 @@ describe('isStorable', () => {
 })
 
 describe('rewriteCookiePath', () => {
-  // heimdall sets Path=/v1/refresh because it is mounted at root. Behind the proxy the
-  // browser would never send that cookie back to /api/auth/v1/refresh, so the session
-  // would silently fail to survive a reload.
+  // Behind the proxy the browser would never send that cookie back to /api/auth/v1/refresh, so
+  // the session would silently fail to survive a reload.
   it('re-anchors the refresh path under the proxy prefix', () => {
     expect(rewriteCookiePath('refresh_token=abc; Path=/v1/refresh; HttpOnly; Secure', '/api/auth')).toBe(
       'refresh_token=abc; Path=/api/auth/v1/refresh; HttpOnly; Secure',

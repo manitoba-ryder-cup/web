@@ -2,20 +2,14 @@
 import { computed, onMounted, onBeforeUnmount, nextTick, watch, ref } from 'vue'
 import { centreOffset, nudgeOffset } from '@/lib/strokeStrip'
 
-// One player's strokes for one hole: a strip of numbered tiles pinned to par, with the
-// chosen one filled. Par sits in the same place in every player's strip, so the fill's
-// position is the score against par and a hole reads down the column — the low score is
-// the leftmost fill, before you have read a number.
-//
-// The strip never moves itself. Choosing fills a tile where it already sits rather than
-// sliding it to the middle, which means scrolling cannot select either: the tile in the
-// middle is not the answer to anything. That is deliberate — the control this replaced
-// read whatever the scroll centred, so a stray drag or a focus could record a score
-// nobody picked.
-//
-// priorStrokes/priorPar are the round before this hole, so the readout is a running total
-// that follows the strip: you see what the score you are about to record does to the
-// round, not just the hole. Default 0/0 reads as this hole alone.
+// eslint-disable-next-line comment-cap/max-lines -- names the control this replaced and the
+// bug that made it worth replacing, which is the reason not to make the strip move again.
+// Par sits in the same place in every player's strip, so the fill's position is the score
+// against par and a hole reads down the column. The strip never moves itself: choosing fills
+// a tile where it sits rather than sliding it to the middle, so scrolling cannot select
+// either. The control this replaced read whatever the scroll centred, and a stray drag or a
+// focus recorded a score nobody picked. priorStrokes/priorPar are the round before this hole,
+// so the readout is a running total; 0/0 reads as this hole alone.
 const props = withDefaults(
   defineProps<{
     modelValue: number
@@ -58,20 +52,16 @@ function term(s: number): string {
 function tileAt(s: number): HTMLElement | undefined {
   return track.value?.querySelectorAll<HTMLElement>('[data-stroke]')[s - 1]
 }
-// Par centred, because par is what lines the strips up with one another. Re-run whenever
-// par changes or the strip is resized: the same component is reused from hole to hole, so
-// without this the strips drift out of column the first time the par does.
+// Re-run when par changes or the strip resizes: the component is reused hole to hole, so
+// without this the strips drift out of column the first time par does.
 function anchor() {
   const el = track.value
   const tile = tileAt(props.par)
   if (!el || !tile) return
   el.scrollLeft = centreOffset(tile.offsetLeft, tile.offsetWidth, el.clientWidth)
 }
-// Nudged into view, never centred: choosing must not shift the strip under the finger that
-// chose, and a score far enough from par to load off-screen still has to be seen. The
-// track's own scrollLeft rather than scrollIntoView, which walks every ancestor scrollport
-// including the document — on mount that scrolls the page to the last player, and on a tap
-// it drags the chosen tile up under the sticky header.
+// Nudged, never centred: choosing must not shift the strip under the finger that chose. The
+// track's own scrollLeft, since scrollIntoView walks every ancestor scrollport to the document.
 function reveal(s: number) {
   const el = track.value
   const tile = tileAt(s)

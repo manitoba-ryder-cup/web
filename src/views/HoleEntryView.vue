@@ -28,9 +28,7 @@ const { error, loading, retry, refresh, teams, results, holeStates, holes, match
   () => props.tournamentId,
   () => props.matchId,
 )
-// Before a match tees off there is nothing to show and nothing to record, so the strips
-// aren't offered — the server refuses the write too. Afterwards there is everything to
-// show: a played match still reads, it just reads read-only.
+// The server refuses a write before a match tees off, so the strips are not offered either.
 const auth = useAuthStore()
 const started = computed(() => hasStarted(match.value))
 const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
@@ -39,28 +37,23 @@ const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.
 const finishedByWrite = ref(false)
 const finished = computed(() => finishedByWrite.value || (match.value?.finished ?? false))
 const scoredHoles = computed(() => holeStates.value.map((h) => h.hole_number))
-// This page is the wheel. Everything it showed a reader is on the scorecard, so a hole
-// that cannot be recorded sends you back there rather than rendering a card with its
-// controls switched off. The strips still render inert for the frame between the data
-// landing and the redirect, which is why `readonly` outlives the reason it was added.
+// A hole that cannot be recorded goes back to the card, which carries everything this showed
+// a reader. `readonly` still covers the frame between the data landing and the redirect.
 const editable = computed(
   () =>
     auth.hasScope(SCOPE_SCORES_WRITE) &&
     holeOpen(match.value, holeNumber.value, { finished: finished.value, scoredHoles: scoredHoles.value }),
 )
 const saveError = ref('')
-// Which hole the refusal was about. A message that outlived its hole would keep the
-// redirect switched off for every hole after it, and describe the wrong one while it did.
-// Declared above the watch below, which reads it on its immediate run.
+// A message that outlived its hole would keep the redirect off for every hole after it.
 const refusedHole = ref<number | null>(null)
 const readonly = computed(() => !editable.value)
 // A hole outside the card's eighteen has nothing behind it either, and dead-ended on
 // "Hole not found." rather than going anywhere useful.
 const onTheCard = computed(() => Number.isInteger(holeNumber.value) && holeNumber.value >= 1 && holeNumber.value <= 18)
 watch(
-  // holeNumber in its own right: walking from a hole that could not be recorded onto
-  // another one leaves `editable` false throughout, so nothing else here changes and the
-  // walk would never be checked.
+  // holeNumber in its own right: walking between two closed holes leaves `editable` false
+  // throughout, so nothing else here changes and the walk would never be checked.
   [loading, match, editable, onTheCard, holeNumber],
   () => {
     if (loading.value || !match.value) return
@@ -68,9 +61,8 @@ watch(
     // hole, and the page below says when it tees off. Leave that reachable.
     if (!started.value) return
     if (editable.value && onTheCard.value) return
-    // Not over a refusal the scorer has yet to read — but only the one about the hole they
-    // are on. Carried forward, a single 409 would switch the redirect off for the rest of
-    // the walk and leave the inert wheel this exists to remove.
+    // Not over a refusal still unread — but only the one about this hole, or a single 409 would
+    // switch the redirect off for the rest of the walk.
     if (saveError.value && refusedHole.value === holeNumber.value) return
     router.replace({ name: 'match', params: { tournamentId: props.tournamentId, matchId: props.matchId } })
   },
@@ -104,9 +96,8 @@ const buttonLabel = computed(() => {
   return last ? 'Save & Finish' : 'Save & Next Hole'
 })
 
-// Both return the pending navigation: saveAndNext awaits it so the button stays disabled
-// until the route has actually changed. Re-enabling mid-transition let a second tap fire
-// goNext() on a match the save had just finished, landing hole 16 in behind the scorecard.
+// Awaited, so the button stays disabled until the route has changed: re-enabling mid-
+// transition let a second tap land hole 16 in behind the scorecard.
 function goToScorecard() {
   return router.push({ name: 'match', params: { tournamentId: props.tournamentId, matchId: props.matchId } })
 }
@@ -126,25 +117,21 @@ async function saveAndNext() {
       hole_number: holeNumber.value,
       scores: entries.value.map((e) => ({ team_id: e.teamId, player_id: e.playerId, strokes: e.strokes })),
     })
-    // This hole closed the match out, so there is no next hole to walk to. The scorecard
-    // shows the result and each hole taps back here, so a wrong score is a tap from being
-    // fixed — the toast only explains why Save didn't land on the next hole.
+    // No next hole to walk to. Each hole taps back from the scorecard, so a wrong score is still
+    // a tap from being fixed and the toast only explains why Save did not move on.
     if (status.finished) {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
       await goToScorecard()
       return
     }
-    // The page loads once, so without this the scores just written stay invisible to it:
-    // the next hole's running totals would omit them, and coming back to this hole would
-    // show par again — and saving from there would overwrite what was just recorded.
+    // The page loads once, so without this the next hole's running totals omit what was just
+    // written, and coming back here shows par — saving from there would overwrite it.
     await refresh()
     await goNext()
   } catch (err) {
-    // 409 means the match ended before this hole — a tab that went stale walking forward.
-    // The server answers 409 for two different refusals — a shut scoring window, and a
-    // decided match asked for a hole it never reached — and this cannot tell them apart, so
-    // the sentence has to hold for both. Naming one of them describes the other wrongly.
+    // The server answers 409 for a shut window and for a hole a decided match never reached, and
+    // this cannot tell them apart — so the sentence has to hold for both.
     if (err instanceof ApiError && err.status === 409) {
       finishedByWrite.value = true
       refusedHole.value = holeNumber.value
@@ -161,11 +148,8 @@ async function saveAndNext() {
   <PageLayout>
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
-        <!-- This page has no hero, so loading is otherwise a blank screen — and it's the one
-             most likely to be opened on a weak connection, standing on a tee box. Mirrors
-             the real layout: sticky context block, a strip per player, then Save. Two
-             strips, not four: the team formats use two, and under-promising closes up
-             rather than leaving a gap. -->
+        <!-- No hero here, so loading is otherwise a blank screen on the page most likely to be opened
+             on a weak connection. Two strips, not four: under-promising closes up rather than gaps. -->
         <div data-testid="skeleton">
           <div class="-mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 pb-3 shadow">
             <SkeletonBlock radius="none" class="h-20 w-full" />

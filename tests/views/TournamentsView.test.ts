@@ -174,10 +174,8 @@ describe('TournamentsView', () => {
     expect(w.text()).toContain('Bygone')
   })
 
-  // Awaited: the component has to mount with the hash already resolved, the way router-view
-  // mounts it. Left un-awaited it mounts on the cups and only flips once the navigation
-  // drains — which fetches the archive too, and would pass whether or not the hash reached
-  // the first frame.
+  // Awaited so the component mounts with the hash resolved, as router-view does. Un-awaited it
+  // mounts on the cups and flips later, passing whether or not the hash reached the first frame.
   it('opens on the tab the hash names, without loading the other one', async () => {
     await router.push('/tournaments#participants')
     const w = await loaded()

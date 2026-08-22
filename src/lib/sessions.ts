@@ -27,9 +27,8 @@ export function groupIntoSessions(matches: MatchResult[]): Session[] {
 }
 
 /**
- * The session worth putting on the landing page: the earliest with anything left to play,
- * which is the one being played once it has teed off. Once everything has finished there
- * is no next session — the final standing is the answer and the schedule is history.
+ * The earliest session with anything left to play, which is the one being played once it has
+ * teed off. Nothing left means the final standing is the answer.
  */
 export function currentSession(matches: MatchResult[]): Session | null {
   return groupIntoSessions(matches).find((s) => s.matches.some((m) => !m.finished)) ?? null

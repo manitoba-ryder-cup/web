@@ -73,9 +73,8 @@ describe('DashboardView', () => {
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([])
   })
 
-  // The cup's identity is resolved once per session and then fixed, so the record has to
-  // be re-read by id. Taking it from the store instead would leave a tab open through an
-  // edit showing the phase the old start date implied.
+  // The identity is fixed for the session, so the record is re-read by id — from the store, a
+  // tab open through an edit shows the phase the old start date implied.
   it('reads the cup record itself rather than the one the session resolved with', async () => {
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([{ ...TOURNAMENT, location: 'Stale City' }])
     vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, location: 'Current City' })
@@ -91,9 +90,8 @@ describe('DashboardView', () => {
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball')])
     const wrapper = mountDashboard()
 
-    // An unloaded page is indistinguishable from a cup with nothing left to play, so the
-    // session heading is a claim about data that hasn't arrived. Matched without regard to
-    // case, so the guard survives the copy being reworded.
+    // An unloaded page looks exactly like a cup with nothing left to play. Matched case-
+    // insensitively so the guard survives the copy being reworded.
     expect(wrapper.text()).not.toMatch(/next out/i)
     expect(wrapper.find('[data-testid="hero-skeleton"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="body-skeleton"]').exists()).toBe(true)
@@ -167,11 +165,8 @@ describe('DashboardView', () => {
     expect(hero.text()).toContain('3½')
   })
 
-  // Matters at the start: the countdown ran against a tee time that had already passed.
-  //
-  // Asserts the points, not the absence of the countdown — `useCountdown` returns null for
-  // a target in the past, so once the fixture date passes, "no countdown" stops telling the
-  // two heroes apart and the test quietly stops testing anything.
+  // Asserts the points, not the absence of a countdown: `useCountdown` returns null for a past
+  // target, so once the fixture date passes that stops telling the two heroes apart.
   it('takes the phase from the record rather than re-deriving it from the results', async () => {
     vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([

@@ -13,10 +13,8 @@ const cup = useCupStore()
 cup.load().catch(() => {})
 const scoresTo = computed(() => cup.scoresTo)
 
-// Which tab is lit is navSection's call, not RouterLink's isActive, which only matches the
-// exact route a tab points at: drilling from the scores into a match would blank the bar,
-// with no way to say a match still belongs to Scores. The header asks the same function,
-// so the two navs always name the same section.
+// navSection, not RouterLink's isActive, which matches only the exact route a tab points
+// at — drilling from the scores into a match would blank the bar.
 const section = computed(() => navSection(route))
 
 const tabs = computed((): { to: string; label: string; icon: Component; section: NavSection }[] => [

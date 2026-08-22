@@ -27,11 +27,8 @@ app.use(VueQueryPlugin, {
         // between tabs is free and short enough that the draft never sits stale for long.
         staleTime: 30_000,
         refetchOnWindowFocus: true,
-        // One, and none for a request that already waited out its own deadline: retrying
-        // that spends a second fifteen seconds before the view can offer Try again, which
-        // is the opposite of what bounding the request was for. Anything else gets the one
-        // retry a blip deserves — the default of three puts ~7s of backoff behind the
-        // skeleton, and a save on the hole page waits on this refresh too.
+        // None for a request that already waited out its deadline — retrying spends a second fifteen
+        // seconds in front of the Try again that bounding it was meant to bring forward.
         retry: shouldRetry,
       },
     },

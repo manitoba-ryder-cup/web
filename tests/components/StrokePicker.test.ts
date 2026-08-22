@@ -7,10 +7,8 @@ const base = { modelValue: 4, par: 4, name: 'Justin Rabe' }
 const tiles = (w: ReturnType<typeof mount>) => w.findAll('[data-stroke]')
 const chosen = (w: ReturnType<typeof mount>) => tiles(w).filter((t) => t.attributes('aria-checked') === 'true')
 
-// jsdom has no layout, so every offsetLeft and clientWidth reads 0 and the strip has
-// nothing to position against. It does keep a scrollLeft that was assigned, so giving the
-// tiles measurements makes where the strip parks observable — which is the one thing about
-// this control that cannot be inferred from its markup.
+// jsdom has no layout, so offsetLeft and clientWidth read 0 — but an assigned scrollLeft is
+// kept, so stubbing the measurements makes where the strip parks observable.
 const TILE = 90
 const VIEWPORT = 390
 async function withLayout(w: ReturnType<typeof mount>) {
@@ -88,9 +86,8 @@ describe('StrokePicker', () => {
     expect(w.emitted('update:modelValue')).toBeUndefined()
   })
 
-  // Twenty tiles, one control. Only the chosen stroke is in the tab order, so tabbing
-  // towards Save walks past one strip per player rather than twenty tiles each — and
-  // cannot leave a score behind on the way.
+  // Only the chosen stroke is in the tab order, so tabbing towards Save walks one strip per
+  // player rather than twenty tiles each, and cannot leave a score behind.
   it('is a single tab stop on the chosen stroke', () => {
     const w = mount(StrokePicker, { props: base })
 
@@ -158,9 +155,8 @@ describe('StrokePicker', () => {
     expect(labels.some((l) => l.includes('Quadruple'))).toBe(false)
   })
 
-  // Par, not the score: it is what makes every player's strip share a column, so a hole
-  // can be read down it. Anchoring on the score would line the fills up instead, which is
-  // exactly the information the layout is meant to carry.
+  // Par, not the score: it is what makes every strip share a column. Anchoring on the score
+  // would line the fills up instead, losing what the layout carries.
   it('pins the strip to par, wherever the score sits', async () => {
     // A birdie, which is on screen once par is centred — so nothing nudges it afterwards
     // and the offset is purely the anchor. Anchored on the score it would be centreOf(3).

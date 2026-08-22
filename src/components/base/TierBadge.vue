@@ -2,9 +2,8 @@
 import { computed } from 'vue'
 import { tierBadge } from '@/lib/tier'
 
-// A player's tier as a coloured pill. The label is the tier itself and is not passed in:
-// when callers supplied it, one page read "GOLD" and another "GOLD FLIGHT". Renders
-// nothing when the tier is unset, so callers don't each need a v-if.
+// The label is the tier itself, not passed in: callers gave one page "GOLD" and another
+// "GOLD FLIGHT". Renders nothing when unset so callers need no v-if.
 const props = withDefaults(defineProps<{ tier?: string }>(), { tier: '' })
 const classes = computed(() => tierBadge(props.tier))
 </script>

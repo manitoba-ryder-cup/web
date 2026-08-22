@@ -2,9 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-// public/_headers is applied by Cloudflare Pages, so nothing in the app exercises it and a
-// deletion would ship silently. These assert the parts that are load-bearing rather than
-// the whole file — the values themselves are free to change.
+// Nothing in the app exercises it, so a deletion would ship silently. These assert the
+// load-bearing parts; the values themselves are free to change.
 const headers = readFileSync(resolve(__dirname, '../../public/_headers'), 'utf8')
 
 function directive(name: string): string {

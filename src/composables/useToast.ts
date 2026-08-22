@@ -1,8 +1,7 @@
 import { reactive } from 'vue'
 
-// A tiny global toast queue: transient confirmations for actions whose result isn't
-// otherwise visible (login, creating a match). Module-level state makes it a singleton —
-// `toast.success(...)` anywhere feeds the one <AppToasts> container mounted in the shell.
+// Module-level state makes it a singleton, so `toast.success(...)` anywhere feeds the one
+// <AppToasts> mounted in the shell.
 export type ToastVariant = 'success' | 'error'
 export interface Toast {
   id: number
