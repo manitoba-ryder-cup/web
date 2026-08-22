@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue'
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { useCoarseClock } from '@/composables/useCoarseClock'
+import { usePollWhileInPlay } from '@/composables/usePollWhileInPlay'
 import { playerInitials, resultText } from '@/lib/matchResult'
 import { formatTeeTime } from '@/lib/teeTime'
-import { cupInPlay, holeOpen } from '@/lib/scoringWindow'
+import { holeOpen } from '@/lib/scoringWindow'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -21,12 +22,13 @@ const auth = useAuthStore()
 
 // The cup, not this match: the ScoreBar pinned at the top carries every match, so an afternoon
 // pairing opened during the morning session would sit on a frozen standing.
-const inPlay = ref(false)
+const now = useCoarseClock()
+const poll = usePollWhileInPlay(now)
 const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
   () => props.matchId,
   {
-    intervalMs: () => (inPlay.value ? 20_000 : 300_000),
+    intervalMs: poll.intervalMs,
     parOptional: true,
   },
 )
@@ -35,8 +37,7 @@ const leftTeam = computed(() => teams.value.find((t) => t.id === left.value?.tea
 const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.team_id) ?? null)
 // A row leading nowhere invites a spectator off the card that shows more than the page behind
 // it. Clock-driven: the window opens with time, not with anything in the data.
-const now = useCoarseClock()
-watchEffect(() => (inPlay.value = cupInPlay(results.value, now.value)))
+poll.follow(() => results.value)
 
 const openHoles = computed(() => {
   if (!auth.hasScope(SCOPE_SCORES_WRITE) || !match.value) return new Set<number>()

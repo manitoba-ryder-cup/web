@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import type { MatchResult, Tournament, TournamentPhase, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
-import { useCoarseClock } from '@/composables/useCoarseClock'
-import { cupInPlay } from '@/lib/scoringWindow'
+import { usePollWhileInPlay } from '@/composables/usePollWhileInPlay'
 import { useCupStore } from '@/stores/cup'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
@@ -26,8 +25,7 @@ const cup = useCupStore()
 
 // Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
 // request turns that empty list full — a page open on the morning of would never see it.
-const clock = useCoarseClock()
-const inPlay = ref(false)
+const poll = usePollWhileInPlay()
 const { data, error, loading, retry } = useAsync(
   ['dashboard'],
   async () => {
@@ -50,13 +48,13 @@ const { data, error, loading, retry } = useAsync(
     }
     return { tournament, teams, results }
   },
-  { intervalMs: () => (inPlay.value ? 20_000 : 300_000) },
+  { intervalMs: poll.intervalMs },
 )
 
 const tournament = computed(() => data.value?.tournament ?? null)
 const teams = computed(() => data.value?.teams ?? [])
 const results = computed(() => data.value?.results ?? [])
-watchEffect(() => (inPlay.value = cupInPlay(results.value, clock.value)))
+poll.follow(() => results.value)
 const { left, right, leftColors, rightColors } = useTeamPair(teams)
 
 // `?captains=false` forces the earlier state for previewing against the populated demo.
