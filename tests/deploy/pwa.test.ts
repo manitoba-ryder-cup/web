@@ -56,6 +56,13 @@ describe('PWA configuration', () => {
 
   // iOS ignores the manifest's icons on older versions, so the home-screen install falls
   // back to a screenshot of the page unless this is declared.
+  // Without it env(safe-area-inset-*) reads 0 on iOS, so the tab bar cannot move its
+  // labels off the home indicator and the fix in AppTabBar silently does nothing.
+  it('asks for the viewport the safe-area insets depend on', () => {
+    const html = readFileSync(resolve(root, 'index.html'), 'utf8')
+    expect(html).toMatch(/name="viewport"[^>]*viewport-fit=cover/)
+  })
+
   it('declares an apple-touch-icon in the HTML', () => {
     expect(readFileSync(resolve(root, 'index.html'), 'utf8')).toContain('rel="apple-touch-icon"')
   })

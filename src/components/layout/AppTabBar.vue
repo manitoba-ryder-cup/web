@@ -31,7 +31,12 @@ const tabs = computed((): { to: string; label: string; icon: Component; section:
 const resolved = computed(() => tabs.value.map((t) => ({ ...t, isActive: t.section === section.value })))
 </script>
 <template>
-  <nav class="fixed inset-x-0 bottom-0 z-10 border-t border-white/10 bg-mrc-ink text-white md:hidden" aria-label="Primary">
+  <!-- The inset lifts the labels off the iPhone's home indicator, which floats over the
+       page and sat on top of them. Zero on a device that has none. -->
+  <nav
+    class="fixed inset-x-0 bottom-0 z-10 border-t border-white/10 bg-mrc-ink pb-[env(safe-area-inset-bottom)] text-white md:hidden"
+    aria-label="Primary"
+  >
     <ul class="flex">
       <li v-for="t in resolved" :key="t.label" class="flex-1">
         <RouterLink :to="t.to" custom v-slot="{ href, navigate }">

@@ -122,4 +122,13 @@ describe('AppTabBar', () => {
     const w = await mountBar()
     expect(w.get('nav').classes()).toContain('md:hidden')
   })
+
+  // A proxy, and worth being honest about: jsdom has no safe area, so this cannot show the
+  // labels clearing the iPhone's home indicator — only that the padding that lifts them is
+  // still asked for. Measured in a browser with the inset simulated, it moves the labels
+  // from 7px above the screen bottom to 41px, clear of a 34px indicator.
+  it('keeps the bottom inset that lifts the labels off the home indicator', async () => {
+    const w = await mountBar()
+    expect(w.get('nav').classes()).toContain('pb-[env(safe-area-inset-bottom)]')
+  })
 })

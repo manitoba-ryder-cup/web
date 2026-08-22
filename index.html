@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: installed on an iPhone the page already runs under the home
+         indicator, and without this env(safe-area-inset-*) reads 0, so nothing can move
+         out from under it. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#212121" />
     <!-- iOS reads none of the manifest's icon or display fields on older versions, so the
          home-screen install needs these separately. -->
