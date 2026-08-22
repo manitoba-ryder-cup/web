@@ -5,11 +5,11 @@ import { useAsync } from '@/composables/useAsync'
 
 // One component factory for both shapes: a fixed key, or one that follows `id` the way a
 // view's key follows its route param.
-function harness<T>(fetcher: () => Promise<T>) {
+function harness<T>(fetcher: () => Promise<T>, options: Parameters<typeof useAsync>[2] = {}) {
   const id: Ref<string> = ref('first')
   const comp = defineComponent({
     setup() {
-      return { id, ...useAsync(() => ['thing', id.value], fetcher) }
+      return { id, ...useAsync(() => ['thing', id.value], fetcher, options) }
     },
     template: '<div/>',
   })
@@ -139,6 +139,21 @@ describe('useAsync', () => {
     await pending
     await flushPromises()
     expect(w.vm.data).toBe('second')
+  })
+
+  // The load-once flow says so for a reason: a refetch arriving mid-entry moves the ground
+  // under someone with strokes already dialled in.
+  it('leaves a load-once query alone when the tab comes back', async () => {
+    let calls = 0
+    harness(() => Promise.resolve(++calls), { refetchOnFocus: false }).mountIt()
+    await flushPromises()
+    expect(calls).toBe(1)
+
+    window.dispatchEvent(new Event('visibilitychange'))
+    window.dispatchEvent(new Event('focus'))
+    await flushPromises()
+
+    expect(calls).toBe(1)
   })
 
   // A poll that blips must not blank a page someone is reading.

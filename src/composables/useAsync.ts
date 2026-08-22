@@ -6,6 +6,9 @@ interface UseAsyncOptions {
   // When set, silently re-fetch on this cadence (ms) while the tab is visible, so live
   // views (scores, standings) stay current without a manual refresh.
   intervalMs?: number
+  // Off for a view that must not have the ground move under it — coming back to the tab
+  // is otherwise a refetch, which is the one thing a load-once flow asked not to happen.
+  refetchOnFocus?: boolean
 }
 
 // Standard fetch state for every data view: data (undefined until loaded), a friendly
@@ -20,6 +23,7 @@ export function useAsync<T>(key: MaybeRefOrGetter<readonly unknown[]>, fetcher: 
     queryKey: computed(() => toValue(key)),
     queryFn: fetcher,
     refetchInterval: options.intervalMs ?? false,
+    refetchOnWindowFocus: options.refetchOnFocus ?? true,
     // A hidden tab is not being read; it catches up when it comes back.
     refetchIntervalInBackground: false,
   })
