@@ -236,9 +236,8 @@ describe('PlayerView stats tab', () => {
     expect(open[0].text()).toContain('Opponents')
   })
 
-  // Partners and opponents are profiles too, reached from inside a profile. The list the
-  // reader started in hasn't changed, so the back link's `from` travels with them rather
-  // than resetting to this year's teams two names down the chain.
+  // The list the reader started in has not changed, so `from` travels with them rather than
+  // resetting two names down the chain.
   it('carries where the reader came from onto the profiles it links to', async () => {
     await router.replace({ path: '/players/p1', query: { from: 'history' } })
     const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
@@ -297,9 +296,8 @@ describe('PlayerView stats tab', () => {
 
     expect(open()).toHaveLength(0)
   })
-  // The hero is rendered outside AsyncState, so the error branch does not cover it. A
-  // failed load after an :id change would otherwise leave the last player standing under
-  // the new player's URL — the symptom this whole page was fixed for, in the error path.
+  // The hero is outside AsyncState, so a failed load after an :id change leaves the last player
+  // standing under the new player's URL — the same symptom, in the error path.
   it('shows no hero at all when the player the URL names fails to load', async () => {
     await router.replace('/players/p1')
     const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })

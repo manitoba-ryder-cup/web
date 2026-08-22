@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import SkeletonBlock from './SkeletonBlock.vue'
 
-// `card` picks between the two list shapes this app actually has: a stack of separate
-// bordered cards (AdminView's LinkCards) and one bordered container with dividers
-// (everything else). A single shape would misrepresent half the pages that use this.
+// Two shapes because the app has two: separate bordered cards, and one bordered container
+// with dividers. A single shape misrepresents half the pages using this.
 withDefaults(defineProps<{ rows?: number; card?: boolean }>(), { rows: 5, card: false })
 </script>
 <template>

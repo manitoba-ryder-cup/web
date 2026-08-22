@@ -15,9 +15,8 @@ const { left, right, colorFor } = useMatchSides(
 // all-square or unstarted match has neither, and stays grey.
 const strong = computed(() => (props.match.finished ? props.match.winner_team_id : props.match.leader_team_id))
 
-// A lead fills solid whether or not the match is over. This row tells the players in the
-// match where they stand and they already know it's live, so it doesn't spend a lighter
-// shade separating projected from decided the way the standings bar has to.
+// Solid whether or not the match is over: the players reading it know it is live, so it does
+// not spend a lighter shade separating projected from decided the way the standings bar has to.
 function sideClass(side: MatchSide | null): string {
   if (!strong.value || side?.team_id !== strong.value) return 'bg-mrc-panel-alt'
   return `${colorFor(side.team_id).solid} font-semibold text-white`

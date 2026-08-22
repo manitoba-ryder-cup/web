@@ -131,9 +131,8 @@ describe('TournamentView polling', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(() => {
     vi.useRealTimers()
-    // mockResolvedValue outlives clearAllMocks, which resets calls and not implementations
-    // — left set, the next describe added below inherits this window-shifted single match
-    // instead of the file's fixture.
+    // mockResolvedValue outlives clearAllMocks, which resets calls and not implementations, so a
+    // describe added below would inherit this window-shifted fixture.
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([LIVE_MATCH])
   })
 

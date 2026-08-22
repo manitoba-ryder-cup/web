@@ -28,9 +28,8 @@ describe('fetchWithTimeout', () => {
         }),
     )
 
-    // Caught as it is created, not after the clock is advanced: the rejection lands while
-    // the timers run, and a promise that rejects before anything is watching is an
-    // unhandled rejection — which fails the run rather than the assertion.
+    // Caught as it is created: the rejection lands while the timers run, and one that rejects
+    // unwatched is an unhandled rejection, which fails the run rather than the assertion.
     const settled = fetchWithTimeout('/api/scorecard/v1/tournaments').catch((e: unknown) => e)
     await vi.advanceTimersByTimeAsync(20_000)
     const err = await settled
@@ -92,9 +91,8 @@ describe('fetchWithTimeout', () => {
     expect(await settled).toBeInstanceOf(ApiError)
   })
 
-  // Losing signal partway through a response is likelier than losing it before the status
-  // line. Read as an empty success, it renders as "nothing here yet" — a claim about data
-  // that never arrived, with no error and no Try again.
+  // Read as an empty success it renders "nothing here yet" — a claim about data that never
+  // arrived, with no error and no Try again.
   it('does not turn a body that fails mid-read into an empty success', async () => {
     vi.stubGlobal('fetch', () =>
       Promise.resolve({

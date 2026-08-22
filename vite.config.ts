@@ -20,10 +20,8 @@ export default defineConfig({
         name: 'Manitoba Ryder Cup',
         short_name: 'Ryder Cup',
         description: 'Live scores, matches and players for the Manitoba Ryder Cup.',
-        // Both are the header colour (bg-mrc-ink). theme_color keeps the status bar from
-        // reading as a band above the header; background_color is the ground the launcher
-        // centres the icon on, and the icon's own left half is brand blue — on a blue
-        // ground it disappears and leaves half a trophy.
+        // Both the header colour. background_color is the ground the launcher centres the icon on,
+        // and the icon's left half is brand blue — on a blue ground it leaves half a trophy.
         theme_color: '#212121',
         background_color: '#212121',
         display: 'standalone',
@@ -79,9 +77,8 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api\/auth/, ''),
-        // heimdall scopes the refresh_token cookie to Path=/v1/refresh, which is
-        // heimdall-relative and doesn't match the proxied /api/auth/v1/refresh path,
-        // so the browser would never send it back. Rewrite Set-Cookie Path to match.
+        // heimdall scopes the cookie to Path=/v1/refresh, which does not match the proxied
+        // /api/auth/v1/refresh, so the browser would never send it back.
         cookiePathRewrite: { '/v1/refresh': '/api/auth/v1/refresh', '/': '/api/auth' },
       },
       '/api/scorecard': { target: 'http://localhost:5000', changeOrigin: true, rewrite: (p) => p.replace(/^\/api\/scorecard/, '') },

@@ -1,9 +1,6 @@
 /**
- * The proxy's decisions, separated from the Workers runtime that acts on them.
- *
- * Nothing here touches a Cloudflare global, so it type-checks and tests against plain
- * Request/Response like any other module in this repo. index.ts holds the parts that can
- * only run on the edge — the cache, waitUntil, the upstream fetch.
+ * The proxy's decisions, with no Cloudflare global touched — so this type-checks and tests
+ * against plain objects rather than the Workers runtime.
  */
 
 export interface Route {
@@ -29,25 +26,16 @@ export function upstreamUrl(origin: string, prefix: string, pathname: string, se
 }
 
 /**
- * Anonymous GETs only.
- *
- * The Authorization check is what keeps a live tournament correct: only scorers hold a
- * token, and a scorer submits a hole then immediately refetches, so handing them their own
- * pre-submission data is the one staleness that would genuinely mislead. Cookies are
- * excluded for the same reason — a request carrying a session is somebody's own view of
- * their own state, not a shared spectator read.
+ * Anonymous GETs only. Only scorers hold a token, and a scorer submits a hole then refetches,
+ * so handing them their own pre-submission data is the one staleness that would mislead.
  */
 export function isCacheable(request: Request): boolean {
   return request.method === 'GET' && !request.headers.has('Authorization') && !request.headers.has('Cookie')
 }
 
 /**
- * Only store a 200 the origin explicitly marked public — the services decide what is
- * cacheable (see scorecard's rest/cache.go), because they are what knows whether a
- * tournament is being scored right now.
- *
- * Errors are excluded because a cached 404 outlives whatever caused it, and the Cache API
- * rejects a response carrying Set-Cookie outright, so that is checked rather than thrown on.
+ * The services decide what is cacheable, because they are what knows whether a tournament is
+ * being scored right now.
  */
 export function isStorable(response: Response): boolean {
   return (
@@ -58,10 +46,8 @@ export function isStorable(response: Response): boolean {
 }
 
 /**
- * Re-anchor a Set-Cookie Path under the proxied prefix:
- *   Path=/v1/refresh -> Path=/api/auth/v1/refresh
- *   Path=/           -> Path=/api/auth
- * Any other Path is left as-is.
+ * Re-anchor a Set-Cookie Path under the proxied prefix: /v1/refresh becomes
+ * /api/auth/v1/refresh, and / becomes /api/auth.
  */
 export function rewriteCookiePath(cookie: string, prefix: string): string {
   return cookie.replace(/;\s*Path=\/v1\/refresh\b/i, `; Path=${prefix}/v1/refresh`).replace(/;\s*Path=\/(?=\s*(;|$))/i, `; Path=${prefix}`)

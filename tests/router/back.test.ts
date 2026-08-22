@@ -29,10 +29,8 @@ describe('a profile’s back link', () => {
   })
 })
 
-// The page answered to /players until the archive moved off it. Home screens are already
-// installed against that address, and profiles were shared from it. Navigated rather than
-// resolved: a redirect is applied on the way through, so resolving alone reports the
-// redirect record and says nothing about where anyone lands.
+// Home screens are installed against the old address. Navigated rather than resolved: a
+// redirect applies on the way through, so resolving alone reports the redirect record.
 describe('the old players address', () => {
   beforeEach(() => setActivePinia(createPinia()))
 

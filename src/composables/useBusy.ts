@@ -1,10 +1,8 @@
 import { ref } from 'vue'
 import { toast } from '@/composables/useToast'
 
-// Runs one write action at a time and reports failures as a toast — the shared shell behind
-// the admin mutations (draft, captain, lineup). `key` distinguishes per-row actions (pass a
-// player id) from a single-flight page (pass `true`); isBusy(key) / isBusy() reads it back.
-// The action does its own optimistic updates; `onError` (e.g. a refetch) re-syncs on failure.
+// `key` distinguishes per-row actions from a single-flight page. The action does its own
+// optimistic update; `onError` re-syncs when it fails.
 export function useBusy() {
   const busy = ref<string | true | null>(null)
 

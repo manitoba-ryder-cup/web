@@ -55,9 +55,8 @@ describe('useMatchContext', () => {
     getMatchHoles.mockReset().mockResolvedValue(holes)
   })
 
-  // Only hole entry asks to be left alone by a refetch, and it does that by passing no
-  // interval at all. `false` means "do not poll" — a live view saying the cup is over for
-  // the day still wants the tab coming back to bring it up to date.
+  // Hole entry asks by passing no interval at all. `false` means do not poll — a live view
+  // whose cup is over for the day still wants the tab coming back to refresh it.
   it('keeps the focus refetch for a view that asked not to poll', async () => {
     mount(harness('m1', { intervalMs: false }))
     await flushPromises()

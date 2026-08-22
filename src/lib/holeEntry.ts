@@ -1,10 +1,8 @@
 import type { Hole, HoleStatus, MatchSide } from '@/api/types'
 import { playerNames, playerSurnames } from '@/lib/matchResult'
 
-// One stroke strip on the hole-entry page. playerId is null for a one-ball format, where
-// the score belongs to the team. `scored` separates a recorded par from par-as-a-default,
-// which the strip renders differently. priorStrokes/priorPar are the round up to but not
-// including this hole, so the strip can show a running total that moves with the choice.
+// `scored` separates a recorded par from par-as-a-default, which the strip renders
+// differently. priorStrokes/priorPar are the round up to but not including this hole.
 export interface HoleEntry {
   key: string
   teamId: string

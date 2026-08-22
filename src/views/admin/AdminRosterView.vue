@@ -17,10 +17,8 @@ import BaseAlert from '@/components/base/BaseAlert.vue'
 import TierDot from '@/components/base/TierDot.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
 
-// The field for one cup: who is entered, and what is true of them that year. Tier,
-// biography and handicap live on the entry rather than the player — a player has a
-// different flight and a different write-up each time — so this is the only place they
-// can be edited, and it is scoped to a tournament for the same reason.
+// Tier, biography and handicap live on the entry, not the player — a different flight and
+// write-up each cup — so this is the only place they can be edited.
 const props = defineProps<{ id: string }>()
 
 const { data, error, loading, refresh, retry } = useAsync(
@@ -43,9 +41,8 @@ const available = computed(() => {
   return [...(data.value?.players ?? [])].filter((p) => !entered.has(p.id)).sort(byName)
 })
 
-// The tee-box colours a flight is named for, most common first. `silver` is in the
-// palette but has never been used, so it sits last rather than being dropped — a cup that
-// wants it shouldn't need a code change.
+// `silver` is in the palette but unused, so it sits last rather than being dropped: a cup
+// that wants it should not need a code change.
 const TIERS = ['gold', 'blue', 'white', 'black', 'silver']
 
 const { isBusy, run } = useBusy()
@@ -63,9 +60,8 @@ function open(entry: TournamentPlayer) {
   draft.value = { tier: entry.tier, biography: entry.biography, hdcp: String(entry.hdcp) }
 }
 
-// Only what actually changed is sent. The update is partial precisely so a biography can
-// be written without restating a handicap the writer may not know — sending the whole
-// entry back would give that away.
+// Partial precisely so a biography can be written without restating a handicap the writer may
+// not know — sending the whole entry back would give it away.
 function changes(entry: TournamentPlayer) {
   const out: { tier?: string; biography?: string; hdcp?: number } = {}
   if (draft.value.tier !== entry.tier) out.tier = draft.value.tier

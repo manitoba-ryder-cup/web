@@ -5,18 +5,8 @@ import type { PlayerRecord } from '@/api/types'
 import PlayerAvatar from './PlayerAvatar.vue'
 import TierBadge from '@/components/base/TierBadge.vue'
 
-// A photo-forward player card: square headshot, then career form (W-L-T · cups). tier is
-// shown only where a player has one (the current roster) — it's per-tournament, so the
-// all-players listing omits it.
-//
-// tournamentId follows the same rule, and opens the profile with that cup already
-// expanded: a card showing this year's flight should land on this year's write-up rather
-// than make you find it, and the rest of the player's career is right there under it.
-//
-// `from` names the list this card was tapped in, so the profile's back link can offer it.
-// It rides in the URL rather than in navigation state because the header derives that link
-// purely from the route — state would answer differently after a refresh or on a link
-// someone was sent.
+// `from` rides in the URL, not navigation state: the header derives the back link from the
+// route alone, so state would answer differently after a refresh or on a shared link.
 const props = defineProps<{
   id: string
   firstName: string

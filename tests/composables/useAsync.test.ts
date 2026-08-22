@@ -80,14 +80,11 @@ describe('useAsync', () => {
     expect(w.vm.loading).toBe(false)
   })
 
-  // Views render their identity — a hero, a title — outside AsyncState, where the error
-  // branch does not cover it. Holding the previous answer would put the last player's name
-  // under the new player's URL. The key is what guarantees this now: a different id is a
-  // different cache entry, so there is nothing of the old one to show.
+  // Views render their identity outside AsyncState, where the error branch does not cover it,
+  // so holding the previous answer puts the last player's name under the new player's URL.
   it('shows nothing of the previous answer once the key changes', async () => {
-    // Asserted while the second request is still out, not after it lands: holding the old
-    // answer only for the duration of the new load is exactly the bug, and a check that
-    // waits for the end cannot see it.
+    // Asserted while the second request is out: holding the old answer only for the duration of
+    // the new load is the bug, and a check that waits for the end cannot see it.
     let release: (v: string) => void = () => {}
     let first = true
     const { comp, id } = harness(() => {

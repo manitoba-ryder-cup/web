@@ -7,9 +7,8 @@ defineProps<{ to: string; active: boolean }>()
 </script>
 <template>
   <RouterLink :to="to" custom v-slot="{ href, navigate }">
-    <!-- accent-soft, the shade the tab bar marks with: the accent itself is a deep purple
-         and reads as a disabled item against the header's ink. min-h-11 because md starts
-         at tablet width, where this nav replaces the bar and is still thumbed. -->
+    <!-- accent-soft: the accent itself is a deep purple and reads as disabled against the
+         header's ink. min-h-11 because md starts at tablet width, where this is still thumbed. -->
     <a
       :href="href"
       @click="navigate"

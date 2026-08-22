@@ -4,12 +4,8 @@ import type { TournamentPlayer, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
 import PlayerRow from './PlayerRow.vue'
 
-// The two drafted rosters, side by side, as a team sheet. Named by captain, painted by
-// colour: blue-left/red-right already governs which column a team lands in, so the header
-// says which is which rather than leaving it to be inferred from the order.
-//
-// Capped rather than filling the content column: each row pins its tier dot right, and a
-// full-width desktop column strands the dot a paragraph from the name it belongs to.
+// Capped rather than filling the content column: each row pins its tier dot right, and a full
+// desktop column strands the dot a paragraph from the name it belongs to.
 const props = defineProps<{ players: TournamentPlayer[]; teams: TournamentTeam[] }>()
 
 // Captain first — the column is headed with his name, so he leads it rather than turning up

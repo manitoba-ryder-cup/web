@@ -4,10 +4,8 @@ import type { TournamentPlayer } from '@/api/types'
 import TierDot from '@/components/base/TierDot.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 
-// One player line, shared by the team sheet and the pre-draft field: a face, the name
-// (linking to the profile, where the year's bio lives), a tier dot, and career form.
-// Two of these sit side by side on a phone, so the tier stays a dot rather than the text
-// badge the player cards use — there is not the width for both a face and a word.
+// Two of these sit side by side on a phone, so the tier stays a dot rather than the text badge
+// the cards use — there is no width for both a face and a word.
 defineProps<{ player: TournamentPlayer }>()
 
 function record(p: TournamentPlayer): string {

@@ -16,9 +16,8 @@ import CaptainMatchup from '@/components/tournament/CaptainMatchup.vue'
 import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue'
 
 const props = defineProps<{ id: string }>()
-// Poll so the standings + results stay live during a round without a manual refresh.
 // Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
-// request turns that empty list full — so a page open on the morning of would never see it.
+// request turns that empty list full.
 const clock = useCoarseClock()
 const inPlay = ref(false)
 const { data, error, loading, retry } = useAsync(
@@ -57,9 +56,8 @@ const hasCaptains = computed(() => !!(teams.value[0]?.captain && teams.value[1]?
     </template>
     <!-- Standings bar pinned above the hero. -->
     <template #top>
-      <!-- Reserved rather than omitted: the bar is the first thing on the page, so letting
-           it appear late pushes everything below it down after the reader has started. The
-           h-20 and the white wrapper are ScoreBar's own, so the swap is height-neutral. -->
+      <!-- Reserved, not omitted: the bar is the first thing on the page, so letting it appear late
+           pushes everything down after the reader has started. -->
       <div v-if="loading" data-testid="scorebar-skeleton" class="bg-mrc-surface shadow">
         <SkeletonBlock radius="none" class="h-20 w-full" />
       </div>

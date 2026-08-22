@@ -17,9 +17,8 @@ export interface HoleRow {
   state: { text: string; cls: string } | null
 }
 
-// A won hole gets a faint team-colour tint behind the coloured digit — scannable down the
-// column, softer than a solid fill. In a side's own view the same mark falls on the score
-// that took it. A played-but-unmarked hole is plain ink; an unplayed one is faint.
+// A tint rather than a fill: scannable down the column and softer. A played-but-unmarked hole
+// is plain ink; an unplayed one is faint.
 export function scoreClass(won: boolean, val: number | null, meta: TeamColorClasses): string {
   if (won) return `${meta.tint} ${meta.text} font-bold`
   return val != null ? 'text-mrc-ink' : 'text-mrc-faint'

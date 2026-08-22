@@ -7,9 +7,8 @@ import type { MatchResult } from '@/api/types'
 const teeOff = new Date('2026-09-18T13:00:00Z')
 const at = (hours: number) => new Date(teeOff.getTime() + hours * 3600000)
 
-// A match as the API sends it: the window straddling the tee time by the server's 2h/12h.
-// Those numbers are the server's to change — restating them here would only assert this
-// fixture against itself, so the tests below read the bounds off the fixture.
+// The window straddles the tee time by the server's 2h/12h, which are the server's to change
+// — so these read the bounds off the fixture rather than restating them.
 const matchAt = (tee: Date, opensBefore = 2, closesAfter = 12) =>
   ({
     tee_time: tee.toISOString(),
@@ -67,9 +66,8 @@ describe('scoringOpen', () => {
     expect(scoringOpen(tomorrow, at(0))).toBe(false)
   })
 
-  // The server owns the numbers now, so a change there has to reach the UI without a
-  // release here. A match carrying a window this client has never heard of must be gated
-  // on what it was sent, not on what 2h/12h would have implied.
+  // A change there has to reach the UI without a release here, so a match carrying a window
+  // this client never heard of is gated on what it was sent.
   it('follows a window the server widened, without knowing the new numbers', () => {
     const wide = matchAt(teeOff, 6, 30)
     expect(scoringOpen(wide, at(-5))).toBe(true)
@@ -82,9 +80,8 @@ describe('scoringOpen', () => {
   })
 })
 
-// The API is what decides, so a bound it did not send must not become a UI that refuses to
-// open. Permissive costs a clean 409; strict silently offers no way to record a legitimate
-// score, and gives the scorer nothing to go on.
+// Permissive costs a clean 409; strict silently offers no way to record a legitimate score,
+// and gives the scorer nothing to go on.
 describe('a window the API did not send', () => {
   it('leaves scoring available rather than blocking it', () => {
     const bare = { tee_time: teeOff.toISOString() } as MatchResult

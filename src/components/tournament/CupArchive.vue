@@ -7,11 +7,8 @@ import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonGrid from '@/components/skeleton/SkeletonGrid.vue'
 import TournamentCard from '@/components/tournament/TournamentCard.vue'
 
-// Every cup ever played, newest first. Each card shows the final scores, so a cup's teams
-// come with it — one-time, this list isn't polled.
-//
-// The fetch lives here rather than in the page so it starts when this half is first shown
-// and not before, and so an outage on it leaves the other half readable.
+// Fetched here rather than in the page so it starts when this half is first shown, and an
+// outage on it leaves the other half readable.
 const { data, error, loading, retry } = useAsync(['cups', 'archive'], async () => {
   const tournaments = await scorecardApi.listTournaments()
   const sorted = [...tournaments].sort((a, b) => b.start_date.localeCompare(a.start_date))

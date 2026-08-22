@@ -41,10 +41,8 @@ const matches = computed(() => data.value?.matches ?? [])
 const matchFormats = computed(() => data.value?.matchFormats ?? [])
 const courses = computed(() => data.value?.courses ?? [])
 
-// Matches split by format — one tab per round. Rounds are set one at a time over the event
-// (Fourball at the draft, Alt Shot at lunch, Scotch that evening, Singles after), so a tab
-// per format keeps you on exactly the round you're setting. Within a format the tee time is
-// what tells the matches apart, so an unassigned match is identifiable before any players.
+// Rounds are set one at a time over the event, so a tab per format keeps you on the round you
+// are setting. Within one, the tee time is what tells unassigned matches apart.
 const formats = computed(() => {
   const seen: string[] = []
   for (const m of matches.value) if (!seen.includes(m.format_name)) seen.push(m.format_name)
@@ -177,9 +175,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
       </RouterLink>
 
       <section class="mt-8">
-        <!-- Match lineups by round. One tab per format; each row is a match, led by its tee
-             time. The active format is mirrored in the URL hash, so you return to the round
-             you were setting. Full-bleed so the tab bar spans the page; rows padded back in. -->
+        <!-- The active format is mirrored in the hash, so you return to the round you were setting. -->
         <FullBleed v-if="formats.length">
           <BaseTabs :tabs="formats" v-slot="{ tab }">
             <div class="px-4">

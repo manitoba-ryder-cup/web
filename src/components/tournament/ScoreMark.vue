@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-// Standard scorecard notation around a hole score, relative to par:
-//   birdie (−1) → circle, eagle or better (≤ −2) → double circle,
-//   bogey (+1) → square, double bogey or worse (≥ +2) → double square, par → nothing.
-// Rings are absolutely positioned and overhang the box, so a bigger mark never changes the
-// row height, and border-current makes them match the digit's colour.
+// Rings overhang the box absolutely, so a bigger mark never changes the row height, and
+// border-current makes them match the digit's colour.
 const props = defineProps<{ score: number | null; par: number | null }>()
 
 type Ring = 'circle' | 'square' | null

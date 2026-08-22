@@ -63,11 +63,8 @@ describe('AppHeader', () => {
     expect(w.text()).not.toContain('Manitoba Ryder Cup')
   })
 
-  // Only shown from md up, where the tab bar is hidden. If these two ever disagree the app
-  // has two different answers for where it goes.
-  // The wordmark is the way home everywhere else, but a route with a back link replaces it
-  // — so without Home in the nav, a detail page has no link to the dashboard at all. Uses
-  // /deep because that is the route in this table declaring a back link.
+  // Without Home in the nav a detail page has no link to the dashboard at all: the wordmark is
+  // the way home elsewhere, and a route with a back link replaces it.
   it('offers Home in the desktop nav where the wordmark has been replaced', async () => {
     const w = await mountHeader('/deep')
 
@@ -85,9 +82,8 @@ describe('AppHeader', () => {
     expect(currentFor(w, 'History')).toBeUndefined()
   })
 
-  // RouterLink's isActive is a path prefix test and no nav link is a prefix of a profile,
-  // so the marking is the header's own to compute — and it has to land on the same section
-  // the bottom bar lights, or the app answers two ways for one screen.
+  // No nav link is a prefix of a profile, so the marking is the header's own to compute — and
+  // it has to land on the section the bottom bar lights.
   it('keeps the list a profile was opened from marked', async () => {
     const fromTeams = await mountHeader('/players/p1')
     expect(currentFor(fromTeams, 'Teams')).toBe('page')

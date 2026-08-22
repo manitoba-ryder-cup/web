@@ -1,7 +1,5 @@
-// Tee times are stored as UTC instants and shown in the viewer's own zone and locale —
-// Intl uses both by default, so the display helpers just format. `locale` is a test
-// seam; production callers omit it. Entering a tee time is the other direction and does
-// need a zone: see eventInputToUtc, which takes the course's.
+// Shown in the viewer's own zone and locale, which Intl uses by default. Entering one is the
+// other direction and does need a zone: see eventInputToUtc, which takes the course's.
 
 // Time of day, e.g. "9:10 AM" — or 09:10 where the locale keeps a 24-hour clock.
 export function formatTeeTime(iso: string, locale?: string): string {
@@ -13,9 +11,8 @@ export function teeDayLabel(iso: string, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso))
 }
 
-// Grouping key, not display — so the locale IS pinned, to the one that spells a date
-// YYYY-MM-DD and therefore sorts. The viewer's zone still decides which day an instant
-// falls on, which is what keeps a row under the heading it belongs to.
+// A key, not display, so the locale is pinned to the one that spells a date YYYY-MM-DD and
+// therefore sorts. The viewer's zone still decides which day an instant falls on.
 export function teeDayKey(iso: string): string {
   return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
 }
@@ -46,9 +43,8 @@ export function utcToEventInput(iso: string, tz: string): string {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`
 }
 
-// A datetime-local value ("YYYY-MM-DDTHH:mm"), meant in the event's timezone, → a UTC
-// RFC3339 instant. Correct across DST: we find the UTC time whose event-zone rendering
-// matches the input (guess it as UTC, then correct by the zone's offset at that instant).
+// Correct across DST: find the UTC time whose event-zone rendering matches the input, by
+// guessing UTC then correcting by the zone's offset at that instant.
 export function eventInputToUtc(wall: string, tz: string): string {
   const guess = new Date(`${wall}:00Z`)
   const p = eventParts(guess, tz)

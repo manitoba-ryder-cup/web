@@ -19,11 +19,8 @@ const props = defineProps<{ tournamentId: string; matchId: string }>()
 
 const auth = useAuthStore()
 
-// Polls while the cup is being played, not while this match is: the ScoreBar pinned at the
-// top carries every match in the tournament, so an afternoon pairing opened during the
-// morning session would sit on a frozen event standing while the points were being decided.
-// The narrower question — is this match still recordable — is the right one for the rows
-// below, and that is where it is asked. Par is non-fatal here: the card renders without it.
+// The cup, not this match: the ScoreBar pinned at the top carries every match, so an afternoon
+// pairing opened during the morning session would sit on a frozen standing.
 const inPlay = ref(false)
 const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
@@ -36,12 +33,8 @@ const { error, loading, retry, teams, results, holeStates, holes, match, left, r
 const holeInfo = computed(() => new Map(holes.value.map((h) => [h.number, h])))
 const leftTeam = computed(() => teams.value.find((t) => t.id === left.value?.team_id) ?? null)
 const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.team_id) ?? null)
-// Which rows lead to the wheel. A row that taps through to a page offering nothing to
-// record invites a spectator away from the card that already shows more than that page
-// does, so it stays inert — for a signed-in scorer too, once the hole is closed to writes.
-// Whether a row leads anywhere turns on the scoring window, which passes with time rather
-// than with data — so it needs a clock of its own, or a scorer waiting on the tee for the
-// window to open sits on inert rows until something else in the results happens to move.
+// A row leading nowhere invites a spectator off the card that shows more than the page behind
+// it. Clock-driven: the window opens with time, not with anything in the data.
 const now = useCoarseClock()
 watchEffect(() => (inPlay.value = cupInPlay(results.value, now.value)))
 
@@ -56,9 +49,7 @@ const leftLabel = computed(() => (left.value ? playerInitials(left.value.players
 const rightLabel = computed(() => (right.value ? playerInitials(right.value.players) : ''))
 </script>
 <template>
-  <!-- No image hero: the ScoreBar is the only thing worth pinning here, and a photo
-       stacked under it pushed the card itself off a phone screen. The match identifies
-       itself in text instead, the same way the hole-entry page does. -->
+  <!-- No image hero: a photo stacked under the ScoreBar pushed the card off a phone screen. -->
   <PageLayout>
     <!-- Overall event standing pinned to the top, so the team battle stays in view. -->
     <template #top>
@@ -70,9 +61,8 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
     </template>
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
-        <!-- Hand-built rather than a shared composition: an 18-hole card is a shape nothing
-             else in the app has, and forcing it through SkeletonList would reserve the wrong
-             height on the one page where the card is the whole point. -->
+        <!-- Hand-built: an 18-hole card is a shape nothing else has, and SkeletonList would reserve the
+             wrong height on the one page where the card is the whole point. -->
         <div class="mx-auto mb-4 max-w-2xl">
           <SkeletonBlock radius="md" class="h-16 w-full" />
         </div>
@@ -88,11 +78,8 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
         </div>
       </template>
       <template v-if="match && leftTeam && rightTeam">
-        <!-- The scores row you tapped, reused as this page's heading: it names both
-             sides AND states the result at a fixed position. The Match column and the Tot
-             row carry the result too, but neither sits anywhere predictable — the Match
-             column's last filled cell moves as the round goes on, and Tot means scrolling.
-             Width-matched to the card below. -->
+        <!-- States the result at a fixed position. The Match column's last filled cell moves as the
+             round goes on, and Tot means scrolling. -->
         <div class="mx-auto mb-4 max-w-2xl">
           <MatchSummary :match="match" :teams="teams" />
         </div>
@@ -113,9 +100,8 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
           :open-holes="openHoles"
         />
       </template>
-      <!-- The match exists on the schedule but has no lineup yet — show its context and say
-           so, rather than a misleading "not found" (it becomes the real scorecard once the
-           lineup is set). -->
+      <!-- Has no lineup yet: say so rather than a misleading "not found", since it becomes the real
+           scorecard once one is set. -->
       <div v-else-if="match" class="mx-auto mt-6 max-w-2xl text-center">
         <p class="text-mrc-muted">
           <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
@@ -123,9 +109,8 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
           <template v-if="match.course_name"> · {{ match.course_name }}</template>
         </p>
         <p class="mt-6 text-mrc-muted">The lineup for this match hasn't been set yet.</p>
-        <!-- For an admin this empty state's whole purpose is to set the lineup, so it gets a
-             real button. It needs the scope the lineup page itself requires, or it would
-             offer a scorer a link that bounces them back. -->
+        <!-- Gated on the scope the lineup page itself requires, or it offers a scorer a link that
+             bounces them back. -->
         <RouterLink
           v-if="auth.hasScope(SCOPE_TOURNAMENTS_WRITE)"
           :to="{ name: 'admin-lineup', params: { id: tournamentId, matchId } }"

@@ -3,10 +3,7 @@ import type { TeamColorClasses } from '@/lib/teamColor'
 import { scoreClass, type HoleRow } from './scorecard'
 import ScoreMark from './ScoreMark.vue'
 
-// One hole's row. Cells inherit the table's text size/alignment; only per-cell colour and
-// the dark Hole/Par bands are set here. The whole row taps through to the hole's entry —
-// unless `tappable` is false, when there is nowhere useful to go and the row says so by
-// not inviting the tap.
+// Untappable rows say so by not inviting the tap: there is nowhere useful to go.
 withDefaults(defineProps<{ row: HoleRow; leftMeta: TeamColorClasses; rightMeta: TeamColorClasses; tappable?: boolean }>(), {
   tappable: true,
 })

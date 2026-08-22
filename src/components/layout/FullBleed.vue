@@ -1,7 +1,6 @@
 <script setup lang="ts">
-// Breaks its content out of the page body's padding so it spans the full content
-// column. The negative margins mirror ContentContainer's `px-4` (and, with flushTop,
-// PageLayout's `pt-4` top) — keep them in sync if that padding ever changes.
+// The negative margins mirror ContentContainer's px-4 and, with flushTop, PageLayout's
+// pt-4 — keep them in sync if that padding changes.
 withDefaults(defineProps<{ flushTop?: boolean }>(), { flushTop: false })
 </script>
 <template>

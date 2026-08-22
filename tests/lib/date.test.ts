@@ -1,12 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { formatDate, formatDateRange, formatDayRange } from '@/lib/date'
 
-// These render in the viewer's locale, so the tests pass one explicitly rather than
-// asserting whatever the machine running them happens to be set to. en-GB stands in for
-// every day-first locale — it is also what this project's own browser resolves to, despite
-// navigator.language reporting en-US.
-//
-// The separator Intl produces is a thin space around an en dash, not a plain space.
+// A locale is passed explicitly rather than asserting whatever the machine is set to. The
+// separator Intl produces is a thin space around an en dash, not a plain space.
 const EN_DASH = ' – '
 
 describe('formatDate', () => {

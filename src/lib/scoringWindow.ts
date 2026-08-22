@@ -1,13 +1,11 @@
 import type { MatchResult } from '@/api/types'
 
-// Both bounds come from the API (scoring_opens_at/scoring_closes_at), which is also what
-// enforces them. This file used to hold its own copy of the two constants, which put one
-// rule in two repos with nothing keeping them equal.
-//
-// A bound the API did not send is read as open rather than shut. That direction is
-// deliberate: being permissive costs a clean 409 from the write, while being strict
-// silently offers no way to record a legitimate score — the failure nobody can diagnose
-// standing on a fairway.
+// eslint-disable-next-line comment-cap/max-lines -- names the local copy this file used to
+// hold, which is the change someone would otherwise make again.
+// Both bounds come from the API, which also enforces them. This file used to restate the two
+// constants, putting one rule in two repos with nothing keeping them equal. A bound the API
+// did not send reads as open, deliberately: permissive costs a clean 409, while strict
+// silently offers no way to record a legitimate score.
 function instant(value: string | undefined): number | null {
   if (!value) return null
   const ms = new Date(value).getTime()
@@ -22,22 +20,16 @@ export function hasStarted(match: MatchResult | null, now: Date = new Date()): b
   return opens === null || now.getTime() >= opens
 }
 
-// Whether scores can still be recorded. Strictly narrower than hasStarted, and expressed
-// in terms of it so the two can't drift into answering the same way for a match that
-// hasn't teed off and one that finished last year — those read as opposites.
+// Expressed in terms of hasStarted so the two cannot drift into answering the same way for a
+// match that has not teed off and one that finished last year.
 export function scoringOpen(match: MatchResult | null, now: Date = new Date()): boolean {
   if (!match || !hasStarted(match, now)) return false
   const closes = instant(match.scoring_closes_at)
   return closes === null || now.getTime() <= closes
 }
 
-// Whether a given hole can still be recorded — the rule the entry page enforces and the
-// scorecard uses to decide whether tapping a row leads anywhere. One function because it
-// is one rule: stated in both places, a change to either leaves rows inviting a tap the
-// page turns straight back.
-//
-// `finished` is passed rather than read off the match: a save that closes the match out
-// knows before the reloaded match does.
+// One function because it is one rule: stated in both the entry page and the card, a change
+// to either leaves rows inviting a tap the page turns straight back.
 export function holeOpen(
   match: MatchResult | null,
   hole: number,

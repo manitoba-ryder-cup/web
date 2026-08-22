@@ -7,9 +7,7 @@ import NavLink from './NavLink.vue'
 import AccountMenu from './AccountMenu.vue'
 import ArrowLeftIcon from '@/components/icons/ArrowLeftIcon.vue'
 
-// The back link is derived from the current route's meta (declared in the router), so it's
-// a pure function of the route and never lingers across navigations. It replaces the
-// wordmark; the account menu stays.
+// Derived from route meta, so it is a pure function of the route and never lingers.
 const route = useRoute()
 const back = computed(() => route.meta.back?.(route) ?? null)
 
@@ -17,9 +15,8 @@ const cup = useCupStore()
 cup.load().catch(() => {})
 const scoresTo = computed(() => cup.scoresTo)
 
-// Only shown from md up, where there is no tab bar. Same destinations and the same
-// navSection rule the bar uses, so the two cannot disagree about where the app goes or
-// about which screen you are on.
+// Same destinations and the same navSection rule the tab bar uses, so the two navs cannot
+// disagree about where the app goes or which screen you are on.
 const section = computed(() => navSection(route))
 const links = computed((): { to: string; label: string; section: NavSection }[] => [
   // Home is here and not left to the wordmark: a detail page replaces the wordmark with

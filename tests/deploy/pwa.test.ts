@@ -43,9 +43,8 @@ describe('PWA configuration', () => {
     expect(config).toContain("purpose: 'maskable'")
   })
 
-  // The icon is the two teams, so it has to be drawn in their colours from the palette
-  // rather than a second pair that only exists here. It sits on the emphasis step: at icon
-  // size the scores page's own blue and red are louder than they are on a page.
+  // Drawn from the palette rather than a second pair existing only here, on the emphasis step:
+  // at icon size the page's own blue and red are louder.
   it('draws the icon in the palette colours of the two teams', () => {
     const css = readFileSync(resolve(root, 'src/assets/main.css'), 'utf8')
     const token = (name: string) => css.match(new RegExp(`--color-mrc-${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1]

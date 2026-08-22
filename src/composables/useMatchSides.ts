@@ -3,9 +3,7 @@ import type { MatchResult, MatchSide, TournamentTeam } from '@/api/types'
 import { teamColor, type TeamColorClasses } from '@/lib/teamColor'
 import { orderSides } from '@/lib/teamOrder'
 
-// Resolves a match's two sides against the tournament's teams: a fixed left/right order
-// (Blue left, Red right) and a colour lookup by team id. Shared by every component that
-// renders a match, so the ordering/colour logic lives in exactly one place.
+// Shared by every component that renders a match, so ordering and colour live in one place.
 export function useMatchSides(match: MaybeRefOrGetter<MatchResult | null | undefined>, teams: MaybeRefOrGetter<TournamentTeam[]>) {
   const teamById = (id: string | null | undefined) => toValue(teams).find((t) => t.id === id) ?? null
   const ordered = computed(() => orderSides(toValue(match)?.sides ?? [], toValue(teams)))

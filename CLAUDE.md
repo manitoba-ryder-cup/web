@@ -146,14 +146,18 @@ them rather than mocking `Intl` or `Date`.
 
 ## Conventions
 
-Comments explain **why**, not what — the tradeoff, the failure mode it prevents, the
-alternative rejected. Look at `dev/bootstrap.sh` or `lib/scoringWindow.ts` for the house
-style. Don't add narration that restates the code, and write for someone who never saw the
-change: "used to" earns its place only where it warns off a path they might take again, as
-`scoringWindow.ts` does with the constants it once held. Anything else about how the code
-got this way is a commit message. Keep it to a line or two: a longer block earns its place
-only where it names the alternative that was rejected or the failure that cost something,
-and needing a paragraph usually means the code under it is what wants changing.
+**The default is no comment.** Code says what it does; a comment is for why it was done
+this way, and only when that reason isn't evident from reading it. Nothing else earns a
+line — not a summary of the code below, not what it used to do, not a fact about how some
+other part of the app behaves. That last one is the worst of them: it is true when written,
+goes stale silently, and then misleads whoever came to check exactly that question. Where
+something has to stay true, a test says it and fails when it stops.
+
+One line, or two — eslint rejects a longer block, the same bargain the heading scale makes:
+keep the length by saying so with an `eslint-disable-next-line` that names the reason, which
+is what puts the exception in front of a reviewer. Needing a paragraph usually means the code
+under it is what wants changing. Anything about how the code got this way is a commit
+message.
 
 Prose and infra are **prettier-ignored** (`*.md`, `docker-compose.yml`) because its quote
 and wrapping rules churn them and un-align hand-spaced lists. Hand-format those; run

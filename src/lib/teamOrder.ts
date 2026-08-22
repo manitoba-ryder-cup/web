@@ -1,9 +1,7 @@
 import type { MatchSide, TournamentTeam } from '@/api/types'
 
-// The one rule for which side a team renders on: Blue left, Red right — never by id,
-// which is arbitrary. Teams are ordered once at the API boundary (getTournamentTeams);
-// a match's sides carry only a team_id, so they're ordered against the teams here too.
-// Unknown colours sort last.
+// Blue left, Red right — never by id, which is arbitrary. A match's sides carry only a
+// team_id, so they are ordered against the teams here too. Unknown colours sort last.
 export function teamColorRank(color: string | null | undefined): number {
   return color === 'Blue' ? 0 : color === 'Red' ? 1 : 2
 }

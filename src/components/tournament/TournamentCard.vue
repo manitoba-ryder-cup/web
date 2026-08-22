@@ -6,12 +6,8 @@ import { formatDayRange } from '@/lib/date'
 import LinkCard from '@/components/base/LinkCard.vue'
 import TrophyIcon from '@/components/icons/TrophyIcon.vue'
 
-// A tournament summary card: the year it was played, where, and both teams' final scores
-// in their colours with a trophy on the winner. Teams are identified by captain.
-//
-// Headed by the year because there has been exactly one cup a year since 2008 — the year
-// is which cup this is, so it's what you scan a list of them for. The venue moves around
-// (three provinces and a state so far), so it earns its own line rather than a suffix.
+// Headed by the year because there has been one cup a year since 2008, so the year is which
+// cup this is. The venue moves around, so it earns its own line rather than a suffix.
 const props = defineProps<{ tournament: Tournament; teams: TournamentTeam[] }>()
 
 const year = computed(() => props.tournament.start_date.slice(0, 4))

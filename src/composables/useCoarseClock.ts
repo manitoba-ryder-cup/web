@@ -1,8 +1,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 
-// For what changes with the time of day rather than with data. Derived from a match's
-// bounds alone, a page open across the moment a window opens has nothing to recompute from
-// and sits there waiting for something unrelated to move.
+// Derived from a match's bounds alone, a page open across the moment a window opens has
+// nothing to recompute from.
 export function useCoarseClock(everyMs = 30_000) {
   const now = ref(new Date())
   let timer: ReturnType<typeof setInterval> | undefined

@@ -45,9 +45,8 @@ describe('router guard', () => {
     expect(router.currentRoute.value.query.redirect).toBe('/__protected')
   })
 
-  // The real /admin routes name a scope and nothing else, so an anonymous visitor has to
-  // reach login through the scope requirement alone — landing on the dashboard would
-  // leave them with no way in.
+  // The real /admin routes name a scope and nothing else, so an anonymous visitor reaches login
+  // through the scope requirement alone — the dashboard would leave them no way in.
   it('sends an anonymous visitor to login from a scope-only route', async () => {
     await router.push('/__scoped')
     expect(router.currentRoute.value.name).toBe('login')

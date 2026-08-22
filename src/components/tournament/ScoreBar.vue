@@ -4,12 +4,8 @@ import type { MatchResult, TournamentTeam } from '@/api/types'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { splitPoints } from '@/lib/points'
 
-// The signature standings bar. Two bars per match (each = ½ a point) so halved matches
-// paint cleanly. From each end a team fills its DECIDED points in solid colour, then its
-// PROJECTED points from the matches under way in a lighter shade; matches still to tee
-// off stay grey. Order and colour come from the caller.
-// `flat` drops the self-stick wrapper so the bar can be embedded in a caller's own sticky
-// header (e.g. the hole-entry page); on its own it sticks under the hero.
+// Two bars per match, each half a point, so a halved match paints cleanly. `flat` drops the
+// self-stick wrapper for a caller with its own sticky header.
 const props = withDefaults(defineProps<{ results: MatchResult[]; teams: TournamentTeam[]; flat?: boolean }>(), {
   flat: false,
 })

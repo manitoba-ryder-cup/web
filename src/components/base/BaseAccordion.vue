@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import ChevronRightIcon from '@/components/icons/ChevronRightIcon.vue'
 
-// A disclosure row: a header that stays put and a panel that opens beneath it. When open
-// the header is the panel's heading rather than a peer of it, so it keeps its weight and
-// takes a shadowed edge to separate the two.
-//
-// Whoever renders a list of these owns which is open, so the list can enforce one at a
-// time rather than each row deciding for itself. `itemId` is what the anchor is built
-// from, so a row can be linked to and scrolled to — see useHashAccordion, which is the
-// other half of this.
+// The list owns which row is open, so it can enforce one at a time. `itemId` builds the
+// anchor a row is linked to — useHashAccordion is the other half.
 defineProps<{ open: boolean; itemId: string }>()
 defineEmits<{ toggle: [] }>()
 </script>

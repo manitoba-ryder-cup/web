@@ -10,10 +10,8 @@ import ScorecardRow from './ScorecardRow.vue'
 import ScorecardSummaryRow from './ScorecardSummaryRow.vue'
 import BaseSegmented from '@/components/base/BaseSegmented.vue'
 
-// A vertical scorecard (holes down the rows, à la the real Southwood card): teams sit
-// once in the header (as initials to save space), then every row is scores. Yardage
-// leads (col 2), the running match state sits between the teams and par, and the hole/par
-// columns are dark bands (the Southwood look). OUT/IN/TOT give the nine + total subtotals.
+// Vertical, like the real Southwood card: holes down the rows, teams once in the header as
+// initials to save the width.
 const props = defineProps<{
   holeStates: HoleStatus[] // per-hole match state; holeInfo carries the tee set's par
 
@@ -27,9 +25,8 @@ const props = defineProps<{
   holeInfo?: Map<number, Hole>
   tournamentId: string
   matchId: string
-  // Which holes tap through to the wheel. Per hole, not per card: a decided match still
-  // takes corrections to the holes it was played over. Omitted, nothing taps — the page
-  // behind them would only turn you straight back.
+  // Per hole, not per card: a decided match still takes corrections to the holes it was
+  // played over. Omitted, nothing taps.
   openHoles?: Set<number>
   // A fourball's two players a side; without them the card stays on the best ball.
   leftPlayers?: MatchPlayer[]
@@ -161,11 +158,8 @@ function open(hole: number) {
   <div>
     <div class="mx-auto max-w-2xl overflow-hidden rounded-sm border border-mrc-line">
       <table class="w-full table-fixed text-center text-base tabular-nums">
-        <!-- Masthead, built like a printed card's letterhead: where and what kind, pinned to
-           the two edges as a header rule. The pairing is the caller's heading, above the
-           card. A <caption> keeps this part of the table rather than a strip that happens
-           to sit above one. Charcoal here, mrc-muted for the structural bands (header row,
-           Hole and Par columns), panel-alt for the totals. -->
+        <!-- A <caption> keeps this part of the table rather than a strip that happens to sit above
+             one. Charcoal here, mrc-muted for the structural bands, panel-alt for the totals. -->
         <caption v-if="courseName || formatName" class="bg-mrc-charcoal px-3 py-3">
           <div class="flex items-baseline justify-between gap-3 font-semibold text-white/90">
             <span class="min-w-0 truncate text-left">{{ courseName }}</span>
@@ -221,12 +215,10 @@ function open(hole: number) {
         </tbody>
       </table>
     </div>
-    <!-- Under the card, not in it: a control is not tabular data, and a row of it inside the
-       table would be read as one. Here it also sits against the OUT/IN/TOT band, so
-       switching to a player changes their totals right where the tap was. -->
-    <!-- Further off the card than the summary row above it sits: that gap separates two
-         pieces of content, this one separates the card from a control acting on it, and
-         the TOT row's heavy rule makes the bottom edge the stronger of the two. -->
+    <!-- Under the card, not in it: a control is not tabular data, and a row of it inside the table
+         would be read as one. -->
+    <!-- Wider than the gap above it: that separates two pieces of content, this separates the card
+         from a control acting on it. -->
     <div v-if="canSplit" class="mx-auto mt-6 max-w-2xl">
       <BaseSegmented v-model="viewIndex" :options="viewLabels" label="Whose scores" />
     </div>

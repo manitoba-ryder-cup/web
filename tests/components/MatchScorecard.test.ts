@@ -24,9 +24,8 @@ const holeInfo = new Map<number, Hole>([
   [2, { number: 2, par: 4, hdcp: 2, yards: 310 }],
   [3, { number: 3, par: 4, hdcp: 3, yards: 320 }],
 ])
-// Hole 1: blue wins it, Rabe 5 and Van Walleghem 4 — the 4 took the hole. Hole 2: both
-// blue players make 4 and red halves it, so neither took anything. Hole 3: blue wins with
-// both players on 3.
+// Hole 1 blue takes with a 4; hole 2 both blue make 4 and red halves it; hole 3 blue wins
+// with both on 3.
 const holeStates: HoleStatus[] = [
   {
     hole_number: 1,

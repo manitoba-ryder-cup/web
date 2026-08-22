@@ -3,9 +3,8 @@ withDefaults(defineProps<{ modelValue?: string; type?: string; invalid?: boolean
 defineEmits<{ (e: 'update:modelValue', v: string): void }>()
 </script>
 <template>
-  <!-- Explicit white bg + dark text (and light color-scheme): without them, a phone in
-       dark mode paints the UA default dark field colour, so the input reads as transparent
-       with only its border visible on the login hero. -->
+  <!-- Explicit, or a phone in dark mode paints the UA's own dark field and the input reads
+       as transparent against the login hero. -->
   <input
     :type="type"
     :value="modelValue"

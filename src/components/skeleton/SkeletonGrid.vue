@@ -2,12 +2,8 @@
 import CardGrid from '@/components/layout/CardGrid.vue'
 import SkeletonBlock from './SkeletonBlock.vue'
 
-// Composes the real CardGrid rather than repeating its column classes, so a change to the
-// grid can't leave the skeleton laying out differently from what replaces it.
-//
-// Comments live here rather than above the root element: a leading comment in the template
-// makes the component multi-root, which silently breaks both attribute fallthrough and any
-// test that reads an attribute off the root.
+// Composes CardGrid rather than repeating its columns, so the skeleton cannot lay out
+// differently from what replaces it. Here, not above the root: that makes it multi-root.
 withDefaults(defineProps<{ cards?: number }>(), { cards: 6 })
 </script>
 <template>

@@ -67,9 +67,8 @@ describe('TeamsView', () => {
     vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([entrant()])
   })
 
-  // The store resolves which cup this is and then holds it for the session, so the record
-  // has to be read by id — taking it from there would leave the eyebrow on the name and
-  // dates the session opened with, for the whole session.
+  // The identity is fixed for the session, so the record is read by id — from the store the
+  // eyebrow keeps the name and dates the session opened with.
   it('reads the cup record itself rather than the one the session resolved with', async () => {
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
       { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Stale City', phase: 'upcoming' },

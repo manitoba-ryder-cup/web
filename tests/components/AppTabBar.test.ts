@@ -83,9 +83,8 @@ describe('AppTabBar', () => {
     expect(currentFor(w, 'History')).toBeUndefined()
   })
 
-  // A profile is reached from two lists, and the bar has to agree with the back link the
-  // header offers on the same screen — otherwise one says Teams while the other says
-  // History and neither is wrong on its own.
+  // Has to agree with the back link the header offers on the same screen, or one says Teams
+  // while the other says History and neither is wrong alone.
   it('keeps the tab a profile was opened from lit', async () => {
     const fromTeams = await mountBar('/players/p1')
     expect(currentFor(fromTeams, 'Teams')).toBe('page')

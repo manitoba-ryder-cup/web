@@ -52,9 +52,8 @@ const filtered = computed(() => {
   })
 })
 
-// The captain calls a pick; we record it. Reassigning is undraft-then-draft; clearing is
-// just an undraft. We only update the row once the writes succeed, and re-sync from the
-// server if anything fails (so a half-applied move never leaves the UI lying).
+// The row moves only once the writes succeed, and re-syncs on failure, so a half-applied
+// move never leaves the list lying.
 const { isBusy, run } = useBusy()
 const afterWrite = useAfterWrite()
 function assign(p: TournamentPlayer, target: string | null) {
@@ -76,10 +75,8 @@ function assign(p: TournamentPlayer, target: string | null) {
   )
 }
 
-// Captaincy is per-team: one captain, and only a drafted player can hold it. The C shows
-// only where it's actionable — on a team with no captain yet (any drafted player, tap to
-// set) or on the current captain (tap to clear) — so the list stays quiet once captains
-// are set. To reassign, clear the current captain, then pick a new one.
+// The C shows only where it is actionable — a team with no captain, or the current one — so
+// the list stays quiet once captains are set. Reassigning means clearing first.
 function teamOf(id: string | null) {
   return id ? (teams.value.find((t) => t.id === id) ?? null) : null
 }

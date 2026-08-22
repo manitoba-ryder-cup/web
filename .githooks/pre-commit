@@ -14,3 +14,13 @@ if ! echo "$files" | xargs npx prettier --check; then
   echo "  npm run format"
   exit 1
 fi
+
+# Same bargain for lint, which is a hard CI gate too — a comment two lines over is worth
+# knowing about here rather than after a push.
+code=$(echo "$files" | grep -E '\.(ts|vue)$')
+if [ -n "$code" ] && ! echo "$code" | xargs npx eslint; then
+  echo
+  echo "Lint failed on staged files. Run:"
+  echo "  npm run lint"
+  exit 1
+fi

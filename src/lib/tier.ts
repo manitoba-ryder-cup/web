@@ -1,7 +1,5 @@
-// A player's per-tournament tier is named for a tee-box colour — gold, blue, white — so
-// the colour IS the name, and nothing here adds a noun to it. Both paint jobs live
-// together because they describe one vocabulary: a dot where space is tight, a pill where
-// the name is worth reading. An unknown or unset tier falls back to neutral.
+// The tee-box colour IS the name, so nothing here adds a noun. A dot where space is tight, a
+// pill where the name is worth reading; an unknown tier falls back to neutral.
 const TIER_DOT: Record<string, string> = {
   gold: 'bg-mrc-gold',
   silver: 'bg-mrc-faint',

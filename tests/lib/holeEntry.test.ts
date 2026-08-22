@@ -117,9 +117,8 @@ describe('buildHoleEntries', () => {
   })
 
   it('falls back to par for a player with no recorded score', () => {
-    // A save that failed part-way through: the unscored players must open on par rather
-    // than borrow a teammate's score. Hole 7 is a par 5 here so the recorded 4 can't be
-    // confused with the default.
+    // Unscored players must open on par rather than borrow a teammate's score. Hole 7 is a par 5
+    // so the recorded 4 cannot be confused with the default.
     const parFive = holes.map((h) => (h.number === 7 ? { ...h, par: 5 } : h))
     const scored = status(7, [{ team_id: 'blue', strokes: 4, player_scores: [{ player_id: 'p1', strokes: 4 }] }])
 
