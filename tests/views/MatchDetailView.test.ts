@@ -56,6 +56,7 @@ vi.mock('@/api/scorecard', () => ({
     getTournamentResults: vi.fn(() => Promise.resolve(cup())),
     getMatchHoles: vi.fn(() => Promise.resolve([])),
     getMatchScores: vi.fn(() => Promise.resolve([])),
+    resetMatch: vi.fn(() => Promise.resolve()),
   },
 }))
 
@@ -253,5 +254,70 @@ describe('MatchDetailView polling', () => {
     // Gated on this match's own window it would sit still, showing a standing being decided
     // three fairways away.
     expect(vi.mocked(scorecardApi.getTournamentResults).mock.calls.length).toBeGreaterThan(first)
+  })
+})
+
+// Offered where the wrong scores are visible, and only to whoever could fix them.
+describe('resetting a match', () => {
+  const played = { ...withLineup, hole_results: ['blue', null, 'red'] }
+
+  // A sibling describe, so the outer beforeEach does not reach it and calls would otherwise
+  // accumulate across these tests.
+  beforeEach(() => {
+    vi.clearAllMocks()
+    match.mockReturnValue(withWindow(played, teeingOffNow))
+    cup.mockImplementation(() => [withWindow(played, teeingOffNow)])
+  })
+
+  it('shows nothing to a spectator', async () => {
+    // The trigger, not the item: the item is not in the DOM until the menu opens, so its
+    // absence would pass whatever the gate said.
+    expect((await open({ loggedIn: false })).find(TRIGGER).exists()).toBe(false)
+  })
+
+  // A scorer corrects a hole; wiping the match is a different job with a different scope.
+  it('shows nothing to a scorer', async () => {
+    expect((await open({ scopes: [SCOPE_SCORES_WRITE] })).find(TRIGGER).exists()).toBe(false)
+  })
+
+  // Never a button that does nothing: an unscored match has nothing to clear.
+  it('shows nothing on a match with no scores', async () => {
+    const unplayed = withWindow({ ...withLineup, hole_results: [] }, teeingOffNow)
+    match.mockReturnValue(unplayed)
+    cup.mockImplementation(() => [unplayed])
+
+    expect((await open({ scopes: [SCOPE_TOURNAMENTS_WRITE] })).find(TRIGGER).exists()).toBe(false)
+  })
+
+  const TRIGGER = 'button[aria-label="Match actions"]'
+  const openMenu = async (w: Awaited<ReturnType<typeof open>>) => {
+    await w.get(TRIGGER).trigger('click')
+    return w
+  }
+
+  it('keeps the action behind the menu rather than on the card', async () => {
+    const w = await open({ scopes: [SCOPE_TOURNAMENTS_WRITE] })
+
+    expect(w.text()).not.toContain('Reset Match')
+    expect(w.find(TRIGGER).exists()).toBe(true)
+  })
+
+  it('names the action', async () => {
+    const w = await openMenu(await open({ scopes: [SCOPE_TOURNAMENTS_WRITE] }))
+
+    expect(w.text()).toContain('Reset Match')
+    expect(scorecardApi.resetMatch).not.toHaveBeenCalled()
+  })
+
+  it('resets when the item is chosen', async () => {
+    const w = await openMenu(await open({ scopes: [SCOPE_TOURNAMENTS_WRITE] }))
+
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Reset Match')!
+      .trigger('click')
+    await flushPromises()
+
+    expect(scorecardApi.resetMatch).toHaveBeenCalledWith('m1')
   })
 })
