@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
-import type { MatchResult, Tournament, TournamentTeam } from '@/api/types'
+import type { MatchResult, Tournament, TournamentPhase, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
 import { useCoarseClock } from '@/composables/useCoarseClock'
@@ -34,8 +34,8 @@ const { data, error, loading, retry } = useAsync(
   ['dashboard'],
   async () => {
     // Which cup: resolved once by the shell. The record itself is re-read on every poll
-    // alongside the standing — the phase this page renders is derived from its start date,
-    // so a tab left open through an edit would otherwise show the wrong one all day.
+    // alongside the standing — it carries the phase this page renders, so a tab left open
+    // across the first score would otherwise sit on the draft all day.
     await cup.load()
     const id = cup.latestId
     let tournament: Tournament | null = null
@@ -69,15 +69,15 @@ const showMatchup = computed(() => {
   if (route.query.captains === 'false') return false
   return !!(left.value?.captain && right.value?.captain)
 })
-// Phase from the results: nothing played = upcoming (draft/schedule), all done = finished,
-// otherwise live. `?phase=` overrides it for previewing a mode against real data.
-const phase = computed<'upcoming' | 'live' | 'finished'>(() => {
+// Which of the three the page renders. Read off the record rather than re-derived from the
+// results: the API decides it there, and the copy this page kept called a match started
+// only once both sides had scored a hole — so a cup being scored right now read as the
+// draft page until someone's card came back complete. `?phase=` overrides it for previewing
+// a mode against real data.
+const phase = computed<TournamentPhase>(() => {
   const override = route.query.phase
   if (override === 'upcoming' || override === 'live' || override === 'finished') return override
-  const r = results.value
-  if (!r.length || !r.some((m) => m.finished || m.hole_results.length > 0)) return 'upcoming'
-  if (r.every((m) => m.finished)) return 'finished'
-  return 'live'
+  return tournament.value?.phase ?? 'upcoming'
 })
 
 const heroEyebrow = computed(() => tournamentEyebrow(tournament.value))

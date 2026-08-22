@@ -148,6 +148,29 @@ describe('TournamentView polling', () => {
     expect(vi.mocked(scorecardApi.getTournamentResults).mock.calls.length).toBeGreaterThan(1)
   })
 
+  // The case a page open on the morning of depends on: nobody reloads when the first
+  // window opens. Nothing in the data changes at that moment — the windows were always
+  // there — so the escalation has to come from the clock, and a cadence captured at mount
+  // would leave a spectator on a five-minute heartbeat through the front nine.
+  it('speeds up when a window opens under a page nobody has touched', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue(withWindow(hoursFromNow(0.5), hoursFromNow(12)))
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    mount(TournamentView, { props: { id: 't1' }, global: { plugins: [router] } })
+    await flushPromises()
+    expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(1)
+
+    // Still shut: a minute passes without the twenty-second cadence starting.
+    await vi.advanceTimersByTimeAsync(65_000)
+    expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(1)
+
+    // Past the opening, without a reload or a new payload.
+    await vi.advanceTimersByTimeAsync(30 * 60_000)
+    const atOpen = vi.mocked(scorecardApi.getTournamentResults).mock.calls.length
+
+    await vi.advanceTimersByTimeAsync(65_000)
+    expect(vi.mocked(scorecardApi.getTournamentResults).mock.calls.length).toBeGreaterThan(atOpen + 1)
+  })
+
   it('drops to a heartbeat once the last window has shut', async () => {
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue(withWindow(hoursFromNow(-26), hoursFromNow(-14)))
     vi.useFakeTimers({ shouldAdvanceTime: true })

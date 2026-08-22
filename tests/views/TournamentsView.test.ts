@@ -41,8 +41,8 @@ describe('TournamentsView', () => {
     // an un-awaited reset leaves the previous test opening this one on Participants.
     await router.push('/tournaments')
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
-      { id: 't1', name: 'Summer Cup', start_date: '2019-07-01', end_date: '2019-07-03', location: 'Winnipeg' },
-      { id: 't2', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Gimli' },
+      { id: 't1', name: 'Summer Cup', start_date: '2019-07-01', end_date: '2019-07-03', location: 'Winnipeg', phase: 'upcoming' },
+      { id: 't2', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Gimli', phase: 'upcoming' },
     ])
     // Deliberately out of order, so a page that echoed the server's order would fail.
     vi.mocked(scorecardApi.listPlayers).mockResolvedValue([

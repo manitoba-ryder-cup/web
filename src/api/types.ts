@@ -15,12 +15,19 @@ export interface User {
   first_name: string
   last_name: string
 }
+// Where the cup stands, decided by the API from its matches: 'live' from the first score
+// recorded until the last match is final. Not the same question as `cupInPlay`, which is
+// about the time of day — a cup whose first tee time has passed is in play, and stays
+// 'upcoming' here until someone actually records a score.
+export type TournamentPhase = 'upcoming' | 'live' | 'finished'
+
 export interface Tournament {
   id: string
   name: string
   start_date: string
   end_date: string
   location: string
+  phase: TournamentPhase
 }
 export interface MatchFormat {
   id: string

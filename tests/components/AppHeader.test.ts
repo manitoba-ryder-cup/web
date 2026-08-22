@@ -45,8 +45,8 @@ describe('AppHeader', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
-      { id: 't1', name: 'Old', start_date: '2025-07-01', end_date: '2025-07-03', location: 'Winnipeg' },
-      { id: 't2', name: 'New', start_date: '2026-09-01', end_date: '2026-09-03', location: 'Brandon' },
+      { id: 't1', name: 'Old', start_date: '2025-07-01', end_date: '2025-07-03', location: 'Winnipeg', phase: 'upcoming' },
+      { id: 't2', name: 'New', start_date: '2026-09-01', end_date: '2026-09-03', location: 'Brandon', phase: 'upcoming' },
     ])
   })
 

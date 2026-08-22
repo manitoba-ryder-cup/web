@@ -16,7 +16,7 @@ describe('AdminView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
-      { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Winnipeg' },
+      { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Winnipeg', phase: 'upcoming' },
     ])
   })
 
