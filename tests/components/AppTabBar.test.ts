@@ -6,6 +6,7 @@ vi.mock('@/api/scorecard', () => ({ scorecardApi: { listTournaments: vi.fn() } }
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
+import type { Tournament } from '@/api/types'
 import AppTabBar from '@/components/layout/AppTabBar.vue'
 
 const router = createRouter({
@@ -20,8 +21,22 @@ const router = createRouter({
   ],
 })
 
-const OLDER = { id: 't1', name: 'Summer Cup', start_date: '2025-07-01', end_date: '2025-07-03', location: 'Winnipeg' }
-const LATEST = { id: 't2', name: 'Autumn Cup', start_date: '2026-09-01', end_date: '2026-09-03', location: 'Brandon' }
+const OLDER: Tournament = {
+  id: 't1',
+  name: 'Summer Cup',
+  start_date: '2025-07-01',
+  end_date: '2025-07-03',
+  location: 'Winnipeg',
+  phase: 'upcoming',
+}
+const LATEST: Tournament = {
+  id: 't2',
+  name: 'Autumn Cup',
+  start_date: '2026-09-01',
+  end_date: '2026-09-03',
+  location: 'Brandon',
+  phase: 'upcoming',
+}
 
 async function mountBar(path = '/') {
   await router.push(path)

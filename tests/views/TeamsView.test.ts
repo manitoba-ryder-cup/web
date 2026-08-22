@@ -50,7 +50,7 @@ describe('TeamsView', () => {
     vi.clearAllMocks()
     router.push('/teams')
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
-      { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Winnipeg' },
+      { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Winnipeg', phase: 'upcoming' },
     ])
     vi.mocked(scorecardApi.getTournament).mockResolvedValue({
       id: 't1',
@@ -58,6 +58,7 @@ describe('TeamsView', () => {
       start_date: '2026-07-01',
       end_date: '2026-07-03',
       location: 'Winnipeg',
+      phase: 'upcoming',
     })
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
       { id: 'blue-1', color: 'Blue', captain: { id: 'c1', first_name: 'Bo', last_name: 'Jones' }, points: 0 },
@@ -71,7 +72,7 @@ describe('TeamsView', () => {
   // dates the session opened with, for the whole session.
   it('reads the cup record itself rather than the one the session resolved with', async () => {
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([
-      { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Stale City' },
+      { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Stale City', phase: 'upcoming' },
     ])
     vi.mocked(scorecardApi.getTournament).mockResolvedValue({
       id: 't1',
@@ -79,6 +80,7 @@ describe('TeamsView', () => {
       start_date: '2026-07-01',
       end_date: '2026-07-03',
       location: 'Current City',
+      phase: 'upcoming',
     })
 
     const w = mount(TeamsView, { global: { plugins: [router] } })

@@ -14,6 +14,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import DashboardView from '@/views/DashboardView.vue'
+import type { Tournament } from '@/api/types'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -45,7 +46,14 @@ function match(teeTime: string, format: string, finished = false) {
 const FRI = '2026-09-18T14:00:00Z'
 const SAT = '2026-09-19T14:00:00Z'
 
-const TOURNAMENT = { id: 't1', name: 'Summer Cup', start_date: '2026-07-01', end_date: '2026-07-03', location: 'Winnipeg' }
+const TOURNAMENT: Tournament = {
+  id: 't1',
+  name: 'Summer Cup',
+  start_date: '2026-07-01',
+  end_date: '2026-07-03',
+  location: 'Winnipeg',
+  phase: 'upcoming',
+}
 const TEAMS = [
   { id: 'blue-1', color: 'Blue', captain: { id: 'p2', first_name: 'Bo', last_name: 'Jones' }, points: 0 },
   { id: 'red-1', color: 'Red', captain: { id: 'p1', first_name: 'Amy', last_name: 'Smith' }, points: 0 },
@@ -144,6 +152,7 @@ describe('DashboardView', () => {
   })
 
   it('leads with the standing once the cup is under way', async () => {
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
       { ...TEAMS[0], points: 6.5 },
       { ...TEAMS[1], points: 3.5 },
@@ -156,6 +165,24 @@ describe('DashboardView', () => {
     expect(hero.text()).toContain('Jones')
     expect(hero.text()).toContain('6½')
     expect(hero.text()).toContain('3½')
+  })
+
+  // Matters at the start: the countdown ran against a tee time that had already passed.
+  //
+  // Asserts the points, not the absence of the countdown — `useCountdown` returns null for
+  // a target in the past, so once the fixture date passes, "no countdown" stops telling the
+  // two heroes apart and the test quietly stops testing anything.
+  it('takes the phase from the record rather than re-deriving it from the results', async () => {
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
+      { ...TEAMS[0], points: 6.5 },
+      { ...TEAMS[1], points: 3.5 },
+    ])
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball')])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.get('section').text()).toContain('6½')
   })
 
   // The tab bar reaches the same page, so the hero does not need to.

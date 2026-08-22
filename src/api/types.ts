@@ -15,12 +15,17 @@ export interface User {
   first_name: string
   last_name: string
 }
+// The API's call, not ours. Not `cupInPlay`, which asks about the time of day: a cup two
+// hours from its first tee is in play and still 'upcoming' here.
+export type TournamentPhase = 'upcoming' | 'live' | 'finished'
+
 export interface Tournament {
   id: string
   name: string
   start_date: string
   end_date: string
   location: string
+  phase: TournamentPhase
 }
 export interface MatchFormat {
   id: string

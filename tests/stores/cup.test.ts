@@ -5,10 +5,11 @@ vi.mock('@/api/scorecard', () => ({ scorecardApi: { listTournaments: vi.fn() } }
 import { createPinia, setActivePinia } from 'pinia'
 import { scorecardApi } from '@/api/scorecard'
 import { useCupStore } from '@/stores/cup'
+import type { Tournament } from '@/api/types'
 
-const CUPS = [
-  { id: 'old', name: 'Cup', start_date: '2025-07-01', end_date: '2025-07-02', location: 'Gimli' },
-  { id: 'latest', name: 'Cup', start_date: '2026-09-18', end_date: '2026-09-19', location: 'Buffalo Point' },
+const CUPS: Tournament[] = [
+  { id: 'old', name: 'Cup', start_date: '2025-07-01', end_date: '2025-07-02', location: 'Gimli', phase: 'upcoming' },
+  { id: 'latest', name: 'Cup', start_date: '2026-09-18', end_date: '2026-09-19', location: 'Buffalo Point', phase: 'upcoming' },
 ]
 
 describe('the cup store', () => {
