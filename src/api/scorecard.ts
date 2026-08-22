@@ -75,6 +75,9 @@ export const scorecardApi = {
   addParticipant: (matchId: string, playerId: string, teamId: string) =>
     sc().post<void>(`/v1/matches/${matchId}/participants`, { player_id: playerId, team_id: teamId }),
   removeParticipant: (matchId: string, playerId: string) => sc().del<void>(`/v1/matches/${matchId}/participants/${playerId}`),
+  // Clears every score on a match and its stored result; the lineup stays, so it can be
+  // scored again without being rebuilt. tournaments:write, and it ignores the scoring window.
+  resetMatch: (matchId: string) => sc().del<void>(`/v1/matches/${matchId}/scores`),
   // Match setup: courses + their tee sets feed the create-match form.
   listCourses: () => sc().get<Course[]>('/v1/courses'),
   getCourseTees: (courseId: string) => sc().get<TeeSetSummary[]>(`/v1/courses/${courseId}/tees`),
