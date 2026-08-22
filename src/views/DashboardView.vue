@@ -70,19 +70,12 @@ const showMatchup = computed(() => {
   return !!(left.value?.captain && right.value?.captain)
 })
 // `?phase=` previews a mode against real data. The phase itself is the record's — deriving
-// it here from the results called a match started later than the API does.
-//
-// The fallback only runs against an API too old to send the field, and picks 'finished'
-// over 'upcoming' because that failure is otherwise silent and year-round: a settled cup
-// read as upcoming renders the matchup with no countdown and no score, where the standing
-// belongs.
+// it here from the results called a match started later than the API does. The default
+// covers the moment before a record has loaded, not an API that fails to send the field.
 const phase = computed<TournamentPhase>(() => {
   const override = route.query.phase
   if (override === 'upcoming' || override === 'live' || override === 'finished') return override
-  const known = tournament.value?.phase
-  if (known) return known
-  const r = results.value
-  return r.length && r.every((m) => m.finished) ? 'finished' : 'upcoming'
+  return tournament.value?.phase ?? 'upcoming'
 })
 
 const heroEyebrow = computed(() => tournamentEyebrow(tournament.value))

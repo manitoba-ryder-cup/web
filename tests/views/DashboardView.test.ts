@@ -185,23 +185,6 @@ describe('DashboardView', () => {
     expect(w.get('section').text()).toContain('6½')
   })
 
-  // Against an API too old to send the field. 'upcoming' would be the silent, year-round
-  // failure: a settled cup rendering the matchup with no countdown and no score.
-  it('falls back to the results when the record carries no phase', async () => {
-    const noPhase: Partial<Tournament> = { ...TOURNAMENT }
-    delete noPhase.phase
-    vi.mocked(scorecardApi.getTournament).mockResolvedValue(noPhase as Tournament)
-    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
-      { ...TEAMS[0], points: 6.5 },
-      { ...TEAMS[1], points: 3.5 },
-    ])
-    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true)])
-    const w = mountDashboard()
-    await flushPromises()
-
-    expect(w.get('section').text()).toContain('6½')
-  })
-
   // The tab bar reaches the same page, so the hero does not need to.
   it('sends nobody from the hero to a page the tab bar already reaches', async () => {
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([{ ...match(FRI, 'Fourball'), hole_results: ['blue-1'] }])
