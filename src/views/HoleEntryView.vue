@@ -51,25 +51,22 @@ const readonly = computed(() => !editable.value)
 // A hole outside the card's eighteen has nothing behind it either, and dead-ended on
 // "Hole not found." rather than going anywhere useful.
 const onTheCard = computed(() => Number.isInteger(holeNumber.value) && holeNumber.value >= 1 && holeNumber.value <= 18)
-watch(
-  // holeNumber in its own right: walking between two closed holes leaves `editable` false
-  // throughout, so nothing else here changes and the walk would never be checked.
-  [loading, match, editable, onTheCard, holeNumber],
-  () => {
-    if (loading.value || !match.value) return
-    // A match that has not gone off is a different answer from one that will not take this
-    // hole, and the page below says when it tees off. Leave that reachable.
-    if (!started.value) return
-    if (editable.value && onTheCard.value) return
-    // Not over a refusal still unread — but only the one about this hole, or a single 409 would
-    // switch the redirect off for the rest of the walk.
-    if (saveError.value && refusedHole.value === holeNumber.value) return
-    router.replace({ name: 'match', params: { tournamentId: props.tournamentId, matchId: props.matchId } })
-  },
-  // A warm cache resolves before the first render, so nothing here would ever change and
-  // the arrival this guards — a shared link, a typed URL — is exactly the one that skips it.
-  { immediate: true },
-)
+// Where this hole sends a reader, or null to stay. A computed rather than a watch over a
+// list of sources: the list has to be kept in step with what the guards read, and was not.
+const sendAway = computed(() => {
+  if (loading.value || !match.value) return null
+  // A match that has not gone off is a different answer from one that will not take this
+  // hole, and the page below says when it tees off. Leave that reachable.
+  if (!started.value) return null
+  if (editable.value && onTheCard.value) return null
+  // Not over a refusal still unread — but only the one about this hole, or a single 409 would
+  // switch the redirect off for the rest of the walk.
+  if (saveError.value && refusedHole.value === holeNumber.value) return null
+  return { name: 'match', params: { tournamentId: props.tournamentId, matchId: props.matchId } }
+})
+// A warm cache resolves before the first render, so without immediate the arrival this
+// guards — a shared link, a typed URL — is exactly the one that never triggers it.
+watch(sendAway, (to) => to && router.replace(to), { immediate: true })
 
 // Singles/Fourball record a score per player; one-ball formats (Alt Shot/Scramble/Scotch)
 // record one score per team (player_id null).
