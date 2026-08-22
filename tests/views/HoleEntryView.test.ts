@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
-import { ApiError, type MatchResult, type MatchStatus } from '@/api/types'
+import { ApiError, type HoleStatus, type MatchResult, type MatchStatus } from '@/api/types'
 
 const teams = [
   { id: 'blue', color: 'Blue', captain: null, points: 0 },
@@ -42,6 +42,19 @@ const match: MatchResult = {
   course_name: 'Clear Lake',
 }
 const holes = Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, hdcp: i + 1, yards: 400 }))
+// The 15th as it was played: a hole the match already carries a score for, which is what
+// separates correcting one from extending a decided match onto a hole it never reached.
+const scoredFifteenth: HoleStatus = {
+  hole_number: 15,
+  team_scores: [
+    { team_id: 'blue', strokes: 5, player_scores: [{ player_id: 'p1', strokes: 5 }] },
+    { team_id: 'red', strokes: 4, player_scores: [{ player_id: 'p2', strokes: 4 }] },
+  ],
+  leader_team_id: 'red',
+  lead: 4,
+  holes_remaining: 3,
+  decided: true,
+}
 const open: MatchStatus = { finished: false, winner_team_id: null, leader_team_id: 'blue', lead: 1, holes_remaining: 10 }
 const closedOut: MatchStatus = { finished: true, winner_team_id: 'blue', leader_team_id: 'blue', lead: 4, holes_remaining: 3 }
 
@@ -51,7 +64,8 @@ vi.mock('@/composables/useToast', () => ({
 }))
 
 const submitScore = vi.fn()
-const getMatchScores = vi.fn(() => Promise.resolve([]))
+let holeStates: HoleStatus[] = []
+const getMatchScores = vi.fn(() => Promise.resolve(holeStates))
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
@@ -98,6 +112,7 @@ describe('HoleEntryView saving', () => {
     Object.assign(match, withWindow(match, teeingOffNow))
     submitScore.mockReset()
     getMatchScores.mockClear()
+    holeStates = []
     toasts.length = 0
     match.finished = false
   })
@@ -249,7 +264,7 @@ describe('HoleEntryView saving', () => {
     expect(saveButton(w).text()).toBe('Next Hole')
   })
 
-  it('does not write at all for a match that was already finished on load', async () => {
+  it('does not extend a finished match onto a hole it never played', async () => {
     match.finished = true
     const w = await openHole('16')
 
@@ -257,5 +272,21 @@ describe('HoleEntryView saving', () => {
     await flushPromises()
 
     expect(submitScore).not.toHaveBeenCalled()
+  })
+
+  it('still corrects a hole a finished match was played over', async () => {
+    // The server takes corrections to the holes a decided match was played over until its
+    // window shuts, and a typo can be what closed it out early — so the strips stay live.
+    match.finished = true
+    holeStates = [scoredFifteenth]
+    submitScore.mockResolvedValue(closedOut)
+    const w = await openHole('15')
+
+    expect(saveButton(w).text()).toContain('Save')
+
+    await saveButton(w).trigger('click')
+    await flushPromises()
+
+    expect(submitScore).toHaveBeenCalledTimes(1)
   })
 })

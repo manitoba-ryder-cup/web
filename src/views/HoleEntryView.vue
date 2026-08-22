@@ -37,15 +37,16 @@ const started = computed(() => hasStarted(match.value))
 // the server: a score entered for last year's match would be refused.
 const scoreable = computed(() => scoringOpen(match.value))
 const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.value) ?? null)
-// A finished match is read-only (the write flow only makes sense for a live round). The
-// loaded result is a snapshot from mount, so a save that ends the match sets this too —
-// otherwise walking to the next hole would still offer an editable strip.
+// The loaded result is a snapshot from mount, so a save that ends the match sets this too
+// — otherwise walking forward would still offer a strip on a hole the match never reached.
 const finishedByWrite = ref(false)
+const finished = computed(() => finishedByWrite.value || (match.value?.finished ?? false))
+// A decided match still takes corrections to the holes it was played over — a typo can be
+// what closed it out early — and refuses only the holes past them, as the server does.
+const holeScored = computed(() => holeStates.value.some((h) => h.hole_number === holeNumber.value))
 // Reading a hole is public; recording one is not. Without the scope the page still shows
 // what was scored, which is what a spectator came for, and offers nothing to tap.
-const readonly = computed(
-  () => finishedByWrite.value || !scoreable.value || (match.value?.finished ?? false) || !auth.hasScope(SCOPE_SCORES_WRITE),
-)
+const readonly = computed(() => !scoreable.value || !auth.hasScope(SCOPE_SCORES_WRITE) || (finished.value && !holeScored.value))
 
 // Singles/Fourball record a score per player; one-ball formats (Alt Shot/Scramble/Scotch)
 // record one score per team (player_id null).
