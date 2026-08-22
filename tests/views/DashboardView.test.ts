@@ -167,19 +167,39 @@ describe('DashboardView', () => {
     expect(hero.text()).toContain('3½')
   })
 
-  // Which hero to show is the API's call, not this page's. It matters at the start of a
-  // cup: a hole only lands in hole_results once both sides have scored it, so a page
-  // deriving the phase itself showed the countdown to a tee time that had passed while
-  // the first group was already being scored.
+  // Matters at the start: the countdown ran against a tee time that had already passed.
+  //
+  // Asserts the points, not the absence of the countdown — `useCountdown` returns null for
+  // a target in the past, so once the fixture date passes, "no countdown" stops telling the
+  // two heroes apart and the test quietly stops testing anything.
   it('takes the phase from the record rather than re-deriving it from the results', async () => {
     vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
+      { ...TEAMS[0], points: 6.5 },
+      { ...TEAMS[1], points: 3.5 },
+    ])
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball')])
     const w = mountDashboard()
     await flushPromises()
 
-    const hero = w.get('section')
-    expect(hero.text()).not.toContain('Tees off in')
-    expect(hero.text()).toContain('Jones')
+    expect(w.get('section').text()).toContain('6½')
+  })
+
+  // Against an API too old to send the field. 'upcoming' would be the silent, year-round
+  // failure: a settled cup rendering the matchup with no countdown and no score.
+  it('falls back to the results when the record carries no phase', async () => {
+    const noPhase: Partial<Tournament> = { ...TOURNAMENT }
+    delete noPhase.phase
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue(noPhase as Tournament)
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
+      { ...TEAMS[0], points: 6.5 },
+      { ...TEAMS[1], points: 3.5 },
+    ])
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true)])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.get('section').text()).toContain('6½')
   })
 
   // The tab bar reaches the same page, so the hero does not need to.

@@ -69,15 +69,20 @@ const showMatchup = computed(() => {
   if (route.query.captains === 'false') return false
   return !!(left.value?.captain && right.value?.captain)
 })
-// Which of the three the page renders. Read off the record rather than re-derived from the
-// results: the API decides it there, and the copy this page kept called a match started
-// only once both sides had scored a hole — so a cup being scored right now read as the
-// draft page until someone's card came back complete. `?phase=` overrides it for previewing
-// a mode against real data.
+// `?phase=` previews a mode against real data. The phase itself is the record's — deriving
+// it here from the results called a match started later than the API does.
+//
+// The fallback only runs against an API too old to send the field, and picks 'finished'
+// over 'upcoming' because that failure is otherwise silent and year-round: a settled cup
+// read as upcoming renders the matchup with no countdown and no score, where the standing
+// belongs.
 const phase = computed<TournamentPhase>(() => {
   const override = route.query.phase
   if (override === 'upcoming' || override === 'live' || override === 'finished') return override
-  return tournament.value?.phase ?? 'upcoming'
+  const known = tournament.value?.phase
+  if (known) return known
+  const r = results.value
+  return r.length && r.every((m) => m.finished) ? 'finished' : 'upcoming'
 })
 
 const heroEyebrow = computed(() => tournamentEyebrow(tournament.value))

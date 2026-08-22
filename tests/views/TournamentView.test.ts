@@ -9,6 +9,7 @@ vi.mock('@/api/scorecard', () => ({
       start_date: '2026-07-01',
       end_date: '2026-07-03',
       location: 'Winnipeg',
+      phase: 'upcoming',
     }),
     getTournamentTeams: vi.fn().mockResolvedValue([
       { id: 'red-1', color: 'Red', captain: { id: 'p1', first_name: 'Amy', last_name: 'Smith' }, points: 8 },
@@ -148,10 +149,8 @@ describe('TournamentView polling', () => {
     expect(vi.mocked(scorecardApi.getTournamentResults).mock.calls.length).toBeGreaterThan(1)
   })
 
-  // The case a page open on the morning of depends on: nobody reloads when the first
-  // window opens. Nothing in the data changes at that moment — the windows were always
-  // there — so the escalation has to come from the clock, and a cadence captured at mount
-  // would leave a spectator on a five-minute heartbeat through the front nine.
+  // Nothing in the data changes when a window opens — the windows were always there — so
+  // the escalation comes from the clock. A cadence captured at mount would miss it.
   it('speeds up when a window opens under a page nobody has touched', async () => {
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue(withWindow(hoursFromNow(0.5), hoursFromNow(12)))
     vi.useFakeTimers({ shouldAdvanceTime: true })
