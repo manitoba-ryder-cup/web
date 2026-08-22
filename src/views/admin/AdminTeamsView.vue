@@ -4,7 +4,6 @@ import { scorecardApi } from '@/api/scorecard'
 import type { TournamentPlayer } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
-import { useAfterWrite } from '@/composables/useAfterWrite'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -55,7 +54,6 @@ const filtered = computed(() => {
 // The row moves only once the writes succeed, and re-syncs on failure, so a half-applied
 // move never leaves the list lying.
 const { isBusy, run } = useBusy()
-const afterWrite = useAfterWrite()
 function assign(p: TournamentPlayer, target: string | null) {
   if (p.team_id === target) return
   const prev = p.team_id
@@ -69,7 +67,6 @@ function assign(p: TournamentPlayer, target: string | null) {
         // Leaving a team drops any captaincy there (the server clears it on undraft too).
         teams: d.teams.map((t) => (t.id === prev && t.captain?.id === p.player_id ? { ...t, captain: null } : t)),
       }))
-      await afterWrite()
     },
     { error: `Couldn't update ${p.first_name} ${p.last_name}. Please try again.`, onError: refresh },
   )
@@ -99,7 +96,6 @@ function toggleCaptain(p: TournamentPlayer) {
       else await scorecardApi.setTeamCaptain(teamId, p.player_id)
       const captain = clearing ? null : { id: p.player_id, first_name: p.first_name, last_name: p.last_name }
       patch((d) => ({ ...d, teams: d.teams.map((t) => (t.id === teamId ? { ...t, captain } : t)) }))
-      await afterWrite()
     },
     { error: "Couldn't update the captain. Please try again." },
   )
