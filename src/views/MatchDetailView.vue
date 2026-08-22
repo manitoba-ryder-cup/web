@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { scorecardApi } from '@/api/scorecard'
+import { useBusy } from '@/composables/useBusy'
+import { toast } from '@/composables/useToast'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { useCoarseClock } from '@/composables/useCoarseClock'
 import { usePollWhileInPlay } from '@/composables/usePollWhileInPlay'
@@ -14,6 +17,8 @@ import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
 import MatchSummary from '@/components/tournament/MatchSummary.vue'
 import MatchScorecard from '@/components/tournament/MatchScorecard.vue'
+import BaseMenu from '@/components/base/BaseMenu.vue'
+import MoreIcon from '@/components/icons/MoreIcon.vue'
 import { SCOPE_SCORES_WRITE, SCOPE_TOURNAMENTS_WRITE } from '@/api/scopes'
 
 const props = defineProps<{ tournamentId: string; matchId: string }>()
@@ -24,7 +29,7 @@ const auth = useAuthStore()
 // pairing opened during the morning session would sit on a frozen standing.
 const now = useCoarseClock()
 const poll = usePollWhileInPlay(now)
-const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+const { error, loading, refresh, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
   () => props.matchId,
   {
@@ -38,6 +43,28 @@ const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.t
 // A row leading nowhere invites a spectator off the card that shows more than the page behind
 // it. Clock-driven: the window opens with time, not with anything in the data.
 poll.follow(() => results.value)
+
+// Not gated on hole_results: it counts only holes both sides scored, so a stored result left
+// behind by a removed participant reads as empty — the one state that needs this.
+const canReset = computed(() => auth.hasScope(SCOPE_TOURNAMENTS_WRITE))
+const menu = ref<InstanceType<typeof BaseMenu> | null>(null)
+
+// One tap, no confirmation: this exists to clear matches scored while testing, and is not
+// expected to be used during a cup. Adding one has been considered and declined.
+const { isBusy, run } = useBusy()
+const resetMatch = () =>
+  run(
+    'reset-match',
+    async () => {
+      await scorecardApi.resetMatch(props.matchId)
+      menu.value?.close()
+      // This page's own query is the match context, which useAfterWrite leaves alone so a
+      // refetch cannot land under someone entering scores.
+      await refresh()
+      toast.success('Match reset')
+    },
+    { error: "Couldn't reset the match. Please try again." },
+  )
 
 const openHoles = computed(() => {
   if (!auth.hasScope(SCOPE_SCORES_WRITE) || !match.value) return new Set<number>()
@@ -99,7 +126,23 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
           :left-players="left?.players"
           :right-players="right?.players"
           :open-holes="openHoles"
-        />
+        >
+          <!-- In the letterhead beside the format, where the card names itself — an occasional
+               action, out of the way of every hole row below it. -->
+          <template v-if="canReset" #actions>
+            <BaseMenu ref="menu" label="Match actions">
+              <template #trigger><MoreIcon /></template>
+              <button
+                type="button"
+                class="flex min-h-[44px] w-full items-center px-4 py-2 text-left text-white hover:bg-mrc-accent/25 disabled:text-white/40"
+                :disabled="isBusy('reset-match')"
+                @click="resetMatch"
+              >
+                {{ isBusy('reset-match') ? 'Resetting…' : 'Reset Match' }}
+              </button>
+            </BaseMenu>
+          </template>
+        </MatchScorecard>
       </template>
       <!-- Has no lineup yet: say so rather than a misleading "not found", since it becomes the real
            scorecard once one is set. -->
