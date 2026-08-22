@@ -4,6 +4,7 @@ import { scorecardApi } from '@/api/scorecard'
 import type { TournamentPlayer } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
+import { useAfterWrite } from '@/composables/useAfterWrite'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -13,10 +14,13 @@ import TeamAssignRow from '@/components/admin/TeamAssignRow.vue'
 
 const props = defineProps<{ id: string }>()
 
-const { data, error, loading, refresh, retry } = useAsync(async () => {
-  const [roster, teams] = await Promise.all([scorecardApi.getTournamentPlayers(props.id), scorecardApi.getTournamentTeams(props.id)])
-  return { roster, teams }
-})
+const { data, error, loading, refresh, retry, patch } = useAsync(
+  () => ['admin', 'teams', props.id],
+  async () => {
+    const [roster, teams] = await Promise.all([scorecardApi.getTournamentPlayers(props.id), scorecardApi.getTournamentTeams(props.id)])
+    return { roster, teams }
+  },
+)
 
 const teams = computed(() => data.value?.teams ?? [])
 const blueId = computed(() => teams.value.find((t) => t.color === 'Blue')?.id ?? null)
@@ -52,6 +56,7 @@ const filtered = computed(() => {
 // just an undraft. We only update the row once the writes succeed, and re-sync from the
 // server if anything fails (so a half-applied move never leaves the UI lying).
 const { isBusy, run } = useBusy()
+const afterWrite = useAfterWrite()
 function assign(p: TournamentPlayer, target: string | null) {
   if (p.team_id === target) return
   const prev = p.team_id
@@ -60,10 +65,12 @@ function assign(p: TournamentPlayer, target: string | null) {
     async () => {
       if (prev) await scorecardApi.undraftPlayer(prev, p.player_id)
       if (target) await scorecardApi.draftPlayer(target, p.player_id)
-      // Leaving a team drops any captaincy there (the server clears it on undraft too).
-      const prevTeam = teamOf(prev)
-      if (prevTeam?.captain?.id === p.player_id) prevTeam.captain = null
-      p.team_id = target
+      patch((d) => ({
+        roster: d.roster.map((x) => (x.player_id === p.player_id ? { ...x, team_id: target } : x)),
+        // Leaving a team drops any captaincy there (the server clears it on undraft too).
+        teams: d.teams.map((t) => (t.id === prev && t.captain?.id === p.player_id ? { ...t, captain: null } : t)),
+      }))
+      await afterWrite()
     },
     { error: `Couldn't update ${p.first_name} ${p.last_name}. Please try again.`, onError: refresh },
   )
@@ -85,17 +92,17 @@ function showCaptainToggle(p: TournamentPlayer): boolean {
 }
 function toggleCaptain(p: TournamentPlayer) {
   if (!p.team_id) return
-  const t = teamOf(p.team_id)
+  const teamId = p.team_id
+  // Read before the write: the patch below is what changes it.
+  const clearing = isCaptain(p)
   return run(
     p.player_id,
     async () => {
-      if (isCaptain(p)) {
-        await scorecardApi.clearTeamCaptain(p.team_id!)
-        if (t) t.captain = null
-      } else {
-        await scorecardApi.setTeamCaptain(p.team_id!, p.player_id)
-        if (t) t.captain = { id: p.player_id, first_name: p.first_name, last_name: p.last_name }
-      }
+      if (clearing) await scorecardApi.clearTeamCaptain(teamId)
+      else await scorecardApi.setTeamCaptain(teamId, p.player_id)
+      const captain = clearing ? null : { id: p.player_id, first_name: p.first_name, last_name: p.last_name }
+      patch((d) => ({ ...d, teams: d.teams.map((t) => (t.id === teamId ? { ...t, captain } : t)) }))
+      await afterWrite()
     },
     { error: "Couldn't update the captain. Please try again." },
   )

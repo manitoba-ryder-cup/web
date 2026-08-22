@@ -10,3 +10,19 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollTo) {
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {}
 }
+
+// Every mounted component gets a Query cache, and a fresh one per test — a shared client
+// would let one test serve another's cached data, which reads as a passing test for a
+// query that never ran. Retries are off: they are right in the field and, here, only turn
+// a failing assertion into a timeout.
+if (typeof Element !== 'undefined') {
+  const { config } = await import('@vue/test-utils')
+  const { VueQueryPlugin, QueryClient } = await import('@tanstack/vue-query')
+  const { beforeEach } = await import('vitest')
+  beforeEach(() => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } },
+    })
+    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+  })
+}

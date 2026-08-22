@@ -41,13 +41,23 @@ empty, suspect the tenant before the code.
 | `src/components/base/` | `Base*` primitives + `AsyncState`; the rest of `components/` is grouped by feature |
 | `src/components/skeleton/` | Loading placeholders. `SkeletonBlock` is the atom; the rest compose it. Goes in `AsyncState`'s `#loading` slot |
 | `src/views/` | Route components, all lazy-loaded via dynamic import |
-| `src/stores/` | Pinia. `auth.ts`, and `cup.ts` for which cup is current — the header and tab bar need it before any view has run. Server state is otherwise fetched per view, not centrally cached |
+| `src/stores/` | Pinia. `auth.ts`, and `cup.ts` for which cup is current — the header and tab bar need it before any view has run. Server state lives in the query cache instead, keyed per view |
 
-**Data views follow one pattern:** `useAsync(fetcher)` for `{ data, error, loading, retry }`,
-rendered through `<AsyncState>`. Pass `retry` wherever there's something to re-run — this
-gets used on a phone in a field, and a dropped request should be one tap from recovering.
-`useAsync`'s `intervalMs` polls live views and deliberately keeps stale data on a failed
-poll rather than blanking the page.
+**Data views follow one pattern:** `useAsync(key, fetcher)` for
+`{ data, error, loading, retry }`, rendered through `<AsyncState>`. Pass `retry` wherever
+there's something to re-run — this gets used on a phone in a field, and a dropped request
+should be one tap from recovering. `useAsync`'s `intervalMs` polls live views and
+deliberately keeps stale data on a failed poll rather than blanking the page.
+
+TanStack Query is underneath, so a view renders what it already had and revalidates behind
+it. Three things about that are invisible until they bite. **The key must name everything
+the fetcher reads** — two views sharing one share an answer, and a key that misses a route
+param is how the last player's name ends up under the next player's URL, which the key is
+now the only thing preventing. **A key that depends on a prop is a getter**; an array is
+captured once. And **optimistic updates go through `patch`** — `data` is a readonly view of
+the cache, so assigning into it is dropped rather than refused: the write lands and the row
+never moves. `useAfterWrite` says which pages a write has to reach, and why the polling ones
+aren't among them.
 
 Pass a skeleton through `AsyncState`'s `#loading` slot rather than letting a view collapse
 to a line of text — and check whether the view renders anything *outside* `AsyncState`

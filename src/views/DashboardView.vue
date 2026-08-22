@@ -25,6 +25,7 @@ const cup = useCupStore()
 // The landing adapts to the event's phase: before it (the draft + schedule), during it
 // (the live standing), and after (the final standing). Polls live.
 const { data, error, loading, retry } = useAsync(
+  ['dashboard'],
   async () => {
     // Which cup: resolved once by the shell. The record itself is re-read on every poll
     // alongside the standing — the phase this page renders is derived from its start date,
