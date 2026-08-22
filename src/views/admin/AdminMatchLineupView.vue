@@ -18,7 +18,7 @@ import BaseLabel from '@/components/base/BaseLabel.vue'
 
 const props = defineProps<{ id: string; matchId: string }>()
 
-const { data, error, loading, refresh, retry } = useAsync(
+const { data, error, loading, retry } = useAsync(
   // Tournament-scoped: every request below is about the tournament and the match only selects
   // from the result. Keyed by match, eight lineups would fetch the same four endpoints eight times.
   () => ['admin', 'lineup', props.id],
@@ -66,7 +66,6 @@ const add = (playerId: string, teamId: string) =>
     true,
     async () => {
       await scorecardApi.addParticipant(props.matchId, playerId, teamId)
-      await refresh()
     },
     { error: "Couldn't add that player. Please try again." },
   )
@@ -75,7 +74,6 @@ const remove = (playerId: string) =>
     true,
     async () => {
       await scorecardApi.removeParticipant(props.matchId, playerId)
-      await refresh()
     },
     { error: "Couldn't remove that player. Please try again." },
   )
@@ -113,7 +111,6 @@ const saveTeeTime = () =>
     'tee-time',
     async () => {
       await scorecardApi.updateMatch(props.matchId, { tee_time: eventInputToUtc(teeTimeInput.value, courseZone.value) })
-      await refresh()
     },
     { error: "Couldn't move that tee time. Please try again." },
   )

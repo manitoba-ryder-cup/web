@@ -1,10 +1,12 @@
 import { ref } from 'vue'
 import { toast } from '@/composables/useToast'
+import { useAfterWrite } from '@/composables/useAfterWrite'
 
 // `key` distinguishes per-row actions from a single-flight page. The action does its own
 // optimistic update; `onError` re-syncs when it fails.
 export function useBusy() {
   const busy = ref<string | true | null>(null)
+  const afterWrite = useAfterWrite()
 
   function isBusy(key?: string): boolean {
     return key === undefined ? busy.value !== null : busy.value === key
@@ -15,6 +17,9 @@ export function useBusy() {
     busy.value = key
     try {
       await action()
+      // Every caller here is a write, and each one used to decide for itself what to tell
+      // the rest of the app — three views, three answers, one of them a second request.
+      await afterWrite()
     } catch {
       toast.error(opts.error)
       await opts.onError?.()
