@@ -40,6 +40,7 @@ vi.mock('@/api/scorecard', () => ({
   },
 }))
 
+import { scorecardApi } from '@/api/scorecard'
 import { useMatchContext } from '@/composables/useMatchContext'
 
 function harness(matchId = 'm1', options?: Parameters<typeof useMatchContext>[2]) {
@@ -52,6 +53,21 @@ function harness(matchId = 'm1', options?: Parameters<typeof useMatchContext>[2]
 describe('useMatchContext', () => {
   beforeEach(() => {
     getMatchHoles.mockReset().mockResolvedValue(holes)
+  })
+
+  // Only hole entry asks to be left alone by a refetch, and it does that by passing no
+  // interval at all. `false` means "do not poll" — a live view saying the cup is over for
+  // the day still wants the tab coming back to bring it up to date.
+  it('keeps the focus refetch for a view that asked not to poll', async () => {
+    mount(harness('m1', { intervalMs: false }))
+    await flushPromises()
+    const before = vi.mocked(scorecardApi.getTournamentResults).mock.calls.length
+
+    window.dispatchEvent(new Event('visibilitychange'))
+    window.dispatchEvent(new Event('focus'))
+    await flushPromises()
+
+    expect(vi.mocked(scorecardApi.getTournamentResults).mock.calls.length).toBeGreaterThan(before)
   })
 
   it('picks the match out of the tournament results and orders its sides', async () => {

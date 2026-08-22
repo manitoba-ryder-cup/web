@@ -3,9 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { displayError } from '@/lib/displayError'
 
 interface UseAsyncOptions {
-  // When set, silently re-fetch on this cadence (ms) while the tab is visible, so live
-  // views (scores, standings) stay current without a manual refresh.
-  intervalMs?: number
+  // Silently re-fetch on this cadence (ms) while the tab is visible. A getter, so a view
+  // can change its mind; `false` means do not poll, which is not the same as not asking.
+  intervalMs?: MaybeRefOrGetter<number | false>
+  // Off for a view that must not have the ground move under it — coming back to the tab
+  // is otherwise a refetch, which is the one thing a load-once flow asked not to happen.
+  refetchOnFocus?: boolean
 }
 
 // Standard fetch state for every data view: data (undefined until loaded), a friendly
@@ -19,7 +22,8 @@ export function useAsync<T>(key: MaybeRefOrGetter<readonly unknown[]>, fetcher: 
   const q = useQuery({
     queryKey: computed(() => toValue(key)),
     queryFn: fetcher,
-    refetchInterval: options.intervalMs ?? false,
+    refetchInterval: computed(() => toValue(options.intervalMs) ?? false),
+    refetchOnWindowFocus: options.refetchOnFocus ?? true,
     // A hidden tab is not being read; it catches up when it comes back.
     refetchIntervalInBackground: false,
   })

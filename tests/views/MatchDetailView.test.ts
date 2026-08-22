@@ -47,10 +47,13 @@ const withLineup: MatchResult = {
 const noLineup: MatchResult = { ...withLineup, sides: [] }
 
 const match = vi.fn(() => withLineup)
+// The whole tournament, which is what the ScoreBar on this page renders. Defaults to the
+// one match the other tests care about.
+const cup = vi.fn((): MatchResult[] => [match()])
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
-    getTournamentResults: vi.fn(() => Promise.resolve([match()])),
+    getTournamentResults: vi.fn(() => Promise.resolve(cup())),
     getMatchHoles: vi.fn(() => Promise.resolve([])),
     getMatchScores: vi.fn(() => Promise.resolve([])),
   },
@@ -226,5 +229,30 @@ describe('MatchDetailView', () => {
     const w = await open({ loggedIn: false })
 
     expect(w.text()).not.toContain('Set lineup')
+  })
+})
+
+// The page pins the event standing, so what it polls for is the cup rather than this match.
+describe('MatchDetailView polling', () => {
+  const other = { ...withLineup, match_id: 'm2' }
+  afterEach(() => {
+    vi.useRealTimers()
+    cup.mockImplementation(() => [match()])
+  })
+
+  it('keeps the pinned standing moving while the cup is being played', async () => {
+    // This pairing tees off in the afternoon; the session on the course now is another's.
+    const mine = withWindow(withLineup, hoursFromNow(4))
+    match.mockReturnValue(mine)
+    cup.mockImplementation(() => [mine, withWindow(other, hoursFromNow(-1))])
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+
+    await open({ scopes: [SCOPE_SCORES_WRITE] })
+    const first = vi.mocked(scorecardApi.getTournamentResults).mock.calls.length
+    await vi.advanceTimersByTimeAsync(65_000)
+
+    // Gated on this match's own window it would sit still, showing a standing being decided
+    // three fairways away.
+    expect(vi.mocked(scorecardApi.getTournamentResults).mock.calls.length).toBeGreaterThan(first)
   })
 })

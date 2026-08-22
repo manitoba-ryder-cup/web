@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import type { MatchResult, Tournament, TournamentTeam } from '@/api/types'
 import { scorecardApi } from '@/api/scorecard'
 import { useAsync } from '@/composables/useAsync'
+import { useCoarseClock } from '@/composables/useCoarseClock'
+import { cupInPlay } from '@/lib/scoringWindow'
 import { useCupStore } from '@/stores/cup'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
@@ -24,6 +26,10 @@ const cup = useCupStore()
 
 // The landing adapts to the event's phase: before it (the draft + schedule), during it
 // (the live standing), and after (the final standing). Polls live.
+// Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
+// request turns that empty list full — so a page open on the morning of would never see it.
+const clock = useCoarseClock()
+const inPlay = ref(false)
 const { data, error, loading, retry } = useAsync(
   ['dashboard'],
   async () => {
@@ -47,12 +53,13 @@ const { data, error, loading, retry } = useAsync(
     }
     return { tournament, teams, results }
   },
-  { intervalMs: 20000 },
+  { intervalMs: () => (inPlay.value ? 20_000 : 300_000) },
 )
 
 const tournament = computed(() => data.value?.tournament ?? null)
 const teams = computed(() => data.value?.teams ?? [])
 const results = computed(() => data.value?.results ?? [])
+watchEffect(() => (inPlay.value = cupInPlay(results.value, clock.value)))
 const { left, right, leftColors, rightColors } = useTeamPair(teams)
 
 // The hero fills in as data lands: the site name until there is a tournament, then the

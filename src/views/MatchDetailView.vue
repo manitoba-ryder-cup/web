@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useMatchContext } from '@/composables/useMatchContext'
+import { useCoarseClock } from '@/composables/useCoarseClock'
 import { playerInitials, resultText } from '@/lib/matchResult'
 import { formatTeeTime } from '@/lib/teeTime'
-import { holeOpen } from '@/lib/scoringWindow'
+import { cupInPlay, holeOpen } from '@/lib/scoringWindow'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -18,13 +19,17 @@ const props = defineProps<{ tournamentId: string; matchId: string }>()
 
 const auth = useAuthStore()
 
-// Polls, so a spectator watching the round sees it move. Par is non-fatal here — the
-// card renders without it.
+// Polls while the cup is being played, not while this match is: the ScoreBar pinned at the
+// top carries every match in the tournament, so an afternoon pairing opened during the
+// morning session would sit on a frozen event standing while the points were being decided.
+// The narrower question — is this match still recordable — is the right one for the rows
+// below, and that is where it is asked. Par is non-fatal here: the card renders without it.
+const inPlay = ref(false)
 const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
   () => props.matchId,
   {
-    intervalMs: 20000,
+    intervalMs: () => (inPlay.value ? 20_000 : 300_000),
     parOptional: true,
   },
 )
@@ -37,10 +42,8 @@ const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.t
 // Whether a row leads anywhere turns on the scoring window, which passes with time rather
 // than with data — so it needs a clock of its own, or a scorer waiting on the tee for the
 // window to open sits on inert rows until something else in the results happens to move.
-const now = ref(new Date())
-let clock: ReturnType<typeof setInterval> | undefined
-onMounted(() => (clock = setInterval(() => (now.value = new Date()), 30_000)))
-onUnmounted(() => clearInterval(clock))
+const now = useCoarseClock()
+watchEffect(() => (inPlay.value = cupInPlay(results.value, now.value)))
 
 const openHoles = computed(() => {
   if (!auth.hasScope(SCOPE_SCORES_WRITE) || !match.value) return new Set<number>()
