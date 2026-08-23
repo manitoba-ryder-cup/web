@@ -1,23 +1,34 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('@/api/auth', () => ({
-  authApi: {
-    login: vi.fn().mockResolvedValue({ access_token: 'acc-1', token_type: 'Bearer', expires_in: 900, refresh_expires_in: 3600 }),
-    refresh: vi.fn().mockResolvedValue({ access_token: 'acc-2', token_type: 'Bearer', expires_in: 900, refresh_expires_in: 3600 }),
-    logout: vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
-    me: vi.fn().mockResolvedValue({ id: 'u1', email: 'dev@x.com', first_name: 'Dev', last_name: 'User' }),
-  },
+  authApi: { login: vi.fn(), refresh: vi.fn(), logout: vi.fn(), me: vi.fn() },
 }))
 
+const LOGGED_IN = { access_token: 'acc-1', token_type: 'Bearer', expires_in: 900, refresh_expires_in: 3600 }
+const REFRESHED = { access_token: 'acc-2', token_type: 'Bearer', expires_in: 900, refresh_expires_in: 3600 }
+const ME = { id: 'u1', email: 'dev@x.com', first_name: 'Dev', last_name: 'User' }
+
 import { useAuthStore } from '@/stores/auth'
+import { ApiError } from '@/api/types'
 import { authApi } from '@/api/auth'
 
 describe('auth store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
+    // mockReset rather than clearAllMocks, which leaves the ...Once queues intact: a rejection
+    // a failing test never consumed is handed to the next one, and one failure becomes five.
+    vi.mocked(authApi.login).mockReset().mockResolvedValue(LOGGED_IN)
+    vi.mocked(authApi.refresh).mockReset().mockResolvedValue(REFRESHED)
+    vi.mocked(authApi.logout)
+      .mockReset()
+      .mockResolvedValue(new Response(null, { status: 204 }))
+    vi.mocked(authApi.me).mockReset().mockResolvedValue(ME)
   })
+
+  // Not inline in the tests that install them: a failing assertion throws first, and fake
+  // timers left on leak into every test after it.
+  afterEach(() => vi.useRealTimers())
 
   it('login stores token + user and marks authenticated', async () => {
     const auth = useAuthStore()
@@ -35,11 +46,49 @@ describe('auth store', () => {
     expect(auth.isAuthenticated).toBe(true)
   })
 
-  it('restore stays logged out when refresh fails', async () => {
-    vi.mocked(authApi.refresh).mockRejectedValueOnce(new Error('no cookie'))
+  it('restore stays logged out when the session is refused', async () => {
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(401, 'invalid refresh token'))
     const auth = useAuthStore()
     await auth.restore()
     expect(auth.isAuthenticated).toBe(false)
+    expect(authApi.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('restore keeps trying when the network fails rather than the session', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(408, 'The server took too long to answer.'))
+    const auth = useAuthStore()
+    await auth.restore()
+    // Mounts on the first attempt: a waking phone must not be made to wait for a retry.
+    expect(auth.isAuthenticated).toBe(false)
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(auth.isAuthenticated).toBe(true)
+    expect(auth.user?.id).toBe('u1')
+  })
+
+  it('restore stops retrying once someone has signed in by hand', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    await auth.login('dev@x.com', 'pw')
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(auth.accessToken).toBe('acc-1')
+    // The one that failed, and nothing after it: the pending retries found a session.
+    expect(authApi.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('restore gives up retrying once the session is refused', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh)
+      .mockRejectedValueOnce(new ApiError(408, 'timeout'))
+      .mockRejectedValueOnce(new ApiError(401, 'invalid refresh token'))
+    const auth = useAuthStore()
+    await auth.restore()
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(auth.isAuthenticated).toBe(false)
+    // Two: the timeout, then the refusal. It must not work through the whole schedule.
+    expect(authApi.refresh).toHaveBeenCalledTimes(2)
   })
 
   it('logout clears state', async () => {
@@ -51,13 +100,38 @@ describe('auth store', () => {
     expect(auth.isAuthenticated).toBe(false)
   })
 
-  it('refresh failure clears auth state and rethrows', async () => {
+  it('a refused refresh clears auth state and rethrows', async () => {
     const auth = useAuthStore()
     await auth.login('dev@x.com', 'pw')
-    vi.mocked(authApi.refresh).mockRejectedValueOnce(new Error('no cookie'))
-    await expect(auth.refresh()).rejects.toThrow('no cookie')
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(401, 'invalid refresh token'))
+    await expect(auth.refresh()).rejects.toThrow('invalid refresh token')
     expect(auth.accessToken).toBeNull()
     expect(auth.isAuthenticated).toBe(false)
+  })
+
+  it('a refresh that times out keeps the session and rethrows', async () => {
+    const auth = useAuthStore()
+    await auth.login('dev@x.com', 'pw')
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(408, 'The server took too long to answer.'))
+    await expect(auth.refresh()).rejects.toThrow('too long')
+    expect(auth.accessToken).toBe('acc-1')
+    expect(auth.isAuthenticated).toBe(true)
+  })
+
+  it('concurrent callers share one rotation', async () => {
+    const auth = useAuthStore()
+    // What returning to the app does: every mounted query refetches, each one 401s, and each
+    // asks for a refresh. The cookie is single-use, so a second rotation ends the session.
+    await Promise.all([auth.refresh(), auth.refresh(), auth.refresh()])
+    expect(authApi.refresh).toHaveBeenCalledOnce()
+    expect(auth.accessToken).toBe('acc-2')
+  })
+
+  it('a later refresh rotates again rather than reusing the joined one', async () => {
+    const auth = useAuthStore()
+    await auth.refresh()
+    await auth.refresh()
+    expect(authApi.refresh).toHaveBeenCalledTimes(2)
   })
 
   it('login failure at me() leaves logged out', async () => {
