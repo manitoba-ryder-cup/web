@@ -37,7 +37,7 @@ const resolved = computed(() => tabs.value.map((t) => ({ ...t, isActive: t.secti
             :href="href"
             @click="navigate"
             :aria-current="t.isActive ? 'page' : undefined"
-            class="flex flex-col items-center gap-1 py-2"
+            class="flex flex-col items-center gap-1 py-3"
             :class="t.isActive ? 'text-mrc-accent-soft' : 'text-white/70'"
           >
             <!-- The pill is the cue that survives without colour: it is there or it is
