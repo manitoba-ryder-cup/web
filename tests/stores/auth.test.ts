@@ -173,6 +173,8 @@ describe('auth store', () => {
 
     expect(auth.accessToken).toBe('acc-1')
     expect(auth.user?.id).toBe('u1')
+    // The login's, and none for the retry: once the epoch has moved there is nobody to load.
+    expect(authApi.me).toHaveBeenCalledOnce()
   })
 
   it('a user loaded after someone signs in does not replace them', async () => {
@@ -204,6 +206,24 @@ describe('auth store', () => {
 
     await vi.advanceTimersByTimeAsync(1_000)
     expect(auth.user?.id).toBe('u1')
+  })
+
+  it('logging out of a half-loaded session stops the retries', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.me).mockRejectedValueOnce(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    // A token, no profile, and Logout on screen — which renders on isAuthenticated alone.
+    expect(auth.isAuthenticated).toBe(true)
+    expect(auth.user).toBeNull()
+
+    await auth.logout()
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(auth.isAuthenticated).toBe(false)
+    // Restore's own refresh and nothing after it. No login intervened, so signing out is the
+    // only thing that can have stopped the pending retry.
+    expect(authApi.refresh).toHaveBeenCalledOnce()
   })
 
   it('logging out stops the retries still pending', async () => {
