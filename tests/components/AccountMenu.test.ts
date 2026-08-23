@@ -99,4 +99,24 @@ describe('AccountMenu', () => {
     await w.vm.$nextTick()
     expect(w.text()).not.toContain('Admin')
   })
+
+  // Dismissed with Escape, focus would otherwise sit on a panel that no longer exists and a
+  // keyboard user loses their place on the page.
+  it('hands the caret back to the trigger when it closes', async () => {
+    const w = await signedIn()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await w.vm.$nextTick()
+
+    expect(document.activeElement).toBe(w.get('button[aria-label="Account"]').element)
+  })
+
+  // A disclosure, not a menu: nothing here implements arrow keys, so promising menu
+  // semantics would have a screen reader announce keys that do nothing.
+  it('does not promise menu semantics it has not got', async () => {
+    const trigger = (await signedIn()).get('button[aria-label="Account"]')
+
+    expect(trigger.attributes('aria-haspopup')).toBeUndefined()
+    expect(trigger.attributes('aria-controls')).toBeTruthy()
+  })
 })

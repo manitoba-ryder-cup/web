@@ -161,9 +161,12 @@ function open(hole: number) {
         <!-- A <caption> keeps this part of the table rather than a strip that happens to sit above
              one. Charcoal here, mrc-muted for the structural bands, panel-alt for the totals. -->
         <caption v-if="courseName || formatName" class="bg-mrc-charcoal px-3 py-3">
-          <div class="flex items-baseline justify-between gap-3 font-semibold text-white/90">
+          <div class="flex items-center justify-between gap-3 font-semibold text-white/90">
             <span class="min-w-0 truncate text-left">{{ courseName }}</span>
-            <span class="shrink-0 text-right">{{ formatName }}</span>
+            <span class="ml-auto shrink-0 text-right">{{ formatName }}</span>
+            <!-- Actions belong to whoever renders the card; it does not know what they are.
+                 The -mr-3 pulls the menu's own tap padding back to the letterhead's edge. -->
+            <span class="-my-3 -mr-3 shrink-0"><slot name="actions" /></span>
           </div>
         </caption>
         <thead>
