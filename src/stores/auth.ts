@@ -22,10 +22,14 @@ export const useAuthStore = defineStore('auth', () => {
   // access narrows what they are offered on the next request rather than at next login.
   const scopes = computed(() => scopesFrom(accessToken.value))
   const hasScope = (scope: string) => scopes.value.includes(scope)
-  // Not a ref: nothing renders it, and callers join it rather than read it.
+  // Not refs: nothing renders these, and callers join or compare rather than read.
   let rotating: Promise<void> | null = null
+  // Signing in, signing out and being refused each decide the session on purpose and start a
+  // new epoch. Work already in flight belongs to the one before it and must not write over it.
+  let epoch = 0
 
   function clear() {
+    epoch += 1
     accessToken.value = null
     user.value = null
   }
@@ -35,18 +39,20 @@ export const useAuthStore = defineStore('auth', () => {
     // leaves a half-authenticated state (token set, user null).
     const res = await authApi.login({ email, password })
     const loggedInUser = await authApi.me(res.access_token)
+    epoch += 1
     accessToken.value = res.access_token
     user.value = loggedInUser
   }
 
   async function rotate() {
+    const mine = epoch
     try {
       const res = await authApi.refresh()
-      accessToken.value = res.access_token
+      if (epoch === mine) accessToken.value = res.access_token
     } catch (err) {
-      // Only a refusal ends a session. Clearing on a timeout charges the user a password for
-      // a network that was down for a second, with a cookie still good for the rest of the day.
-      if (sessionEnded(err)) clear()
+      // Only a refusal ends a session, and only the session it was asked about: someone who
+      // signed in while this was in flight owns the one that exists now.
+      if (epoch === mine && sessionEnded(err)) clear()
       throw err
     }
   }
@@ -61,8 +67,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function loadSession() {
+    const mine = epoch
     await refresh()
-    if (accessToken.value) user.value = await authApi.me(accessToken.value)
+    if (epoch !== mine || !accessToken.value) return
+    const loaded = await authApi.me(accessToken.value)
+    if (epoch === mine) user.value = loaded
   }
 
   async function restore() {
@@ -77,15 +86,16 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function retryRestore() {
+    const mine = epoch
     for (const delay of RETRY_DELAYS) {
       await new Promise((resolve) => setTimeout(resolve, delay))
-      // Someone who signed in by hand while these were pending has a session already, and
-      // rotating it underneath them buys nothing.
-      if (accessToken.value) return
+      // Anyone who signed in or out while these were pending has the last word, and a retry
+      // from before that is answering a question nobody is asking any more.
+      if (epoch !== mine) return
       try {
         return await loadSession()
       } catch (err) {
-        if (sessionEnded(err)) return clear()
+        if (sessionEnded(err)) return
       }
     }
   }

@@ -10,7 +10,7 @@ const REFRESHED = { access_token: 'acc-2', token_type: 'Bearer', expires_in: 900
 const ME = { id: 'u1', email: 'dev@x.com', first_name: 'Dev', last_name: 'User' }
 
 import { useAuthStore } from '@/stores/auth'
-import { ApiError } from '@/api/types'
+import { ApiError, type LoginResponse, type User } from '@/api/types'
 import { authApi } from '@/api/auth'
 
 describe('auth store', () => {
@@ -132,6 +132,92 @@ describe('auth store', () => {
     await auth.refresh()
     await auth.refresh()
     expect(authApi.refresh).toHaveBeenCalledTimes(2)
+  })
+
+  // Everything below is the same race: a retry whose refresh is already in flight when the user
+  // decides the session by hand. Each was reported on the branch.
+
+  it('a retry refused after someone signs in leaves the new session alone', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+
+    let refuse: (err: unknown) => void = () => {}
+    vi.mocked(authApi.refresh).mockImplementationOnce(() => new Promise((_, reject) => (refuse = reject)))
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    await auth.login('dev@x.com', 'pw')
+    // The login rotated the family, so the in-flight retry is refused on a cookie it no longer owns.
+    refuse(new ApiError(401, 'invalid refresh token'))
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(auth.accessToken).toBe('acc-1')
+    expect(auth.isAuthenticated).toBe(true)
+  })
+
+  it('a retry that lands after someone signs in does not replace them', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.me).mockImplementation(async (token: string) => (token === 'acc-1' ? ME : { ...ME, id: 'u2' }))
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+
+    let land: (value: LoginResponse) => void = () => {}
+    vi.mocked(authApi.refresh).mockImplementationOnce(() => new Promise((resolve) => (land = resolve)))
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    await auth.login('dev@x.com', 'pw')
+    land(REFRESHED)
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(auth.accessToken).toBe('acc-1')
+    expect(auth.user?.id).toBe('u1')
+  })
+
+  it('a user loaded after someone signs in does not replace them', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+
+    // The retry gets past its refresh and stalls loading the user, which is the later window:
+    // the token guard has already been cleared by the time the login lands.
+    let land: (loaded: User) => void = () => {}
+    vi.mocked(authApi.me).mockImplementation(async (token: string) => (token === 'acc-1' ? ME : new Promise((resolve) => (land = resolve))))
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    await auth.login('dev@x.com', 'pw')
+    land({ ...ME, id: 'u2' })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(auth.user?.id).toBe('u1')
+    expect(auth.accessToken).toBe('acc-1')
+  })
+
+  it('a transport failure loading the user heals rather than sticking half signed in', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.me).mockRejectedValueOnce(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    expect(auth.user).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(auth.user?.id).toBe('u1')
+  })
+
+  it('logging out stops the retries still pending', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    await auth.login('dev@x.com', 'pw')
+    await auth.logout()
+
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(auth.isAuthenticated).toBe(false)
+    // The failed first attempt and nothing since: a signed-out user must not be signed back in.
+    expect(authApi.refresh).toHaveBeenCalledOnce()
   })
 
   it('login failure at me() leaves logged out', async () => {
