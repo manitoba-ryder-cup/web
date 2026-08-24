@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
+import { ApiError, type TeeSetSummary, type UpdateMatchBody } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
+import { toast } from '@/composables/useToast'
 import { utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -23,17 +25,21 @@ const { data, error, loading, retry } = useAsync(
   // from the result. Keyed by match, eight lineups would fetch the same four endpoints eight times.
   () => ['admin', 'lineup', props.id],
   async () => {
-    const [matches, teams, roster, courses] = await Promise.all([
+    const [matches, records, teams, roster, courses] = await Promise.all([
       scorecardApi.getTournamentResults(props.id),
+      scorecardApi.listMatches(props.id),
       scorecardApi.getTournamentTeams(props.id),
       scorecardApi.getTournamentPlayers(props.id),
       scorecardApi.listCourses(),
     ])
-    return { matches, teams, roster, courses }
+    return { matches, records, teams, roster, courses }
   },
 )
 
 const matches = computed(() => data.value?.matches ?? [])
+// The result carries a course name and no ids, and no tee colour at all — the match record is
+// what the pickers below are set from.
+const record = computed(() => (data.value?.records ?? []).find((m) => m.id === props.matchId) ?? null)
 const match = computed(() => matches.value.find((m) => m.match_id === props.matchId) ?? null)
 const teams = computed(() => data.value?.teams ?? [])
 const roster = computed(() => data.value?.roster ?? [])
@@ -89,10 +95,10 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
   return team.captain ? `Team ${team.captain.last_name}` : team.color
 }
 
-// Courses are unique by name per tenant, which is what makes matching the result's
-// course_name to a course sound.
 const courses = computed(() => data.value?.courses ?? [])
-const courseZone = computed(() => courses.value.find((c) => c.name === match.value?.course_name)?.time_zone ?? 'America/Winnipeg')
+// The stored course, not the one in the picker: an unsaved change must not re-read the clock
+// on a tee time it has not moved.
+const courseZone = computed(() => courses.value.find((c) => c.id === record.value?.course_id)?.time_zone ?? 'America/Winnipeg')
 
 // A watcher, not an initial value: the match arrives after mount, and this has to re-settle
 // after each save.
@@ -106,37 +112,103 @@ const teeTimeChanged = computed(() => !!teeTimeInput.value && teeTimeInput.value
 // datetime picker legible against the white field when the OS is in dark mode.
 const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white px-3 py-2 text-mrc-ink shadow-sm [color-scheme:light]'
 
-const saveTeeTime = () =>
+// Which tees a match is played from decides the par and stroke index its scores are read
+// against, so it belongs to the match rather than the round.
+const teeSet = reactive({ courseId: '', teeColorId: '' })
+const courseTees = ref<TeeSetSummary[]>([])
+
+watch(
+  record,
+  (m) => {
+    if (!m || teeSet.courseId === m.course_id) return
+    teeSet.courseId = m.course_id
+    void loadTees(m.tee_color_id)
+  },
+  { immediate: true },
+)
+
+async function loadTees(select?: string) {
+  courseTees.value = []
+  if (!teeSet.courseId) return
+  try {
+    courseTees.value = await scorecardApi.getCourseTees(teeSet.courseId)
+  } catch {
+    courseTees.value = []
+  }
+  const wanted = select && courseTees.value.some((t) => t.tee_color_id === select) ? select : ''
+  teeSet.teeColorId = wanted || courseTees.value[0]?.tee_color_id || ''
+}
+
+const teeSetChanged = computed(
+  () =>
+    !!record.value &&
+    !!teeSet.teeColorId &&
+    (teeSet.courseId !== record.value.course_id || teeSet.teeColorId !== record.value.tee_color_id),
+)
+
+const changed = computed(() => teeSetChanged.value || teeTimeChanged.value)
+
+// Only what moved is sent. An edit that leaves the tee set alone must not mention it: the
+// API refuses a scored match's tee set, and re-sending the stored value is not a change.
+function edits() {
+  const body: UpdateMatchBody = {}
+  if (teeSetChanged.value) {
+    body.course_id = teeSet.courseId
+    body.tee_color_id = teeSet.teeColorId
+  }
+  if (teeTimeChanged.value) body.tee_time = eventInputToUtc(teeTimeInput.value, courseZone.value)
+  return body
+}
+
+const save = () =>
   run(
-    'tee-time',
+    'details',
     async () => {
-      await scorecardApi.updateMatch(props.matchId, { tee_time: eventInputToUtc(teeTimeInput.value, courseZone.value) })
+      try {
+        await scorecardApi.updateMatch(props.matchId, edits())
+        toast.success('Match updated')
+      } catch (err) {
+        if (!(err instanceof ApiError) || err.status !== 409) throw err
+        toast.error('That match has scores. Reset it before changing its tee set.')
+      }
     },
-    { error: "Couldn't move that tee time. Please try again." },
+    { error: "Couldn't save those changes. Please try again." },
   )
 </script>
 <template>
-  <PageLayout title="Match Lineup" image="/img/oceanside.webp">
+  <PageLayout :title="match?.format_name ?? 'Match'" image="/img/oceanside.webp">
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
         <SkeletonBlock class="mx-auto mb-4 h-4 w-72" />
         <SkeletonGrid :cards="2" />
       </template>
       <template v-if="match">
-        <p class="mb-4 text-center text-mrc-muted">
-          <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
-          <template v-if="match.course_name"> · {{ match.course_name }}</template>
-        </p>
-
-        <!-- Here rather than the header because it is editable. Typed as the tee sheet's wall clock and
-             read at the course, so an admin in another province still gets the round's own morning. -->
-        <form class="mb-6 flex items-end gap-2" @submit.prevent="saveTeeTime">
-          <div class="flex-1">
-            <BaseLabel for="tee-time">Tee time</BaseLabel>
-            <input id="tee-time" v-model="teeTimeInput" type="datetime-local" required :class="fieldClass" />
+        <CapsLabel as="h2" size="sm" class="mb-3 text-mrc-muted">Details</CapsLabel>
+        <!-- The course leads: it is the zone the clock beside it is read in, so moving a match
+             leaves the instant alone and re-reads it, which the tee time shows happening. -->
+        <form class="mb-6" @submit.prevent="save">
+          <div class="mb-3">
+            <BaseLabel for="course">Course</BaseLabel>
+            <select id="course" v-model="teeSet.courseId" :class="fieldClass" @change="loadTees()">
+              <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
           </div>
-          <BaseButton type="submit" :loading="isBusy('tee-time')" :disabled="!teeTimeChanged">Save</BaseButton>
+          <div class="mb-4 flex gap-3">
+            <div class="min-w-0 flex-1">
+              <BaseLabel for="tee">Tees</BaseLabel>
+              <select id="tee" v-model="teeSet.teeColorId" :class="fieldClass" :disabled="!courseTees.length">
+                <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
+              </select>
+            </div>
+            <div class="min-w-0 flex-1">
+              <BaseLabel for="tee-time">Tee time</BaseLabel>
+              <input id="tee-time" v-model="teeTimeInput" type="datetime-local" required :class="fieldClass" />
+            </div>
+          </div>
+          <BaseButton type="submit" :loading="isBusy('details')" :disabled="!changed">Save</BaseButton>
         </form>
+
+        <CapsLabel as="h2" size="sm" class="mb-3 text-mrc-muted">Players</CapsLabel>
         <div class="grid gap-4 md:grid-cols-2" :class="isBusy() ? 'pointer-events-none opacity-60' : ''">
           <BaseCard v-for="panel in panels" :key="panel.team.id">
             <div class="flex items-center gap-2" :class="panel.colors.textStrong">

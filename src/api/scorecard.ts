@@ -79,6 +79,7 @@ export const scorecardApi = {
   // Match setup: courses + their tee sets feed the create-match form.
   listCourses: () => sc().get<Course[]>('/v1/courses'),
   getCourseTees: (courseId: string) => sc().get<TeeSetSummary[]>(`/v1/courses/${courseId}/tees`),
+  listMatches: (tournamentId: string) => sc().get<Match[]>(`/v1/tournaments/${tournamentId}/matches`),
   createMatch: (tournamentId: string, body: CreateMatchBody) => sc().post<Match>(`/v1/tournaments/${tournamentId}/matches`, body),
   updateMatch: (matchId: string, body: UpdateMatchBody) => sc().put<Match>(`/v1/matches/${matchId}`, body),
   deleteMatch: (matchId: string) => sc().del<void>(`/v1/matches/${matchId}`),
