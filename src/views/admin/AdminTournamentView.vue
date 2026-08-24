@@ -2,9 +2,10 @@
 import { ref, reactive, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
-import type { MatchResult, TeeSetSummary } from '@/api/types'
+import { ApiError, type MatchResult, type TeeSetSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { toast } from '@/composables/useToast'
+import { useBusy } from '@/composables/useBusy'
 import { playerSurnames } from '@/lib/matchResult'
 import { formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -19,6 +20,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseLabel from '@/components/base/BaseLabel.vue'
 import BaseAlert from '@/components/base/BaseAlert.vue'
 import ChevronRightIcon from '@/components/icons/ChevronRightIcon.vue'
+import TrashIcon from '@/components/icons/TrashIcon.vue'
 
 const props = defineProps<{ id: string }>()
 
@@ -106,6 +108,26 @@ async function openForm(format: string) {
   adding.value = format
 }
 
+const { isBusy, run } = useBusy()
+
+// One tap, like the reset on the scorecard: this clears matches entered while setting up, and
+// the form above re-creates one. A refusal is the only failure with something to say.
+async function removeMatch(match: MatchResult) {
+  await run(
+    match.match_id,
+    async () => {
+      try {
+        await scorecardApi.deleteMatch(match.match_id)
+        toast.success('Match deleted')
+      } catch (err) {
+        if (!(err instanceof ApiError) || err.status !== 409) throw err
+        toast.error('That match has scores. Reset it before deleting it.')
+      }
+    },
+    { error: 'Could not delete the match. Please try again.' },
+  )
+}
+
 async function submit(format: string) {
   const formatId = matchFormats.value.find((f) => f.name === format)?.id
   if (!formatId || !form.courseId || !form.teeColorId || !form.teeTime) {
@@ -180,18 +202,28 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
           <BaseTabs :tabs="formats" v-slot="{ tab }">
             <div class="px-4">
               <div class="overflow-hidden rounded-md border border-mrc-line bg-mrc-surface shadow">
-                <RouterLink
-                  v-for="m in byFormat[tab]"
-                  :key="m.match_id"
-                  :to="{ name: 'admin-lineup', params: { id, matchId: m.match_id } }"
-                  class="group flex items-center justify-between border-b border-mrc-line px-4 py-3 transition last:border-b-0 hover:bg-mrc-panel"
-                >
-                  <div class="min-w-0">
-                    <p class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time) }}</p>
-                    <p class="truncate text-sm text-mrc-muted">{{ pairing(m.sides) }}</p>
-                  </div>
-                  <ChevronRightIcon class="shrink-0 text-mrc-faint transition group-hover:text-mrc-accent" />
-                </RouterLink>
+                <div v-for="m in byFormat[tab]" :key="m.match_id" class="flex items-stretch border-b border-mrc-line last:border-b-0">
+                  <RouterLink
+                    :to="{ name: 'admin-lineup', params: { id, matchId: m.match_id } }"
+                    class="group flex min-w-0 flex-1 items-center justify-between px-4 py-3 transition hover:bg-mrc-panel"
+                  >
+                    <div class="min-w-0">
+                      <p class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time) }}</p>
+                      <p class="truncate text-sm text-mrc-muted">{{ pairing(m.sides) }}</p>
+                    </div>
+                    <ChevronRightIcon class="shrink-0 text-mrc-faint transition group-hover:text-mrc-accent" />
+                  </RouterLink>
+                  <button
+                    type="button"
+                    :disabled="isBusy()"
+                    :aria-busy="isBusy(m.match_id)"
+                    :aria-label="`Delete the ${formatTeeTime(m.tee_time)} match`"
+                    class="flex min-w-[44px] shrink-0 items-center justify-center border-l border-mrc-line text-mrc-muted transition hover:bg-mrc-panel-alt hover:text-mrc-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-mrc-accent disabled:opacity-50"
+                    @click="removeMatch(m)"
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
               </div>
 
               <!-- Add another match to this round. Course/tee default to what the round uses; the
