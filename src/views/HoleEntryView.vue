@@ -44,9 +44,12 @@ function canScore(hole: number): boolean {
 // A hole that cannot be recorded goes back to the card, which carries everything this showed
 // a reader. `readonly` still covers the frame between the data landing and the redirect.
 const editable = computed(() => canScore(holeNumber.value))
+const saving = ref(false)
 // A step onto a hole the page would turn straight back is a dead chevron instead, so the
 // pager never answers a tap by throwing you off the page.
 function step(by: number): number | null {
+  // Held while a save is in flight: the write is for the hole the button was pressed on.
+  if (saving.value) return null
   const n = holeNumber.value + by
   return n >= 1 && n <= 18 && canScore(n) ? n : null
 }
@@ -95,7 +98,6 @@ function rebuild() {
 // only looked at cannot be saved as four pars by a reflex tap.
 watch([() => props.hole, left, right, holeInfo], rebuild, { immediate: true })
 
-const saving = ref(false)
 // All of them or none, because the hole is written whole: a strip nobody has touched has to
 // stop the write rather than drop out of it and leave a half-scored hole behind.
 const scores = computed<ScoreEntry[] | null>(() => {
@@ -106,6 +108,8 @@ const scores = computed<ScoreEntry[] | null>(() => {
   }
   return out
 })
+// A dead Save has to say what it is waiting for; every other refusal in the app does.
+const missing = computed(() => entries.value.filter((e) => e.strokes === null).length)
 // A save in flight keeps its button: the write that closes a match out is what makes the hole
 // read-only, and the control must not vanish under the thumb still pressing it.
 const showSave = computed(() => !readonly.value || saving.value)
@@ -129,24 +133,27 @@ function goToHole(hole: number) {
 async function saveHole() {
   const payload = scores.value
   if (!payload) return
+  // Read before the await, so the write, the refusal and the hash all name the same hole
+  // however the route moves under them.
+  const hole = holeNumber.value
   saving.value = true
   saveError.value = ''
   try {
     // One write for the hole: it lands whole or not at all, so a dropped connection can
     // never leave one side scored and the other not.
-    const status = await scorecardApi.submitHoleScores(props.matchId, { hole_number: holeNumber.value, scores: payload })
+    const status = await scorecardApi.submitHoleScores(props.matchId, { hole_number: hole, scores: payload })
     if (status.finished) {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
     }
     await afterHoleSaved(props.tournamentId, props.matchId)
-    await goToScorecard(holeNumber.value)
+    await goToScorecard(hole)
   } catch (err) {
     // The server answers 409 for a shut window and for a hole a decided match never reached, and
     // this cannot tell them apart — so the sentence has to hold for both.
     if (err instanceof ApiError && err.status === 409) {
       finishedByWrite.value = true
-      refusedHole.value = holeNumber.value
+      refusedHole.value = hole
       saveError.value = 'This hole is closed to scoring — the match finished before it, or its window has shut.'
     } else {
       saveError.value = err instanceof ApiError ? `Save failed — ${err.message}` : 'Save failed. Please try again.'
@@ -201,7 +208,6 @@ async function saveHole() {
         </div>
 
         <div class="mt-1 -mx-4 divide-y divide-mrc-line border-b border-mrc-line">
-          <!-- Only blank once the match is over: while it's live, par is what Save records. -->
           <StrokePicker
             v-for="e in entries"
             :key="e.key"
@@ -215,11 +221,15 @@ async function saveHole() {
         </div>
 
         <p v-if="saveError" class="mt-6 text-center text-sm text-mrc-red-team">{{ saveError }}</p>
+        <p v-else-if="showSave && missing" id="save-waiting" class="mt-6 text-center text-sm text-mrc-muted">
+          {{ missing }} {{ missing === 1 ? 'score' : 'scores' }} still to enter.
+        </p>
         <button
           v-if="showSave"
           type="button"
           class="mt-6 w-full rounded-md bg-mrc-accent py-4 font-semibold text-white transition hover:bg-mrc-accent-dark disabled:opacity-60"
           :disabled="saving || !scores"
+          :aria-describedby="missing ? 'save-waiting' : undefined"
           @click="saveHole"
         >
           {{ saving ? 'Saving…' : 'Save' }}
