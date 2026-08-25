@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { ApiError, type MatchSide } from '@/api/types'
 import { useMatchContext } from '@/composables/useMatchContext'
+import { useAfterHoleSaved } from '@/composables/useAfterWrite'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
 import { matchCompleteMessage } from '@/lib/matchResult'
 import { hasStarted, holeOpen } from '@/lib/scoringWindow'
@@ -24,7 +25,8 @@ const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
 // Loads once — walking to the next hole only re-derives from what is already here.
-const { error, loading, retry, refresh, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+const afterHoleSaved = useAfterHoleSaved()
+const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
   () => props.matchId,
 )
@@ -124,9 +126,9 @@ async function saveHole() {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
     }
-    // The page loads once, so without this the card behind shows par where this hole was just
-    // written — and opening it from there would save par over it.
-    await refresh()
+    // Both copies of the match, not just this page's: the card keys on a different
+    // parOptional and would otherwise show what it held before the hole was written.
+    await afterHoleSaved(props.tournamentId, props.matchId)
     await goToScorecard(holeNumber.value)
   } catch (err) {
     // The server answers 409 for a shut window and for a hole a decided match never reached, and

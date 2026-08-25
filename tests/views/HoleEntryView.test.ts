@@ -78,6 +78,7 @@ vi.mock('@/api/scorecard', () => ({
 }))
 
 import HoleEntryView from '@/views/HoleEntryView.vue'
+import { useMatchContext } from '@/composables/useMatchContext'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { SCOPE_SCORES_WRITE } from '@/api/scopes'
@@ -105,6 +106,19 @@ async function openHole(hole = '15') {
   return w
 }
 
+// The card keys the match on parOptional: true and the entry page on false, so they are two
+// cache entries. This stands in for the card, holding the key the save has to reach.
+const CardStub = defineComponent({
+  setup() {
+    const { holeStates } = useMatchContext(
+      () => 't1',
+      () => 'm1',
+      { parOptional: true },
+    )
+    return () => h('div', { 'data-testid': 'card' }, String(holeStates.value.length))
+  },
+})
+
 describe('HoleEntryView saving', () => {
   beforeEach(() => {
     // Recording a hole needs the scope; the tests below are all about what a scorer sees.
@@ -119,6 +133,23 @@ describe('HoleEntryView saving', () => {
   })
   // Spies here stub the router; a leaked one silently redirects the next test.
   afterEach(() => vi.restoreAllMocks())
+
+  // Saving refreshed only the entry page's copy, so the card it returns to went on showing
+  // what it held before the hole was written until its own poll came round.
+  it('refreshes the card behind it, not just its own copy of the match', async () => {
+    const card = mount(CardStub, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(card.text()).toBe('0')
+
+    // The hole lands, so the next read of either copy has one scored hole in it.
+    holeStates = [scoredFifteenth]
+    submitScore.mockResolvedValue(open)
+    const w = await openHole('15')
+    await saveButton(w).trigger('click')
+    await flushPromises()
+
+    expect(card.text()).toBe('1')
+  })
 
   // A spectator reads a hole — that is the public half of this page — and is offered no
   // way to record one. Same shape as a played cup: the scores show, nothing can be tapped.
