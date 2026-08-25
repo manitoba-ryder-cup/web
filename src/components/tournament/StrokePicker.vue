@@ -128,6 +128,8 @@ watch(
       <!-- Half the strip less half a tile at each end, so par can sit centred and the low
            scores are still reachable to its left. -->
       <div class="w-[calc(50%-2.75rem)] shrink-0" />
+      <!-- No transition on the fill: par and the score change together at a hole change, and
+           animating it left the previous hole's number lit on the new hole's strip. -->
       <button
         v-for="s in strokes"
         :key="s"
@@ -137,7 +139,7 @@ watch(
         :aria-checked="!unscored && s === modelValue"
         :tabindex="s === modelValue ? 0 : -1"
         :disabled="readonly"
-        class="min-h-[76px] w-[5.5rem] shrink-0 rounded-lg px-1 py-2 text-center transition-colors"
+        class="min-h-[76px] w-[5.5rem] shrink-0 rounded-lg px-1 py-2 text-center"
         :class="!unscored && s === modelValue ? 'bg-mrc-accent text-white' : 'text-mrc-charcoal'"
         @click="select(s)"
       >
