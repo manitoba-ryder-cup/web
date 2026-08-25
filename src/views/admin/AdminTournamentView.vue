@@ -121,7 +121,7 @@ async function removeMatch(match: MatchResult) {
         toast.success('Match deleted')
       } catch (err) {
         if (!(err instanceof ApiError) || err.status !== 409) throw err
-        toast.error('That match has scores. Reset it before deleting it.')
+        toast.error(err.message)
       }
     },
     { error: 'Could not delete the match. Please try again.' },

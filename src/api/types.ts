@@ -27,9 +27,13 @@ export interface Tournament {
   location: string
   phase: TournamentPhase
 }
+// players_per_side and scores_per_player are the format's rules as data: how many a side it
+// takes, and whether a hole is recorded per player or once for the team.
 export interface MatchFormat {
   id: string
   name: string
+  players_per_side: number
+  scores_per_player: boolean
 }
 export interface Course {
   id: string
@@ -64,14 +68,19 @@ export interface CreateMatchBody {
   tee_time: string
   handicapped: boolean
 }
-// Body for updating a match. Every field is optional and only the ones sent are written,
-// so moving a tee time leaves the course, tee and format as they were.
+// Body for updating a match. Only the fields sent are written, and the format is not among
+// them: a match is created in one and deleted to leave it.
 export interface UpdateMatchBody {
   course_id?: string
   tee_color_id?: string
-  match_format_id?: string
   tee_time?: string
   handicapped?: boolean
+}
+// One player on one side. A lineup is sent whole, so how many a side is the format's rule and
+// the server answers it against the set it is being asked to write.
+export interface LineupPlayer {
+  player_id: string
+  team_id: string
 }
 export interface PlayerSummary {
   id: string

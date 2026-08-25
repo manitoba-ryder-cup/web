@@ -59,7 +59,9 @@ describe('AdminTournamentView', () => {
         hole_results: [],
       },
     ])
-    vi.mocked(scorecardApi.listMatchFormats).mockResolvedValue([{ id: 'f1', name: 'Singles' }])
+    vi.mocked(scorecardApi.listMatchFormats).mockResolvedValue([
+      { id: 'f1', name: 'Singles', players_per_side: 1, scores_per_player: true },
+    ])
     vi.mocked(scorecardApi.listCourses).mockResolvedValue([{ id: 'c1', name: 'Elmhurst', time_zone: 'America/Winnipeg' }])
   })
 
@@ -87,10 +89,10 @@ describe('AdminTournamentView', () => {
     expect(scorecardApi.deleteMatch).toHaveBeenCalledWith('m1')
   })
 
-  // A refused delete is the one failure with something useful to say, and it must not read
-  // as a delete that worked.
-  it('tells a scorer to reset a match before deleting it', async () => {
-    vi.mocked(scorecardApi.deleteMatch).mockRejectedValue(new ApiError(409, 'match has been scored'))
+  // A refused delete has something to say and must not read as one that worked. The sentence
+  // is the server's, so a copy here would go on saying the old one after the server moved on.
+  it('shows the refusal the server sent', async () => {
+    vi.mocked(scorecardApi.deleteMatch).mockRejectedValue(new ApiError(409, 'That match has scores. Reset it before deleting it.'))
     const wrapper = await mounted()
 
     await deleteButton(wrapper)!.trigger('click')

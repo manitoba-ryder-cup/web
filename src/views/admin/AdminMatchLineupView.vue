@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
+import { ApiError, type LineupPlayer, type TeeSetSummary, type UpdateMatchBody } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
+import { toast } from '@/composables/useToast'
 import { utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -23,60 +26,84 @@ const { data, error, loading, retry } = useAsync(
   // from the result. Keyed by match, eight lineups would fetch the same four endpoints eight times.
   () => ['admin', 'lineup', props.id],
   async () => {
-    const [matches, teams, roster, courses] = await Promise.all([
+    const [matches, records, teams, roster, courses, formats] = await Promise.all([
       scorecardApi.getTournamentResults(props.id),
+      scorecardApi.listMatches(props.id),
       scorecardApi.getTournamentTeams(props.id),
       scorecardApi.getTournamentPlayers(props.id),
       scorecardApi.listCourses(),
+      scorecardApi.listMatchFormats(),
     ])
-    return { matches, teams, roster, courses }
+    return { matches, records, teams, roster, courses, formats }
   },
 )
 
 const matches = computed(() => data.value?.matches ?? [])
+// The result carries a course name and no ids, and no tee colour at all — the match record is
+// what the pickers below are set from.
+const record = computed(() => (data.value?.records ?? []).find((m) => m.id === props.matchId) ?? null)
 const match = computed(() => matches.value.find((m) => m.match_id === props.matchId) ?? null)
 const teams = computed(() => data.value?.teams ?? [])
 const roster = computed(() => data.value?.roster ?? [])
 
-// One slot per side for Singles, two for every pairs format (Fourball, Alt Shot, …).
-const slots = computed(() => (match.value?.format_name === 'Singles' ? 1 : 2))
+const formats = computed(() => data.value?.formats ?? [])
+const storedFormat = computed(() => formats.value.find((f) => f.id === record.value?.match_format_id) ?? null)
+
+// The stored format, not the selected one: these gate what the server will accept, and an
+// unsaved pick has not changed that yet.
+const slots = computed(() => storedFormat.value?.players_per_side ?? 2)
+
+// The lineup is edited here and written whole, so this holds it until Save. A watcher, not an
+// initial value: the match arrives after mount and this has to re-settle after each save.
+const storedLineup = computed<LineupPlayer[]>(() =>
+  (match.value?.sides ?? []).flatMap((side) => side.players.map((p) => ({ player_id: p.player_id, team_id: side.team_id }))),
+)
+const asKey = (entries: LineupPlayer[]) =>
+  entries
+    .map((p) => `${p.team_id}:${p.player_id}`)
+    .sort()
+    .join('|')
+
+// Keyed, because storedLineup builds a new array every evaluation: watching it directly would
+// re-seed the draft on any refetch, including the one after a save this page refused.
+const lineup = ref<LineupPlayer[]>([])
+watch(
+  () => asKey(storedLineup.value),
+  () => (lineup.value = storedLineup.value.map((p) => ({ ...p }))),
+  { immediate: true },
+)
+const lineupChanged = computed(() => asKey(lineup.value) !== asKey(storedLineup.value))
+
+const addToLineup = (playerId: string, teamId: string) => lineup.value.push({ player_id: playerId, team_id: teamId })
+const removeFromLineup = (playerId: string) => (lineup.value = lineup.value.filter((p) => p.player_id !== playerId))
 
 // A player plays at most once per round, so availability is scoped to the whole format: every
-// drafted player except those already placed in any match of this round.
+// drafted player except those already placed in any match of this round, or in this draft.
 const panels = computed(() => {
   const m = match.value
   if (!m) return []
   const bookedInRound = new Set<string>()
   for (const other of matches.value) {
-    if (other.format_name !== m.format_name) continue
+    if (other.match_id === props.matchId || other.format_name !== m.format_name) continue
     for (const side of other.sides) for (const pl of side.players) bookedInRound.add(pl.player_id)
   }
+  const named = new Set(lineup.value.map((p) => p.player_id))
   return teams.value.map((team) => {
-    const assigned = m.sides.find((s) => s.team_id === team.id)?.players ?? []
+    const assigned = lineup.value.filter((p) => p.team_id === team.id).map((p) => ({ player_id: p.player_id, ...nameOf(p.player_id) }))
     const available = roster.value
-      .filter((p) => p.team_id === team.id && !bookedInRound.has(p.player_id))
+      .filter((p) => p.team_id === team.id && !bookedInRound.has(p.player_id) && !named.has(p.player_id))
       .sort((a, b) => a.last_name.localeCompare(b.last_name))
     return { team, assigned, available, colors: teamColor(team.color) }
   })
 })
 
+// The draft holds ids; the roster is where the names are.
+function nameOf(playerId: string): { first_name: string; last_name: string } {
+  const p = roster.value.find((r) => r.player_id === playerId)
+  return { first_name: p?.first_name ?? '', last_name: p?.last_name ?? '' }
+}
+
 const { isBusy, run } = useBusy()
-const add = (playerId: string, teamId: string) =>
-  run(
-    true,
-    async () => {
-      await scorecardApi.addParticipant(props.matchId, playerId, teamId)
-    },
-    { error: "Couldn't add that player. Please try again." },
-  )
-const remove = (playerId: string) =>
-  run(
-    true,
-    async () => {
-      await scorecardApi.removeParticipant(props.matchId, playerId)
-    },
-    { error: "Couldn't remove that player. Please try again." },
-  )
 
 // Assigned players come from the match sides (no tier); look their flight up on the roster
 // so the swatch shows on both assigned and available pills — handy for keeping a pairing even.
@@ -89,10 +116,14 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
   return team.captain ? `Team ${team.captain.last_name}` : team.color
 }
 
-// Courses are unique by name per tenant, which is what makes matching the result's
-// course_name to a course sound.
 const courses = computed(() => data.value?.courses ?? [])
-const courseZone = computed(() => courses.value.find((c) => c.name === match.value?.course_name)?.time_zone ?? 'America/Winnipeg')
+const zoneOf = (courseId: string | undefined) => courses.value.find((c) => c.id === courseId)?.time_zone ?? 'America/Winnipeg'
+
+// Reading back: the stored course, so picking another does not re-read a tee time nobody moved.
+const courseZone = computed(() => zoneOf(record.value?.course_id))
+// Writing: the course being saved, or a wall clock typed off the new tee sheet lands in the
+// zone of the old one.
+const zoneBeingSaved = computed(() => (teeSetChanged.value ? zoneOf(teeSet.courseId) : courseZone.value))
 
 // A watcher, not an initial value: the match arrives after mount, and this has to re-settle
 // after each save.
@@ -106,83 +137,212 @@ const teeTimeChanged = computed(() => !!teeTimeInput.value && teeTimeInput.value
 // datetime picker legible against the white field when the OS is in dark mode.
 const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white px-3 py-2 text-mrc-ink shadow-sm [color-scheme:light]'
 
-const saveTeeTime = () =>
+// Which tees a match is played from decides the par and stroke index its scores are read
+// against, so it belongs to the match rather than the round.
+const teeSet = reactive({ courseId: '', teeColorId: '' })
+const courseTees = ref<TeeSetSummary[]>([])
+
+watch(
+  record,
+  (m) => {
+    if (!m || teeSet.courseId === m.course_id) return
+    teeSet.courseId = m.course_id
+    void loadTees(m.tee_color_id)
+  },
+  { immediate: true },
+)
+
+// A token, because switching course twice quickly can land the first response last and leave
+// the course reading one thing and the tees another — a pair the server refuses as a 400.
+let teeRequest = 0
+let lastSelect: string | undefined
+const teesFailed = ref(false)
+
+// The retry re-issues what failed. Called bare it would fall through to the first tee in the
+// list, which on a failed initial load arms a tee set change on the match's own course.
+const retryTees = () => loadTees(lastSelect)
+
+async function loadTees(select?: string) {
+  const mine = ++teeRequest
+  lastSelect = select
+  const forCourse = teeSet.courseId
+  courseTees.value = []
+  teesFailed.value = false
+  if (!forCourse) return
+  let loaded: TeeSetSummary[]
+  try {
+    loaded = await scorecardApi.getCourseTees(forCourse)
+  } catch {
+    if (mine === teeRequest) teesFailed.value = true
+    return
+  }
+  if (mine !== teeRequest) return
+  courseTees.value = loaded
+  const wanted = select && loaded.some((t) => t.tee_color_id === select) ? select : ''
+  teeSet.teeColorId = wanted || loaded[0]?.tee_color_id || ''
+}
+
+const teeSetChanged = computed(
+  () =>
+    !!record.value &&
+    !!teeSet.teeColorId &&
+    (teeSet.courseId !== record.value.course_id || teeSet.teeColorId !== record.value.tee_color_id),
+)
+
+// Every side holding exactly what the format takes, which is what the API will accept. The
+// page can see this, so it says so rather than spending a request to be told.
+const lineupComplete = computed(() => panels.value.length > 0 && panels.value.every((p) => p.assigned.length === slots.value))
+
+const changed = computed(() => teeSetChanged.value || teeTimeChanged.value || lineupChanged.value)
+const savable = computed(() => changed.value && (!lineupChanged.value || lineupComplete.value))
+
+// Only what moved is sent. An edit that leaves the tee set alone must not mention it: the
+// API refuses a scored match's tee set, and re-sending the stored value is not a change.
+function edits() {
+  const body: UpdateMatchBody = {}
+  if (teeSetChanged.value) {
+    body.course_id = teeSet.courseId
+    body.tee_color_id = teeSet.teeColorId
+  }
+  // Sent when the course moves even if nobody touched the clock: the tee sheet at the new
+  // course says the time on screen, and holding the instant instead would shift it.
+  if (teeTimeChanged.value || teeSetChanged.value) {
+    body.tee_time = eventInputToUtc(teeTimeInput.value, zoneBeingSaved.value)
+  }
+  return body
+}
+
+// Details before the lineup, and only what moved. A scored match takes a tee time and refuses
+// a lineup, so in this order the edit it allows lands and the one it refuses says why.
+const router = useRouter()
+const save = () =>
   run(
-    'tee-time',
+    'save',
     async () => {
-      await scorecardApi.updateMatch(props.matchId, { tee_time: eventInputToUtc(teeTimeInput.value, courseZone.value) })
+      try {
+        if (teeSetChanged.value || teeTimeChanged.value) await scorecardApi.updateMatch(props.matchId, edits())
+        if (lineupChanged.value) await scorecardApi.setLineup(props.matchId, lineup.value)
+      } catch (err) {
+        // Any 4xx: a lineup naming an undrafted player answers 400 and a deleted match 404,
+        // and "please try again" invites a retry that cannot work.
+        if (!(err instanceof ApiError) || err.status < 400 || err.status >= 500) throw err
+        toast.error(err.message)
+        return
+      }
+      toast.success('Match saved')
+      // The row on the list carries the tee time and the pairing, which is the change in the
+      // context it was made for. A refusal returned above, because that half did not save.
+      await router.push({ name: 'admin-tournament', params: { id: props.id } })
     },
-    { error: "Couldn't move that tee time. Please try again." },
+    { error: "Couldn't save those changes. Please try again." },
   )
 </script>
 <template>
-  <PageLayout title="Match Lineup" image="/img/oceanside.webp">
+  <PageLayout title="Edit Match" image="/img/oceanside.webp">
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
         <SkeletonBlock class="mx-auto mb-4 h-4 w-72" />
         <SkeletonGrid :cards="2" />
       </template>
       <template v-if="match">
-        <p class="mb-4 text-center text-mrc-muted">
-          <span class="font-semibold uppercase tracking-widest">{{ match.format_name }}</span>
-          <template v-if="match.course_name"> · {{ match.course_name }}</template>
-        </p>
-
-        <!-- Here rather than the header because it is editable. Typed as the tee sheet's wall clock and
-             read at the course, so an admin in another province still gets the round's own morning. -->
-        <form class="mb-6 flex items-end gap-2" @submit.prevent="saveTeeTime">
-          <div class="flex-1">
-            <BaseLabel for="tee-time">Tee time</BaseLabel>
-            <input id="tee-time" v-model="teeTimeInput" type="datetime-local" required :class="fieldClass" />
+        <CapsLabel as="h2" size="sm" class="mb-3 text-mrc-muted">Details</CapsLabel>
+        <form @submit.prevent="save">
+          <!-- The course carries the zone the clock beside it is read in, so moving a match
+               leaves the instant alone and re-reads it, which the tee time shows happening. -->
+          <div class="mb-3">
+            <BaseLabel for="course">Course</BaseLabel>
+            <select id="course" v-model="teeSet.courseId" :class="fieldClass" @change="loadTees()">
+              <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
           </div>
-          <BaseButton type="submit" :loading="isBusy('tee-time')" :disabled="!teeTimeChanged">Save</BaseButton>
-        </form>
-        <div class="grid gap-4 md:grid-cols-2" :class="isBusy() ? 'pointer-events-none opacity-60' : ''">
-          <BaseCard v-for="panel in panels" :key="panel.team.id">
-            <div class="flex items-center gap-2" :class="panel.colors.textStrong">
-              <span class="inline-block h-2.5 w-2.5 rounded-full" :class="panel.colors.solid" />
-              <h3>{{ teamLabel(panel.team) }}</h3>
-              <span class="ml-auto tabular-nums text-mrc-muted">{{ panel.assigned.length }}/{{ slots }}</span>
-            </div>
-
-            <!-- Assigned players — remove with the ×. -->
-            <div class="mt-3 space-y-2">
-              <div
-                v-for="p in panel.assigned"
-                :key="p.player_id"
-                class="flex items-center justify-between rounded border px-3 py-2"
-                :class="[panel.colors.tint, panel.colors.line]"
-              >
-                <div class="flex min-w-0 items-center gap-1.5">
-                  <span class="truncate">{{ p.first_name }} {{ p.last_name }}</span>
-                  <TierDot :tier="tierOf(p.player_id)" />
-                </div>
-                <button type="button" aria-label="Remove" class="shrink-0 text-mrc-muted hover:text-mrc-ink" @click="remove(p.player_id)">
-                  <XIcon />
-                </button>
-              </div>
-              <p v-if="!panel.assigned.length" class="text-mrc-faint">No players assigned yet.</p>
-            </div>
-
-            <!-- Add from this team's drafted players, until the slots are full. -->
-            <template v-if="panel.assigned.length < slots">
-              <CapsLabel size="sm" class="mt-4 text-mrc-muted">Add a player</CapsLabel>
-              <div class="mt-3 flex flex-wrap gap-2">
+          <div class="mb-4 flex gap-3">
+            <div class="min-w-0 flex-1">
+              <BaseLabel for="tee">Tees</BaseLabel>
+              <select id="tee" v-model="teeSet.teeColorId" :class="fieldClass" :disabled="!courseTees.length">
+                <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
+              </select>
+              <template v-if="teesFailed">
+                <p class="mt-1 text-sm text-mrc-charcoal">Couldn't load this course's tees.</p>
                 <button
-                  v-for="p in panel.available"
-                  :key="p.player_id"
                   type="button"
-                  class="inline-flex items-center gap-1.5 rounded-full border border-mrc-line px-3 py-1 transition hover:border-mrc-accent hover:text-mrc-accent"
-                  @click="add(p.player_id, panel.team.id)"
+                  class="mt-2 w-full rounded-md bg-mrc-accent py-3 font-semibold text-white transition hover:bg-mrc-accent-dark"
+                  @click="retryTees"
                 >
-                  {{ p.first_name }} {{ p.last_name }}
-                  <TierDot :tier="p.tier" size="xs" />
+                  Try again
                 </button>
-                <p v-if="!panel.available.length" class="text-sm text-mrc-faint">No drafted players left to add.</p>
+              </template>
+            </div>
+            <div class="min-w-0 flex-1">
+              <BaseLabel for="tee-time">Tee time</BaseLabel>
+              <input id="tee-time" v-model="teeTimeInput" type="datetime-local" required :class="fieldClass" />
+            </div>
+          </div>
+
+          <CapsLabel as="h2" size="sm" class="mb-3 text-mrc-muted">Players</CapsLabel>
+          <div class="grid gap-4 md:grid-cols-2">
+            <BaseCard v-for="panel in panels" :key="panel.team.id">
+              <div class="flex items-center gap-2" :class="panel.colors.textStrong">
+                <span class="inline-block h-2.5 w-2.5 rounded-full" :class="panel.colors.solid" />
+                <h3>{{ teamLabel(panel.team) }}</h3>
+                <span class="ml-auto tabular-nums text-mrc-muted">{{ panel.assigned.length }}/{{ slots }}</span>
               </div>
-            </template>
-          </BaseCard>
-        </div>
+
+              <!-- Assigned players — remove with the ×. -->
+              <div class="mt-3 space-y-2">
+                <div
+                  v-for="p in panel.assigned"
+                  :key="p.player_id"
+                  class="flex items-center justify-between rounded border px-3 py-2"
+                  :class="[panel.colors.tint, panel.colors.line]"
+                >
+                  <div class="flex min-w-0 items-center gap-1.5">
+                    <span class="truncate">{{ p.first_name }} {{ p.last_name }}</span>
+                    <TierDot :tier="tierOf(p.player_id)" />
+                  </div>
+                  <!-- The × is 16px of glyph; the negative margins buy it a 44px target without
+                     making the row taller than the tap it has to accept. -->
+                  <button
+                    type="button"
+                    aria-label="Remove"
+                    class="-my-2 -mr-3 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-mrc-muted hover:text-mrc-ink"
+                    @click="removeFromLineup(p.player_id)"
+                  >
+                    <XIcon />
+                  </button>
+                </div>
+                <p v-if="!panel.assigned.length" class="text-mrc-faint">No players assigned yet.</p>
+              </div>
+
+              <!-- Add from this team's drafted players, until the slots are full. -->
+              <template v-if="panel.assigned.length < slots">
+                <CapsLabel size="sm" class="mt-4 text-mrc-muted">Add a player</CapsLabel>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button
+                    v-for="p in panel.available"
+                    :key="p.player_id"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-mrc-line px-3 py-1 transition hover:border-mrc-accent hover:text-mrc-accent"
+                    @click="addToLineup(p.player_id, panel.team.id)"
+                  >
+                    {{ p.first_name }} {{ p.last_name }}
+                    <TierDot :tier="p.tier" size="xs" />
+                  </button>
+                  <p v-if="!panel.available.length" class="text-sm text-mrc-faint">No drafted players left to add.</p>
+                </div>
+              </template>
+            </BaseCard>
+          </div>
+
+          <p v-if="lineupChanged && !lineupComplete" class="mt-3 text-mrc-charcoal">
+            Each side needs {{ slots }} player{{ slots === 1 ? '' : 's' }} before this lineup can be saved.
+          </p>
+
+          <!-- One Save for the page: the tee set, the tee time and the lineup are all edits to
+               the same match, and the lineup can only be written whole anyway. -->
+          <div class="mt-4 flex justify-end">
+            <BaseButton type="submit" :loading="isBusy('save')" :disabled="!savable">Save</BaseButton>
+          </div>
+        </form>
       </template>
       <p v-else class="mt-6 text-center text-mrc-muted">Match not found.</p>
     </AsyncState>
