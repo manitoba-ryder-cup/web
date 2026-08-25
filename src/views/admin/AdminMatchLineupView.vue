@@ -144,20 +144,6 @@ async function loadTees(select?: string) {
   teeSet.teeColorId = wanted || courseTees.value[0]?.tee_color_id || ''
 }
 
-const formatId = ref('')
-watch(record, (m) => m && (formatId.value = m.match_format_id), { immediate: true })
-
-const formatChanged = computed(() => !!record.value && !!formatId.value && formatId.value !== record.value.match_format_id)
-const selectedFormat = computed(() => formats.value.find((f) => f.id === formatId.value) ?? null)
-
-// A side already over what the pick would allow. The server refuses the change until they go,
-// and saying so here beats sending a request that cannot succeed.
-const overfilled = computed(() => {
-  const cap = selectedFormat.value?.players_per_side
-  if (!formatChanged.value || !cap || !match.value) return false
-  return match.value.sides.some((side) => side.players.length > cap)
-})
-
 const teeSetChanged = computed(
   () =>
     !!record.value &&
@@ -165,7 +151,7 @@ const teeSetChanged = computed(
     (teeSet.courseId !== record.value.course_id || teeSet.teeColorId !== record.value.tee_color_id),
 )
 
-const changed = computed(() => teeSetChanged.value || teeTimeChanged.value || formatChanged.value)
+const changed = computed(() => teeSetChanged.value || teeTimeChanged.value)
 
 // Only what moved is sent. An edit that leaves the tee set alone must not mention it: the
 // API refuses a scored match's tee set, and re-sending the stored value is not a change.
@@ -176,7 +162,6 @@ function edits() {
     body.tee_color_id = teeSet.teeColorId
   }
   if (teeTimeChanged.value) body.tee_time = eventInputToUtc(teeTimeInput.value, courseZone.value)
-  if (formatChanged.value) body.match_format_id = formatId.value
   return body
 }
 
@@ -205,20 +190,6 @@ const save = () =>
       <template v-if="match">
         <CapsLabel as="h2" size="sm" class="mb-3 text-mrc-muted">Details</CapsLabel>
         <form class="mb-6" @submit.prevent="save">
-          <!-- Format first: it is the only field here that changes what the Players section
-               below means, and setting a match up starts with what is being played. -->
-          <div class="mb-3">
-            <BaseLabel for="format">Format</BaseLabel>
-            <select id="format" v-model="formatId" :class="fieldClass">
-              <option v-for="f in formats" :key="f.id" :value="f.id">{{ f.name }}</option>
-            </select>
-            <p v-if="overfilled" class="mt-2 text-mrc-charcoal">
-              {{ selectedFormat?.name }} takes {{ selectedFormat?.players_per_side }} player{{
-                selectedFormat?.players_per_side === 1 ? '' : 's'
-              }}
-              a side. Remove the extras below before saving.
-            </p>
-          </div>
           <!-- The course carries the zone the clock beside it is read in, so moving a match
                leaves the instant alone and re-reads it, which the tee time shows happening. -->
           <div class="mb-3">

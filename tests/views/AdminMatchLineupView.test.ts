@@ -110,9 +110,9 @@ describe('AdminMatchLineupView', () => {
     await flushPromises()
 
     expect(w.find('[data-testid="skeleton"]').exists()).toBe(false)
-    // The form itself, not a format name: the picker lists every format, so its text says
-    // nothing about whether this match resolved.
-    expect(w.find('#format').exists()).toBe(true)
+    // The form itself, not a course or format name: both are listed in pickers whatever this
+    // match turned out to be.
+    expect(w.find('#course').exists()).toBe(true)
   })
 
   // Read at the course: 14:00Z is 09:00 at Elmhurst, so that is what the input shows — not
@@ -243,58 +243,6 @@ describe('AdminMatchLineupView', () => {
     expect(Object.keys(vi.mocked(scorecardApi.updateMatch).mock.calls[0][1]).sort()).toEqual(['course_id', 'tee_color_id', 'tee_time'])
   })
 
-  // The fixture plays Singles with nobody assigned. These need a match already holding players,
-  // and playing the format that had room for them.
-  function playing(formatId: string, playersASide: number) {
-    vi.mocked(scorecardApi.listMatches).mockResolvedValue([
-      {
-        id: 'm1',
-        tournament_id: 't1',
-        course_id: 'c1',
-        tee_color_id: 'gold',
-        match_format_id: formatId,
-        tee_time: '2026-09-18T13:00:00Z',
-        handicapped: false,
-      },
-    ])
-    const players = Array.from({ length: playersASide }, (_, i) => ({
-      player_id: `p${i}`,
-      first_name: 'Player',
-      last_name: String(i),
-    }))
-    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([
-      {
-        match_id: 'm1',
-        format_name: formatId === 'f1' ? 'Singles' : 'Fourball',
-        finished: false,
-        winner_team_id: null,
-        leader_team_id: null,
-        lead: 0,
-        holes_remaining: 18,
-        tee_time: '2026-09-18T13:00:00Z',
-        scoring_opens_at: '2026-09-18T11:00:00Z',
-        scoring_closes_at: '2026-09-19T01:00:00Z',
-        course_name: 'Elmhurst',
-        sides: [{ team_id: 'red-1', players }],
-        hole_results: [],
-      },
-    ])
-  }
-
-  it('sets the format picker from the match record', async () => {
-    const w = await mounted()
-    expect((w.find('#format').element as HTMLSelectElement).value).toBe('f1')
-  })
-
-  it('sends only the format when that is what moved', async () => {
-    const w = await mounted()
-    await w.find('#format').setValue('f2')
-    await detailsForm(w).trigger('submit')
-    await flushPromises()
-
-    expect(scorecardApi.updateMatch).toHaveBeenCalledWith('m1', { match_format_id: 'f2' })
-  })
-
   // How many a side is the format's to say. Read off the name, every format but Singles was
   // taken to hold two, which was true only until one of them did not.
   it('counts the slots a side from the format rather than its name', async () => {
@@ -304,28 +252,6 @@ describe('AdminMatchLineupView', () => {
     const w = await mounted()
 
     expect(w.text()).toContain('0/3')
-  })
-
-  // The server refuses this one, so the page says what has to happen before the request goes
-  // rather than after it comes back.
-  it('says what has to go before a smaller format can be saved', async () => {
-    playing('f2', 2)
-    const w = await mounted()
-
-    expect(w.text()).not.toContain('Remove the extras')
-    await w.find('#format').setValue('f1')
-
-    expect(w.text()).toContain('Singles takes 1 player a side')
-    expect(w.text()).toContain('Remove the extras')
-  })
-
-  // A side with room left is half-built, not broken, so growing the format says nothing.
-  it('leaves a roomier format unremarked', async () => {
-    playing('f1', 1)
-    const w = await mounted()
-    await w.find('#format').setValue('f2')
-
-    expect(w.text()).not.toContain('Remove the extras')
   })
 
   const detailsForm = (w: ReturnType<typeof mount>) => w.find('form')
