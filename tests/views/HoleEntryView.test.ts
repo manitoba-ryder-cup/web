@@ -92,11 +92,19 @@ const router = createRouter({
   ],
 })
 
-// The stroke strip's tiles are buttons too, so the save button is the one that
-// isn't a tile.
+// The stroke strip's tiles and the pager's chevrons are buttons too; Save is the one that
+// is neither. Undefined when the hole cannot be recorded, which is the point.
 function saveButton(w: ReturnType<typeof mount>) {
-  return w.findAll('button').filter((b) => b.attributes('data-stroke') === undefined)[0]
+  return w.findAll('button').find((b) => b.attributes('data-stroke') === undefined && b.attributes('aria-label') === undefined)
 }
+const chevron = (w: ReturnType<typeof mount>, dir: 'Previous' | 'Next') => w.get(`[aria-label="${dir} hole"]`)
+// An unrecorded hole opens with nothing chosen, so anything that saves has to choose first —
+// the taps a scorer makes.
+async function pick(w: ReturnType<typeof mount>, strokes = 4) {
+  for (const strip of w.findAll('[role="radiogroup"]')) await strip.findAll('[data-stroke]')[strokes - 1].trigger('click')
+  await flushPromises()
+}
+const stepBlocked = (w: ReturnType<typeof mount>, dir: 'Previous' | 'Next') => chevron(w, dir).attributes('aria-disabled') === 'true'
 
 async function openHole(hole = '15') {
   router.push(`/t/t1/m/m1/h/${hole}`)
@@ -116,7 +124,7 @@ describe('HoleEntryView saving', () => {
     getMatchScores.mockClear()
     holeStates = []
     toasts.length = 0
-    match.finished = false
+    Object.assign(match, { finished: false, leader_team_id: null, lead: 0 })
   })
   // Spies here stub the router; a leaked one silently redirects the next test.
   afterEach(() => vi.restoreAllMocks())
@@ -132,7 +140,8 @@ describe('HoleEntryView saving', () => {
     holeStates = [scoredFifteenth]
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
-    await saveButton(w).trigger('click')
+    await pick(w)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
 
     expect(card.text()).toBe('1')
@@ -146,7 +155,7 @@ describe('HoleEntryView saving', () => {
 
     expect(w.text()).not.toContain("hasn't started yet")
     expect(w.find('[data-stroke]').exists()).toBe(true)
-    expect(saveButton(w).text()).not.toContain('Save')
+    expect(saveButton(w)).toBeUndefined()
   })
 
   it('shows the entry shape while loading rather than an empty screen', async () => {
@@ -186,14 +195,15 @@ describe('HoleEntryView saving', () => {
 
     expect(w.text()).not.toContain("hasn't started yet")
     expect(w.find('[data-stroke]').exists()).toBe(true)
-    expect(saveButton(w).text()).not.toContain('Save')
+    expect(saveButton(w)).toBeUndefined()
   })
 
   it('goes back to the scorecard once the hole is saved', async () => {
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
 
-    await saveButton(w).trigger('click')
+    await pick(w)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
 
     expect(submitScore).toHaveBeenCalledTimes(1) // the whole hole in one write
@@ -202,31 +212,98 @@ describe('HoleEntryView saving', () => {
   })
 
   it("sends every side's score for the hole in one request", async () => {
-    // Both sides in one body is what makes the write atomic — a half-scored hole stops
-    // being reachable, rather than being something the reader has to cope with.
+    // Both sides in one body is what makes the write atomic. A double rather than the par
+    // the strip parks on, so the body cannot be something nobody chose.
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
 
-    await saveButton(w).trigger('click')
+    await pick(w, 6)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
 
     expect(submitScore).toHaveBeenCalledWith('m1', {
       hole_number: 15,
       scores: [
-        { team_id: 'blue', player_id: 'p1', strokes: 4 },
-        { team_id: 'red', player_id: 'p2', strokes: 4 },
+        { team_id: 'blue', player_id: 'p1', strokes: 6 },
+        { team_id: 'red', player_id: 'p2', strokes: 6 },
       ],
     })
   })
 
+  // Par used to be the seed, so a hole opened to look at and left by the Save button under
+  // the thumb went down as a par nobody made.
+  it('records nothing when Save is pressed on a hole nobody has touched', async () => {
+    const w = await openHole('15')
+
+    await saveButton(w)!.trigger('click')
+    await flushPromises()
+
+    expect(submitScore).not.toHaveBeenCalled()
+  })
+
+  it('offers no save until every player on the hole has a score', async () => {
+    const w = await openHole('15')
+    expect(saveButton(w)!.attributes('disabled')).toBeDefined()
+
+    await pick(w)
+
+    expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
+  })
+
+  // A greyed button with nothing beside it is a dead end; this one counts down as they land.
+  it('says how many scores a dead Save is still waiting for', async () => {
+    const w = await openHole('15')
+    expect(w.get('#save-waiting').text()).toBe('2 scores still to enter.')
+    expect(saveButton(w)!.attributes('aria-describedby')).toBe('save-waiting')
+
+    await w.findAll('[role="radiogroup"]')[0].findAll('[data-stroke]')[3].trigger('click')
+    await flushPromises()
+    expect(w.get('#save-waiting').text()).toBe('1 score still to enter.')
+
+    await pick(w)
+
+    expect(w.find('#save-waiting').exists()).toBe(false)
+    expect(saveButton(w)!.attributes('aria-describedby')).toBeUndefined()
+  })
+
+  // Nothing to wait for when the hole cannot be saved at all — that refusal is the missing
+  // button itself.
+  it('says nothing about scores on a hole that takes none', async () => {
+    useAuthStore().accessToken = tokenWithScopes([])
+
+    const w = await openHole('15')
+
+    expect(w.find('#save-waiting').exists()).toBe(false)
+  })
+
+  // The hole is written whole, so half of it chosen is not most of the way there.
+  it('will not save a hole with one side chosen and the other not', async () => {
+    const w = await openHole('15')
+
+    await w.findAll('[role="radiogroup"]')[0].findAll('[data-stroke]')[3].trigger('click')
+    await flushPromises()
+
+    expect(saveButton(w)!.attributes('disabled')).toBeDefined()
+  })
+
+  // A recorded hole opens on its scores, so correcting one costs no taps it did not before.
+  it('offers a save straight away on a hole already recorded', async () => {
+    holeStates = [scoredFifteenth]
+
+    const w = await openHole('15')
+
+    expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
+  })
+
   it('refetches the match after a save, so what was written is what gets read', async () => {
     // The page loads once. Without a refetch the scores just written are invisible to it:
-    // revisiting the hole shows par again, and saving from there overwrites them.
+    // revisiting the hole reads as unrecorded, and the card behind it says the same.
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
     expect(getMatchScores).toHaveBeenCalledTimes(1)
 
-    await saveButton(w).trigger('click')
+    await pick(w)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
 
     expect(getMatchScores).toHaveBeenCalledTimes(2)
@@ -238,7 +315,8 @@ describe('HoleEntryView saving', () => {
     submitScore.mockResolvedValue(closedOut)
     const w = await openHole('15')
 
-    await saveButton(w).trigger('click')
+    await pick(w)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.name).toBe('match')
@@ -250,7 +328,8 @@ describe('HoleEntryView saving', () => {
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
 
-    await saveButton(w).trigger('click')
+    await pick(w)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
 
     expect(toasts).toHaveLength(0)
@@ -263,35 +342,37 @@ describe('HoleEntryView saving', () => {
     const w = await openHole('15')
     const push = vi.spyOn(router, 'push').mockReturnValue(new Promise(() => {})) // never lands
 
-    await saveButton(w).trigger('click')
+    await pick(w)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
 
     expect(push).toHaveBeenCalledTimes(1)
-    expect(saveButton(w).attributes('disabled')).toBeDefined()
+    expect(saveButton(w)!.attributes('disabled')).toBeDefined()
   })
 
   it('reports a 409 and locks the strips instead of a bare save error', async () => {
     submitScore.mockRejectedValue(new ApiError(409, 'match is complete'))
     const w = await openHole('16')
 
-    await saveButton(w).trigger('click')
+    await pick(w)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
 
     // True of both refusals the server answers 409 with — a shut window, and a hole a decided
     // match never reached — because this cannot tell them apart.
     expect(w.text()).toContain('closed to scoring')
     expect(router.currentRoute.value.params.hole).toBe('16')
-    // The button stops offering to save once the view knows the match is over.
-    expect(saveButton(w).text()).toBe('Next Hole')
+    // Nothing left to offer: the hole will not take a score, so there is no Save to press.
+    expect(saveButton(w)).toBeUndefined()
   })
 
   it('does not extend a finished match onto a hole it never played', async () => {
     match.finished = true
+
     const w = await openHole('16')
 
-    await saveButton(w).trigger('click')
-    await flushPromises()
-
+    // No control to press rather than one that refuses: the hole will not take a score.
+    expect(saveButton(w)).toBeUndefined()
     expect(submitScore).not.toHaveBeenCalled()
   })
 
@@ -303,9 +384,10 @@ describe('HoleEntryView saving', () => {
     submitScore.mockResolvedValue(closedOut)
     const w = await openHole('15')
 
-    expect(saveButton(w).text()).toContain('Save')
+    expect(saveButton(w)).toBeDefined()
 
-    await saveButton(w).trigger('click')
+    await pick(w)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
 
     expect(submitScore).toHaveBeenCalledTimes(1)
@@ -340,6 +422,34 @@ describe('HoleEntryView saving', () => {
     expect(router.currentRoute.value.name).toBe('match')
   })
 
+  // A running state read one hole at a time answers two questions — through this hole, or
+  // into it — and cannot say which. The card's own column answers both, for all eighteen.
+  it('leaves the match state to the card', async () => {
+    Object.assign(match, { leader_team_id: 'blue', lead: 1 })
+    holeStates = [scoredFifteenth]
+
+    const w = await openHole('15')
+
+    expect(w.text()).not.toContain('1 up')
+  })
+
+  it('will not step off either end of the card', async () => {
+    expect(stepBlocked(await openHole('1'), 'Previous')).toBe(true)
+    expect(stepBlocked(await openHole('18'), 'Next')).toBe(true)
+  })
+
+  it('will not step onto a hole a finished match never reached', async () => {
+    // The step the page would answer by throwing you back to the card. Offering it as a live
+    // chevron would make the tap look like the mistake.
+    match.finished = true
+    holeStates = [scoredFifteenth]
+
+    const w = await openHole('15')
+
+    expect(stepBlocked(w, 'Previous')).toBe(true)
+    expect(stepBlocked(w, 'Next')).toBe(true)
+  })
+
   // "Not yet" and "not ever" are different answers. A link to a match that has not gone off
   // should say when it does, not bounce to a card with nothing on it.
   it('keeps the tee time reachable for a match that has not started', async () => {
@@ -352,9 +462,9 @@ describe('HoleEntryView saving', () => {
   })
 })
 
-// Mounted the way the router does it, so `hole` follows the URL. Walking forward reuses
-// the component, which is the path a test with a fixed prop cannot see.
-describe('HoleEntryView walking forward', () => {
+// Mounted the way the router does it, so `hole` follows the URL. Stepping reuses the
+// component, which is the path a test with a fixed prop cannot see.
+describe('HoleEntryView stepping between holes', () => {
   const Host = defineComponent({
     setup() {
       const route = useRoute()
@@ -379,23 +489,123 @@ describe('HoleEntryView walking forward', () => {
     match.scoring_opens_at = new Date(new Date(teeingOffNow).getTime() - 2 * 3600000).toISOString()
   })
 
-  // A refusal belongs to the hole it happened on. Carried forward, one 409 switches the
-  // redirect off for the rest of the walk and leaves the inert wheel behind.
-  it('does not let one refusal keep the wheel open on every hole after it', async () => {
-    // The stale tab: the match was live when this hole was opened and finished underneath.
-    submitScore.mockRejectedValue(new ApiError(409, 'match is complete'))
-    router.push('/t/t1/m/m1/h/16')
+  // Not `open`: that is the module-level MatchStatus fixture this block's saves resolve with.
+  async function openAt(hole: string) {
+    router.push(`/t/t1/m/m1/h/${hole}`)
     await router.isReady()
     const w = mount(Host, { global: { plugins: [router] } })
     await flushPromises()
+    return w
+  }
 
-    await saveButton(w).trigger('click')
+  // Tapping the wrong row on the card is a slip a phone cannot prevent — there is no hover
+  // to show which row is under the thumb — so correcting it must not cost a trip back.
+  it('steps to the hole next door without going through the card', async () => {
+    const w = await openAt('15')
+
+    await chevron(w, 'Next').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.params.hole).toBe('16')
+    expect(w.text()).toContain('HDCP 16')
+  })
+
+  it('steps back to the hole before it', async () => {
+    const w = await openAt('15')
+
+    await chevron(w, 'Previous').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.params.hole).toBe('14')
+  })
+
+  // Backing out of a correction should reach the card, not walk back through the holes
+  // stepped over to make it.
+  it('does not stack the steps up in history', async () => {
+    const replace = vi.spyOn(router, 'replace')
+    const w = await openAt('15')
+
+    await chevron(w, 'Next').trigger('click')
+    await flushPromises()
+
+    expect(replace).toHaveBeenCalledWith(expect.objectContaining({ name: 'hole' }))
+  })
+
+  // pointer-events keeps a thumb off a dead chevron, but it is styling, and styling is not
+  // what should be deciding whether a step happens.
+  it('does nothing when a dead chevron is pressed anyway', async () => {
+    const w = await openAt('1')
+    const replace = vi.spyOn(router, 'replace')
+
+    await chevron(w, 'Previous').trigger('click')
+    await flushPromises()
+
+    // Not "the route did not change": a step to nowhere leaves it unchanged too, so this
+    // has to be that no step was attempted.
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  // Stepping while a write is in flight left the save reporting one hole and the card
+  // scrolling to another, and threw the reader off the hole they had just stepped to.
+  it('holds the step while a save is in flight', async () => {
+    let land: (v: MatchStatus) => void = () => {}
+    submitScore.mockReturnValue(new Promise<MatchStatus>((r) => (land = r)))
+    const w = await openAt('15')
+    await pick(w)
+
+    await saveButton(w)!.trigger('click')
+    await flushPromises()
+
+    expect(chevron(w, 'Next').attributes('aria-disabled')).toBe('true')
+    expect(chevron(w, 'Previous').attributes('aria-disabled')).toBe('true')
+
+    await chevron(w, 'Next').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.params.hole).toBe('15')
+    land(open)
+    await flushPromises()
+
+    // The hole the write was for, not whichever one the page had drifted to.
+    expect(submitScore).toHaveBeenCalledWith('m1', expect.objectContaining({ hole_number: 15 }))
+    expect(router.currentRoute.value.hash).toBe('#hole-15')
+  })
+
+  // The chevrons are held during a save, but the back button is not: the write still belongs
+  // to the hole it was pressed on, and the card must be sent to that one.
+  it('writes the hole it was pressed on when the route moves under it', async () => {
+    let land: (v: MatchStatus) => void = () => {}
+    submitScore.mockReturnValue(new Promise<MatchStatus>((r) => (land = r)))
+    const w = await openAt('15')
+    await pick(w)
+
+    await saveButton(w)!.trigger('click')
+    await flushPromises()
+    router.replace('/t/t1/m/m1/h/16')
+    await flushPromises()
+
+    land(open)
+    await flushPromises()
+
+    expect(submitScore).toHaveBeenCalledWith('m1', expect.objectContaining({ hole_number: 15 }))
+    expect(router.currentRoute.value.hash).toBe('#hole-15')
+  })
+
+  // A refusal belongs to the hole it happened on. Carried forward, one 409 switches the
+  // redirect off for every hole after it and leaves the inert wheel behind.
+  it('does not let one refusal keep the wheel open on every hole after it', async () => {
+    // The stale tab: the match was live when this hole was opened and finished underneath.
+    submitScore.mockRejectedValue(new ApiError(409, 'match is complete'))
+    const w = await openAt('16')
+
+    await pick(w)
+    await saveButton(w)!.trigger('click')
     await flushPromises()
     expect(w.text()).toContain('closed to scoring')
     expect(router.currentRoute.value.name).toBe('hole') // the refusal stays readable
 
-    // "Next Hole" walks to 17, which the match never reached and cannot take.
-    await saveButton(w).trigger('click')
+    // 17 is a hole the match never reached and cannot take, however it is arrived at.
+    router.push('/t/t1/m/m1/h/17')
     await flushPromises()
 
     expect(router.currentRoute.value.name).toBe('match')
