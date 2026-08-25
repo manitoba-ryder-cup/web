@@ -14,9 +14,8 @@ import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
-import MatchSummary from '@/components/tournament/MatchSummary.vue'
+import HoleBar from '@/components/tournament/HoleBar.vue'
 import StrokePicker from '@/components/tournament/StrokePicker.vue'
-import FlagIcon from '@/components/icons/FlagIcon.vue'
 import { useAuthStore } from '@/stores/auth'
 import { SCOPE_SCORES_WRITE } from '@/api/scopes'
 
@@ -39,13 +38,20 @@ const holeInfo = computed(() => holes.value.find((h) => h.number === holeNumber.
 const finishedByWrite = ref(false)
 const finished = computed(() => finishedByWrite.value || (match.value?.finished ?? false))
 const scoredHoles = computed(() => holeStates.value.map((h) => h.hole_number))
+function canScore(hole: number): boolean {
+  return auth.hasScope(SCOPE_SCORES_WRITE) && holeOpen(match.value, hole, { finished: finished.value, scoredHoles: scoredHoles.value })
+}
 // A hole that cannot be recorded goes back to the card, which carries everything this showed
 // a reader. `readonly` still covers the frame between the data landing and the redirect.
-const editable = computed(
-  () =>
-    auth.hasScope(SCOPE_SCORES_WRITE) &&
-    holeOpen(match.value, holeNumber.value, { finished: finished.value, scoredHoles: scoredHoles.value }),
-)
+const editable = computed(() => canScore(holeNumber.value))
+// A step onto a hole the page would turn straight back is a dead chevron instead, so the
+// pager never answers a tap by throwing you off the page.
+function step(by: number): number | null {
+  const n = holeNumber.value + by
+  return n >= 1 && n <= 18 && canScore(n) ? n : null
+}
+const prevHole = computed(() => step(-1))
+const nextHole = computed(() => step(1))
 const saveError = ref('')
 // A message that outlived its hole would keep the redirect off for every hole after it.
 const refusedHole = ref<number | null>(null)
@@ -89,10 +95,9 @@ function rebuild() {
 watch([() => props.hole, left, right, holeInfo], rebuild, { immediate: true })
 
 const saving = ref(false)
-const buttonLabel = computed(() => {
-  if (readonly.value) return holeNumber.value >= 18 ? 'Back to Scorecard' : 'Next Hole'
-  return 'Save'
-})
+// A save in flight keeps its button: the write that closes a match out is what makes the hole
+// read-only, and the control must not vanish under the thumb still pressing it.
+const showSave = computed(() => !readonly.value || saving.value)
 
 // Awaited, so the button stays disabled until the route has changed: re-enabling mid-
 // transition leaves a second tap free to write the same hole again.
@@ -103,15 +108,14 @@ function goToScorecard(hole?: number) {
     ...(hole ? { hash: `#hole-${hole}` } : {}),
   })
 }
-function goNext() {
-  const n = holeNumber.value
-  if (n >= 18) return goToScorecard()
-  return router.push({ name: 'hole', params: { tournamentId: props.tournamentId, matchId: props.matchId, hole: n + 1 } })
+function goToHole(hole: number) {
+  // Replace, so backing out of a correction reaches the card rather than walking the holes
+  // stepped through to make it.
+  return router.replace({ name: 'hole', params: { tournamentId: props.tournamentId, matchId: props.matchId, hole } })
 }
 // Back to the card, not on to the next hole: the next score is a fairway away, and this page
 // hides the tab bar, so the card is the only way to the other matches a scorer is watching.
 async function saveHole() {
-  if (readonly.value) return goNext()
   saving.value = true
   saveError.value = ''
   try {
@@ -149,10 +153,9 @@ async function saveHole() {
         <!-- No hero here, so loading is otherwise a blank screen on the page most likely to be opened
              on a weak connection. Two strips, not four: under-promising closes up rather than gaps. -->
         <div data-testid="skeleton">
-          <div class="-mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 pb-3 shadow">
+          <div class="-mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 shadow">
             <SkeletonBlock radius="none" class="h-20 w-full" />
-            <SkeletonBlock radius="md" class="mx-auto mt-3 h-6 w-64" />
-            <SkeletonBlock class="mx-auto mt-3 h-4 w-72" />
+            <SkeletonBlock radius="md" class="mx-auto my-3 h-8 w-64" />
           </div>
           <div class="-mx-4 mt-6 divide-y divide-mrc-line border-b border-mrc-line">
             <div v-for="n in 2" :key="n" class="flex items-center justify-between px-4 py-6">
@@ -181,20 +184,13 @@ async function saveHole() {
         </RouterLink>
       </div>
       <template v-else-if="match && holeInfo">
-        <!-- Sticky context: the match summary, with the hole details on one line below it. -->
-        <div class="sticky top-0 z-10 -mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 pb-3 shadow">
+        <div class="sticky top-0 z-10 -mx-4 -mt-4 border-b border-mrc-line-strong bg-mrc-surface px-2 shadow">
           <!-- Overall event standing stays in view while you enter this hole's scores. -->
           <ScoreBar flat class="-mx-2" :results="results" :teams="teams" />
-          <MatchSummary class="mt-3" :match="match" :teams="teams" />
-          <div class="mt-3 flex items-center justify-center gap-10 text-mrc-muted">
-            <span class="flex items-center gap-2 text-xl font-semibold"> <FlagIcon />{{ hole }} </span>
-            <span>Par {{ holeInfo.par }}</span>
-            <span>{{ holeInfo.yards }} Yards</span>
-            <span>HDCP {{ holeInfo.hdcp }}</span>
-          </div>
+          <HoleBar class="-mx-2" :hole="holeNumber" :info="holeInfo" :prev="prevHole" :next="nextHole" @go="goToHole" />
         </div>
 
-        <div class="mt-6 -mx-4 divide-y divide-mrc-line border-b border-mrc-line">
+        <div class="mt-1 -mx-4 divide-y divide-mrc-line border-b border-mrc-line">
           <!-- Only blank once the match is over: while it's live, par is what Save records. -->
           <StrokePicker
             v-for="e in entries"
@@ -211,12 +207,13 @@ async function saveHole() {
 
         <p v-if="saveError" class="mt-6 text-center text-sm text-mrc-red-team">{{ saveError }}</p>
         <button
+          v-if="showSave"
           type="button"
           class="mt-6 w-full rounded-md bg-mrc-accent py-4 font-semibold text-white transition hover:bg-mrc-accent-dark disabled:opacity-60"
           :disabled="saving"
           @click="saveHole"
         >
-          {{ saving ? 'Saving…' : buttonLabel }}
+          {{ saving ? 'Saving…' : 'Save' }}
         </button>
       </template>
       <p v-else class="mt-4 text-mrc-muted">Hole not found.</p>
