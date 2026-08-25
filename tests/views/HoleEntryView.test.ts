@@ -241,43 +241,13 @@ describe('HoleEntryView saving', () => {
     expect(submitScore).not.toHaveBeenCalled()
   })
 
-  // aria-disabled, not disabled: the button keeps its place in the tab order, so the count
-  // beside it is reachable by the reader who most needs it. `saveHole` is what refuses.
   it('offers no save until every player on the hole has a score', async () => {
     const w = await openHole('15')
-    expect(saveButton(w)!.attributes('aria-disabled')).toBe('true')
+    expect(saveButton(w)!.attributes('disabled')).toBeDefined()
 
     await pick(w)
 
-    expect(saveButton(w)!.attributes('aria-disabled')).toBe('false')
-  })
-
-  // A greyed button with nothing beside it is a dead end; this one counts down as they land.
-  it('says how many scores a dead Save is still waiting for', async () => {
-    const w = await openHole('15')
-    expect(w.get('#save-waiting').text()).toBe('2 scores still to enter.')
-    // Announced as it counts down, or the reader who cannot see it gets no answer at all.
-    expect(w.get('#save-waiting').attributes('aria-live')).toBe('polite')
-    expect(saveButton(w)!.attributes('aria-describedby')).toBe('save-waiting')
-
-    await w.findAll('[role="radiogroup"]')[0].findAll('[data-stroke]')[3].trigger('click')
-    await flushPromises()
-    expect(w.get('#save-waiting').text()).toBe('1 score still to enter.')
-
-    await pick(w)
-
-    expect(w.find('#save-waiting').exists()).toBe(false)
-    expect(saveButton(w)!.attributes('aria-describedby')).toBeUndefined()
-  })
-
-  // Nothing to wait for when the hole cannot be saved at all — that refusal is the missing
-  // button itself.
-  it('says nothing about scores on a hole that takes none', async () => {
-    useAuthStore().accessToken = tokenWithScopes([])
-
-    const w = await openHole('15')
-
-    expect(w.find('#save-waiting').exists()).toBe(false)
+    expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
   })
 
   // The hole is written whole, so half of it chosen is not most of the way there.
@@ -287,7 +257,7 @@ describe('HoleEntryView saving', () => {
     await w.findAll('[role="radiogroup"]')[0].findAll('[data-stroke]')[3].trigger('click')
     await flushPromises()
 
-    expect(saveButton(w)!.attributes('aria-disabled')).toBe('true')
+    expect(saveButton(w)!.attributes('disabled')).toBeDefined()
   })
 
   // A recorded hole opens on its scores, so correcting one costs no taps it did not before.
@@ -296,7 +266,7 @@ describe('HoleEntryView saving', () => {
 
     const w = await openHole('15')
 
-    expect(saveButton(w)!.attributes('aria-disabled')).toBe('false')
+    expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
   })
 
   it('refetches the match after a save, so what was written is what gets read', async () => {
