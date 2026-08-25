@@ -182,6 +182,14 @@ describe('StrokePicker', () => {
     expect(labels.some((l) => l.includes('Quadruple'))).toBe(false)
   })
 
+  // offsetLeft is measured from the nearest positioned ancestor, so the strip has to be one —
+  // without it par rests as far off centre as the page itself sits from the left.
+  it('measures its tiles against itself, not against the page', () => {
+    const w = mount(StrokePicker, { props: base })
+
+    expect(w.get('[role="radiogroup"]').classes()).toContain('relative')
+  })
+
   // Par, not the score: it is what makes every strip share a column. Anchoring on the score
   // would line the fills up instead, losing what the layout carries.
   it('pins the strip to par, wherever the score sits', async () => {
