@@ -24,7 +24,7 @@ const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
 const afterHoleSaved = useAfterHoleSaved()
-// Loads once — a read-only walk to the next hole only re-derives from what is already here.
+// Loads once — stepping between holes only re-derives from what is already here.
 const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
   () => props.matchId,
