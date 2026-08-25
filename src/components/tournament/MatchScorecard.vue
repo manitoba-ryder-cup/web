@@ -154,16 +154,26 @@ function open(hole: number) {
   router.push({ name: 'hole', params: { tournamentId: props.tournamentId, matchId: props.matchId, hole } })
 }
 
+const route = useRoute()
+// Recorded once honoured, so a hash is answered once: `front` is a new array on every
+// evaluation, and without this each later change drags a reader who has scrolled away back.
+const scrolledTo = ref('')
 // Saving a hole comes back here, and on a phone the card runs past the fold at about the
 // tenth — so the hole just written has to be brought to where it can be read.
-const route = useRoute()
 watch(
   [() => route.hash, front],
   async () => {
     const hole = route.hash.match(/^#hole-(\d+)$/)?.[1]
-    if (!hole) return
+    if (!hole) {
+      scrolledTo.value = ''
+      return
+    }
+    if (scrolledTo.value === hole) return
     await nextTick()
-    document.getElementById(`hole-${hole}`)?.scrollIntoView({ block: 'center' })
+    const row = document.getElementById(`hole-${hole}`)
+    if (!row) return
+    scrolledTo.value = hole
+    row.scrollIntoView({ block: 'center' })
   },
   { immediate: true },
 )

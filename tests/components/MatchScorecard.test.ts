@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import MatchScorecard from '@/components/tournament/MatchScorecard.vue'
 import type { Hole, HoleStatus, MatchPlayer, TournamentTeam } from '@/api/types'
@@ -104,8 +104,13 @@ const holeStates: HoleStatus[] = [
   },
 ]
 
-function card(props: Record<string, unknown> = {}) {
+// jsdom has no layout and no scrollIntoView, so the assertion is on whether it was asked to
+// scroll. Attached, because getElementById cannot find a row in a detached mount.
+const scrollIntoView = vi.fn()
+
+function card(props: Record<string, unknown> = {}, attach = false) {
   return mount(MatchScorecard, {
+    ...(attach ? { attachTo: document.body } : {}),
     props: {
       holeStates,
       leftTeam,
@@ -235,5 +240,50 @@ describe('MatchScorecard', () => {
 
     expect(w.find('[role="radiogroup"]').exists()).toBe(false)
     expect(w.findAll('thead th')).toHaveLength(7)
+  })
+})
+
+describe('MatchScorecard scrolling to a saved hole', () => {
+  beforeEach(async () => {
+    scrollIntoView.mockClear()
+    Element.prototype.scrollIntoView = scrollIntoView
+    await router.push('/t/t1/m/m1/h/1')
+    await router.isReady()
+  })
+
+  // The row the hash names is the one that was just written; on a phone the card runs past
+  // the fold at about the tenth, so it has to be brought to where it can be read.
+  it('brings the hole the hash names into view', async () => {
+    await router.push('/t/t1/m/m1/h/1#hole-3')
+    card({}, true)
+    await flushPromises()
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
+  })
+
+  // The id the hash is built from lives on the row, and the hash itself is built a file
+  // away: nothing fails if either end is renamed, it just silently stops scrolling.
+  it('names its rows the way the hash does', async () => {
+    await router.push('/t/t1/m/m1/h/1#hole-2')
+    const w = card({}, true)
+    await flushPromises()
+
+    expect(w.find('#hole-2').exists()).toBe(true)
+  })
+
+  // A reader who has scrolled elsewhere must not be dragged back by a poll landing, or by a
+  // co-scorer entering a hole in the same match.
+  it('scrolls once for a hash, not again every time the data changes', async () => {
+    await router.push('/t/t1/m/m1/h/1#hole-3')
+    const w = card({}, true)
+    await flushPromises()
+    // A delta, not a count: mounts from earlier cases in this file are still watching the
+    // route, so only the change this one makes is attributable to it.
+    const honoured = scrollIntoView.mock.calls.length
+
+    await w.setProps({ holeStates: [...holeStates] })
+    await flushPromises()
+
+    expect(scrollIntoView.mock.calls.length).toBe(honoured)
   })
 })
