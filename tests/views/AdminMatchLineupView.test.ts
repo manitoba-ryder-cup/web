@@ -263,13 +263,24 @@ describe('AdminMatchLineupView', () => {
   const playerPill = (w: ReturnType<typeof mount>, name: string) => w.findAll('button').find((b) => b.text().includes(name))
 
   // Naming a player is an edit to the page, not a request. The whole lineup goes at once, so
-  // there is nothing to send until every side has been named and Save is pressed.
+  // there is nothing to send until Save is pressed.
   it('stages a player rather than writing them', async () => {
     const w = await mounted()
     await playerPill(w, 'Red Alpha')!.trigger('click')
+    await playerPill(w, 'Blue Alpha')!.trigger('click')
 
     expect(scorecardApi.setLineup).not.toHaveBeenCalled()
     expect(saveButton(w).attributes('disabled')).toBeUndefined()
+  })
+
+  // The API takes a lineup whole and refuses one that is short, and this page holds both
+  // numbers, so it says so rather than spending a request to be told.
+  it('will not save a lineup with a side still to name', async () => {
+    const w = await mounted()
+    await playerPill(w, 'Red Alpha')!.trigger('click')
+
+    expect(w.text()).toContain('Each side needs 1 player')
+    expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 
   it('sends the whole lineup on save', async () => {
@@ -337,6 +348,90 @@ describe('AdminMatchLineupView', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.name).not.toBe('admin-tournament')
+  })
+
+  // eslint-disable-next-line comment-cap/max-lines -- the tee time is load-bearing setup here,
+  // and a reader who removes it turns this into a test that cannot fail
+  // The tee time moves too, so the refetch brings back something the query cache cannot share
+  // structurally. That is what makes the re-seed reachable: the details half saved, the lineup
+  // half was refused, and the draft used to be erased by the refetch that followed.
+  it('keeps the draft lineup when the save is refused', async () => {
+    vi.mocked(scorecardApi.setLineup).mockRejectedValue(new ApiError(409, "That lineup isn't the right size."))
+    const w = await mounted()
+    await playerPill(w, 'Red Alpha')!.trigger('click')
+    await playerPill(w, 'Blue Alpha')!.trigger('click')
+    await w.find('input[type="datetime-local"]').setValue('2026-07-01T11:45')
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    expect(toasts.at(-1)).toBe("That lineup isn't the right size.")
+    // The counters read the draft, and a name in the text alone would also match the pill the
+    // player goes back to being when the draft is lost.
+    expect(w.text()).toContain('1/1')
+    expect(w.text()).not.toContain('0/1')
+  })
+
+  // The wall clock is typed off the new course's tee sheet, so it converts at that course.
+  // Banff is an hour behind Elmhurst, which is what makes the two answers distinguishable.
+  it('reads a moved tee time at the course it is moving to', async () => {
+    const w = await mounted()
+    await w.find('#course').setValue('c2')
+    await flushPromises()
+    await w.find('input[type="datetime-local"]').setValue('2026-07-01T10:30')
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    // 10:30 at Banff in July is MDT (UTC-6); at Elmhurst it would have been 15:30Z.
+    expect(scorecardApi.updateMatch).toHaveBeenCalledWith('m1', expect.objectContaining({ tee_time: '2026-07-01T16:30:00.000Z' }))
+  })
+
+  // A 400 for a player another admin undrafted is permanent, so "please try again" invites a
+  // retry that can never work.
+  it('shows what the server said for any refusal, not only a conflict', async () => {
+    vi.mocked(scorecardApi.updateMatch).mockRejectedValue(new ApiError(400, "That request wasn't valid."))
+    const w = await mounted()
+    await w.find('#tee').setValue('white')
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    expect(toasts.at(-1)).toBe("That request wasn't valid.")
+  })
+
+  // The one place on this page with something to re-run and, until now, nothing offered: an
+  // empty Tees select reads exactly like a course that has no tee sets.
+  it('offers a retry when the tees cannot be loaded', async () => {
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    const w = await mounted()
+
+    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
+  })
+
+  // Switching course twice quickly can land the first response last, leaving the course reading
+  // one thing and the tees another — a pair the server rejects as a 400 with nothing useful.
+  it('ignores a tee response the course has already moved past', async () => {
+    const deferred: ((tees: unknown) => void)[] = []
+    vi.mocked(scorecardApi.getCourseTees).mockImplementation(
+      () => new Promise((resolve) => deferred.push(resolve as (tees: unknown) => void)) as never,
+    )
+    const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
+    await flushPromises()
+
+    const gold = [{ course_id: 'c1', tee_color_id: 'gold', color: 'Gold', slope: 120, rating: 70 }]
+    const banff = [{ course_id: 'c2', tee_color_id: 'banff-blue', color: 'Banff Blue', slope: 113, rating: 72 }]
+    deferred[0]?.(gold) // the load the page made on mount
+    await flushPromises()
+
+    await w.find('#course').setValue('c2')
+    await w.find('#course').setValue('c1')
+    // Answer the current pick first and the one it replaced second, which is the interleaving
+    // that leaves an earlier response landing last.
+    deferred[2]?.(gold)
+    deferred[1]?.(banff)
+    await flushPromises()
+
+    expect((w.find('#course').element as HTMLSelectElement).value).toBe('c1')
+    expect((w.find('#tee').element as HTMLSelectElement).value).toBe('gold')
   })
 
   const detailsForm = (w: ReturnType<typeof mount>) => w.find('form')

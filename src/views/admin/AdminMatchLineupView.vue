@@ -58,14 +58,20 @@ const slots = computed(() => storedFormat.value?.players_per_side ?? 2)
 const storedLineup = computed<LineupPlayer[]>(() =>
   (match.value?.sides ?? []).flatMap((side) => side.players.map((p) => ({ player_id: p.player_id, team_id: side.team_id }))),
 )
-const lineup = ref<LineupPlayer[]>([])
-watch(storedLineup, (stored) => (lineup.value = stored.map((p) => ({ ...p }))), { immediate: true })
-
 const asKey = (entries: LineupPlayer[]) =>
   entries
     .map((p) => `${p.team_id}:${p.player_id}`)
     .sort()
     .join('|')
+
+// Keyed, because storedLineup builds a new array every evaluation: watching it directly would
+// re-seed the draft on any refetch, including the one after a save this page refused.
+const lineup = ref<LineupPlayer[]>([])
+watch(
+  () => asKey(storedLineup.value),
+  () => (lineup.value = storedLineup.value.map((p) => ({ ...p }))),
+  { immediate: true },
+)
 const lineupChanged = computed(() => asKey(lineup.value) !== asKey(storedLineup.value))
 
 const addToLineup = (playerId: string, teamId: string) => lineup.value.push({ player_id: playerId, team_id: teamId })
@@ -113,7 +119,13 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
 const courses = computed(() => data.value?.courses ?? [])
 // The stored course, not the one in the picker: an unsaved change must not re-read the clock
 // on a tee time it has not moved.
-const courseZone = computed(() => courses.value.find((c) => c.id === record.value?.course_id)?.time_zone ?? 'America/Winnipeg')
+const zoneOf = (courseId: string | undefined) => courses.value.find((c) => c.id === courseId)?.time_zone ?? 'America/Winnipeg'
+
+// Reading back: the stored course, so picking another does not re-read a tee time nobody moved.
+const courseZone = computed(() => zoneOf(record.value?.course_id))
+// Writing: the course being saved, or a wall clock typed off the new tee sheet lands in the
+// zone of the old one.
+const zoneBeingSaved = computed(() => (teeSetChanged.value ? zoneOf(teeSet.courseId) : courseZone.value))
 
 // A watcher, not an initial value: the match arrives after mount, and this has to re-settle
 // after each save.
@@ -142,16 +154,28 @@ watch(
   { immediate: true },
 )
 
+// A token, because switching course twice quickly can land the first response last and leave
+// the course reading one thing and the tees another — a pair the server refuses as a 400.
+let teeRequest = 0
+const teesFailed = ref(false)
+
 async function loadTees(select?: string) {
+  const mine = ++teeRequest
+  const forCourse = teeSet.courseId
   courseTees.value = []
-  if (!teeSet.courseId) return
+  teesFailed.value = false
+  if (!forCourse) return
+  let loaded: TeeSetSummary[]
   try {
-    courseTees.value = await scorecardApi.getCourseTees(teeSet.courseId)
+    loaded = await scorecardApi.getCourseTees(forCourse)
   } catch {
-    courseTees.value = []
+    if (mine === teeRequest) teesFailed.value = true
+    return
   }
-  const wanted = select && courseTees.value.some((t) => t.tee_color_id === select) ? select : ''
-  teeSet.teeColorId = wanted || courseTees.value[0]?.tee_color_id || ''
+  if (mine !== teeRequest) return
+  courseTees.value = loaded
+  const wanted = select && loaded.some((t) => t.tee_color_id === select) ? select : ''
+  teeSet.teeColorId = wanted || loaded[0]?.tee_color_id || ''
 }
 
 const teeSetChanged = computed(
@@ -161,7 +185,12 @@ const teeSetChanged = computed(
     (teeSet.courseId !== record.value.course_id || teeSet.teeColorId !== record.value.tee_color_id),
 )
 
+// Every side holding exactly what the format takes, which is what the API will accept. The
+// page can see this, so it says so rather than spending a request to be told.
+const lineupComplete = computed(() => panels.value.length > 0 && panels.value.every((p) => p.assigned.length === slots.value))
+
 const changed = computed(() => teeSetChanged.value || teeTimeChanged.value || lineupChanged.value)
+const savable = computed(() => changed.value && (!lineupChanged.value || lineupComplete.value))
 
 // Only what moved is sent. An edit that leaves the tee set alone must not mention it: the
 // API refuses a scored match's tee set, and re-sending the stored value is not a change.
@@ -171,7 +200,7 @@ function edits() {
     body.course_id = teeSet.courseId
     body.tee_color_id = teeSet.teeColorId
   }
-  if (teeTimeChanged.value) body.tee_time = eventInputToUtc(teeTimeInput.value, courseZone.value)
+  if (teeTimeChanged.value) body.tee_time = eventInputToUtc(teeTimeInput.value, zoneBeingSaved.value)
   return body
 }
 
@@ -186,7 +215,9 @@ const save = () =>
         if (teeSetChanged.value || teeTimeChanged.value) await scorecardApi.updateMatch(props.matchId, edits())
         if (lineupChanged.value) await scorecardApi.setLineup(props.matchId, lineup.value)
       } catch (err) {
-        if (!(err instanceof ApiError) || err.status !== 409) throw err
+        // Any 4xx: a lineup naming an undrafted player answers 400 and a deleted match 404,
+        // and "please try again" invites a retry that cannot work.
+        if (!(err instanceof ApiError) || err.status < 400 || err.status >= 500) throw err
         toast.error(err.message)
         return
       }
@@ -222,6 +253,10 @@ const save = () =>
               <select id="tee" v-model="teeSet.teeColorId" :class="fieldClass" :disabled="!courseTees.length">
                 <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
               </select>
+              <p v-if="teesFailed" class="mt-1 text-sm">
+                <span class="text-mrc-charcoal">Couldn't load this course's tees.</span>
+                <button type="button" class="ml-1 font-semibold text-mrc-accent hover:underline" @click="loadTees()">Try again</button>
+              </p>
             </div>
             <div class="min-w-0 flex-1">
               <BaseLabel for="tee-time">Tee time</BaseLabel>
@@ -284,10 +319,14 @@ const save = () =>
             </BaseCard>
           </div>
 
+          <p v-if="lineupChanged && !lineupComplete" class="mt-3 text-mrc-charcoal">
+            Each side needs {{ slots }} player{{ slots === 1 ? '' : 's' }} before this lineup can be saved.
+          </p>
+
           <!-- One Save for the page: the tee set, the tee time and the lineup are all edits to
                the same match, and the lineup can only be written whole anyway. -->
           <div class="mt-4 flex justify-end">
-            <BaseButton type="submit" :loading="isBusy('save')" :disabled="!changed">Save</BaseButton>
+            <BaseButton type="submit" :loading="isBusy('save')" :disabled="!savable">Save</BaseButton>
           </div>
         </form>
       </template>
