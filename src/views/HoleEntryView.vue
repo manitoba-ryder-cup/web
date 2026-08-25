@@ -24,8 +24,8 @@ const props = defineProps<{ tournamentId: string; matchId: string; hole: string 
 const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
-// Loads once — walking to the next hole only re-derives from what is already here.
 const afterHoleSaved = useAfterHoleSaved()
+// Loads once — a read-only walk to the next hole only re-derives from what is already here.
 const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
   () => props.matchId,
@@ -95,12 +95,11 @@ const buttonLabel = computed(() => {
 })
 
 // Awaited, so the button stays disabled until the route has changed: re-enabling mid-
-// transition let a second tap land hole 16 in behind the scorecard.
+// transition leaves a second tap free to write the same hole again.
 function goToScorecard(hole?: number) {
   return router.push({
     name: 'match',
     params: { tournamentId: props.tournamentId, matchId: props.matchId },
-    // Named so the card can scroll to it: past the tenth it is below the fold on a phone.
     ...(hole ? { hash: `#hole-${hole}` } : {}),
   })
 }
@@ -126,8 +125,6 @@ async function saveHole() {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
     }
-    // Both copies of the match, not just this page's: the card keys on a different
-    // parOptional and would otherwise show what it held before the hole was written.
     await afterHoleSaved(props.tournamentId, props.matchId)
     await goToScorecard(holeNumber.value)
   } catch (err) {

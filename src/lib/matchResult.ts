@@ -32,8 +32,7 @@ export function resultText(m: MatchStatus): string {
   }
 }
 
-// The prefix carries the news the scorecard cannot: that the save is why you landed there
-// instead of on the next hole.
+// The scorecard shows the result but not that this save is what produced it.
 export function matchCompleteMessage(state: MatchStatus, sides: MatchSide[]): string {
   if (matchOutcome(state).kind === 'tied') return 'Match complete — halved'
   const winner = sides.find((s) => s.team_id === state.winner_team_id)

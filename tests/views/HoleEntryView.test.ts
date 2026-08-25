@@ -78,11 +78,11 @@ vi.mock('@/api/scorecard', () => ({
 }))
 
 import HoleEntryView from '@/views/HoleEntryView.vue'
-import { useMatchContext } from '@/composables/useMatchContext'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { SCOPE_SCORES_WRITE } from '@/api/scopes'
 import { tokenWithScopes } from '../support/token'
+import { CardStub } from '../support/cardStub'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -106,19 +106,6 @@ async function openHole(hole = '15') {
   return w
 }
 
-// The card keys the match on parOptional: true and the entry page on false, so they are two
-// cache entries. This stands in for the card, holding the key the save has to reach.
-const CardStub = defineComponent({
-  setup() {
-    const { holeStates } = useMatchContext(
-      () => 't1',
-      () => 'm1',
-      { parOptional: true },
-    )
-    return () => h('div', { 'data-testid': 'card' }, String(holeStates.value.length))
-  },
-})
-
 describe('HoleEntryView saving', () => {
   beforeEach(() => {
     // Recording a hole needs the scope; the tests below are all about what a scorer sees.
@@ -134,8 +121,8 @@ describe('HoleEntryView saving', () => {
   // Spies here stub the router; a leaked one silently redirects the next test.
   afterEach(() => vi.restoreAllMocks())
 
-  // Saving refreshed only the entry page's copy, so the card it returns to went on showing
-  // what it held before the hole was written until its own poll came round.
+  // The card holds its own copy of the match; refreshing only the entry page's leaves it
+  // showing what it had until its next poll.
   it('refreshes the card behind it, not just its own copy of the match', async () => {
     const card = mount(CardStub, { global: { plugins: [router] } })
     await flushPromises()
@@ -202,8 +189,6 @@ describe('HoleEntryView saving', () => {
     expect(saveButton(w).text()).not.toContain('Save')
   })
 
-  // The next score is a fairway away, and this page hides the tab bar — so the card is both
-  // where the match is and the only way to the other matches a scorer watches between holes.
   it('goes back to the scorecard once the hole is saved', async () => {
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
@@ -213,7 +198,6 @@ describe('HoleEntryView saving', () => {
 
     expect(submitScore).toHaveBeenCalledTimes(1) // the whole hole in one write
     expect(router.currentRoute.value.name).toBe('match')
-    // Named so the card can scroll to it: on a phone the rows run past the fold at the tenth.
     expect(router.currentRoute.value.hash).toBe('#hole-15')
   })
 
@@ -235,7 +219,7 @@ describe('HoleEntryView saving', () => {
     })
   })
 
-  it('refetches the match after a save, so the next hole is not built from a stale snapshot', async () => {
+  it('refetches the match after a save, so what was written is what gets read', async () => {
     // The page loads once. Without a refetch the scores just written are invisible to it:
     // revisiting the hole shows par again, and saving from there overwrites them.
     submitScore.mockResolvedValue(open)
@@ -249,8 +233,8 @@ describe('HoleEntryView saving', () => {
   })
 
   it('goes to the scorecard when the hole closes the match out', async () => {
-    // The write says the match ended, so there is no hole 16 to walk to — without this
-    // the stale mount-time `finished` would march on and keep offering entry.
+    // The mount-time `finished` is stale the moment this write lands, and a hole the match
+    // never reached must stop offering entry.
     submitScore.mockResolvedValue(closedOut)
     const w = await openHole('15')
 
@@ -258,7 +242,7 @@ describe('HoleEntryView saving', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.name).toBe('match')
-    // Landing somewhere other than the next hole needs explaining.
+    // The card cannot say the match just ended; only the toast can.
     expect(toasts.at(-1)).toBe('Match complete — Rabe win 4 & 3')
   })
 
