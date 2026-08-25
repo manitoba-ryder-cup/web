@@ -59,7 +59,9 @@ describe('AdminTournamentView', () => {
         hole_results: [],
       },
     ])
-    vi.mocked(scorecardApi.listMatchFormats).mockResolvedValue([{ id: 'f1', name: 'Singles' }])
+    vi.mocked(scorecardApi.listMatchFormats).mockResolvedValue([
+      { id: 'f1', name: 'Singles', players_per_side: 1, scores_per_player: true },
+    ])
     vi.mocked(scorecardApi.listCourses).mockResolvedValue([{ id: 'c1', name: 'Elmhurst', time_zone: 'America/Winnipeg' }])
   })
 

@@ -25,14 +25,15 @@ const { data, error, loading, retry } = useAsync(
   // from the result. Keyed by match, eight lineups would fetch the same four endpoints eight times.
   () => ['admin', 'lineup', props.id],
   async () => {
-    const [matches, records, teams, roster, courses] = await Promise.all([
+    const [matches, records, teams, roster, courses, formats] = await Promise.all([
       scorecardApi.getTournamentResults(props.id),
       scorecardApi.listMatches(props.id),
       scorecardApi.getTournamentTeams(props.id),
       scorecardApi.getTournamentPlayers(props.id),
       scorecardApi.listCourses(),
+      scorecardApi.listMatchFormats(),
     ])
-    return { matches, records, teams, roster, courses }
+    return { matches, records, teams, roster, courses, formats }
   },
 )
 
@@ -44,8 +45,12 @@ const match = computed(() => matches.value.find((m) => m.match_id === props.matc
 const teams = computed(() => data.value?.teams ?? [])
 const roster = computed(() => data.value?.roster ?? [])
 
-// One slot per side for Singles, two for every pairs format (Fourball, Alt Shot, …).
-const slots = computed(() => (match.value?.format_name === 'Singles' ? 1 : 2))
+const formats = computed(() => data.value?.formats ?? [])
+const storedFormat = computed(() => formats.value.find((f) => f.id === record.value?.match_format_id) ?? null)
+
+// The stored format, not the selected one: these gate what the server will accept, and an
+// unsaved pick has not changed that yet.
+const slots = computed(() => storedFormat.value?.players_per_side ?? 2)
 
 // A player plays at most once per round, so availability is scoped to the whole format: every
 // drafted player except those already placed in any match of this round.
@@ -139,6 +144,20 @@ async function loadTees(select?: string) {
   teeSet.teeColorId = wanted || courseTees.value[0]?.tee_color_id || ''
 }
 
+const formatId = ref('')
+watch(record, (m) => m && (formatId.value = m.match_format_id), { immediate: true })
+
+const formatChanged = computed(() => !!record.value && !!formatId.value && formatId.value !== record.value.match_format_id)
+const selectedFormat = computed(() => formats.value.find((f) => f.id === formatId.value) ?? null)
+
+// A side already over what the pick would allow. The server refuses the change until they go,
+// and saying so here beats sending a request that cannot succeed.
+const overfilled = computed(() => {
+  const cap = selectedFormat.value?.players_per_side
+  if (!formatChanged.value || !cap || !match.value) return false
+  return match.value.sides.some((side) => side.players.length > cap)
+})
+
 const teeSetChanged = computed(
   () =>
     !!record.value &&
@@ -146,7 +165,7 @@ const teeSetChanged = computed(
     (teeSet.courseId !== record.value.course_id || teeSet.teeColorId !== record.value.tee_color_id),
 )
 
-const changed = computed(() => teeSetChanged.value || teeTimeChanged.value)
+const changed = computed(() => teeSetChanged.value || teeTimeChanged.value || formatChanged.value)
 
 // Only what moved is sent. An edit that leaves the tee set alone must not mention it: the
 // API refuses a scored match's tee set, and re-sending the stored value is not a change.
@@ -157,6 +176,7 @@ function edits() {
     body.tee_color_id = teeSet.teeColorId
   }
   if (teeTimeChanged.value) body.tee_time = eventInputToUtc(teeTimeInput.value, courseZone.value)
+  if (formatChanged.value) body.match_format_id = formatId.value
   return body
 }
 
@@ -169,7 +189,7 @@ const save = () =>
         toast.success('Match updated')
       } catch (err) {
         if (!(err instanceof ApiError) || err.status !== 409) throw err
-        toast.error('That match has scores. Reset it before changing its tee set.')
+        toast.error(err.message)
       }
     },
     { error: "Couldn't save those changes. Please try again." },
@@ -184,9 +204,23 @@ const save = () =>
       </template>
       <template v-if="match">
         <CapsLabel as="h2" size="sm" class="mb-3 text-mrc-muted">Details</CapsLabel>
-        <!-- The course leads: it is the zone the clock beside it is read in, so moving a match
-             leaves the instant alone and re-reads it, which the tee time shows happening. -->
         <form class="mb-6" @submit.prevent="save">
+          <!-- Format first: it is the only field here that changes what the Players section
+               below means, and setting a match up starts with what is being played. -->
+          <div class="mb-3">
+            <BaseLabel for="format">Format</BaseLabel>
+            <select id="format" v-model="formatId" :class="fieldClass">
+              <option v-for="f in formats" :key="f.id" :value="f.id">{{ f.name }}</option>
+            </select>
+            <p v-if="overfilled" class="mt-2 text-mrc-charcoal">
+              {{ selectedFormat?.name }} takes {{ selectedFormat?.players_per_side }} player{{
+                selectedFormat?.players_per_side === 1 ? '' : 's'
+              }}
+              a side. Remove the extras below before saving.
+            </p>
+          </div>
+          <!-- The course carries the zone the clock beside it is read in, so moving a match
+               leaves the instant alone and re-reads it, which the tee time shows happening. -->
           <div class="mb-3">
             <BaseLabel for="course">Course</BaseLabel>
             <select id="course" v-model="teeSet.courseId" :class="fieldClass" @change="loadTees()">
@@ -229,7 +263,14 @@ const save = () =>
                   <span class="truncate">{{ p.first_name }} {{ p.last_name }}</span>
                   <TierDot :tier="tierOf(p.player_id)" />
                 </div>
-                <button type="button" aria-label="Remove" class="shrink-0 text-mrc-muted hover:text-mrc-ink" @click="remove(p.player_id)">
+                <!-- The × is 16px of glyph; the negative margins buy it a 44px target without
+                     making the row taller than the tap it has to accept. -->
+                <button
+                  type="button"
+                  aria-label="Remove"
+                  class="-my-2 -mr-3 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-mrc-muted hover:text-mrc-ink"
+                  @click="remove(p.player_id)"
+                >
                   <XIcon />
                 </button>
               </div>

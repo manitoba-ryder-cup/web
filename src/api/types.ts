@@ -27,9 +27,13 @@ export interface Tournament {
   location: string
   phase: TournamentPhase
 }
+// players_per_side and scores_per_player are the format's rules as data: how many a side it
+// takes, and whether a hole is recorded per player or once for the team.
 export interface MatchFormat {
   id: string
   name: string
+  players_per_side: number
+  scores_per_player: boolean
 }
 export interface Course {
   id: string
