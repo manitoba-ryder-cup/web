@@ -231,15 +231,17 @@ describe('StrokePicker', () => {
     expect(track.scrollLeft).toBe(parked)
   })
 
-  it('brings a stroke off the end into view, no further', async () => {
+  // Centred rather than flush to the edge, which is the least the strip could move: the strip
+  // snaps to whole tiles, and snapping would drag a flush rest back off the stroke just chosen.
+  it('centres a stroke chosen from off the end', async () => {
     const w = mount(StrokePicker, { props: { ...base, par: 4 } })
     const track = await withLayout(w)
 
     await w.setProps({ modelValue: 12 })
     await nextTick()
 
-    // Flush to the right edge rather than centred — the least the strip can move.
-    expect(track.scrollLeft).toBe(11 * TILE + TILE - VIEWPORT)
+    expect(track.scrollLeft).toBe(centreOf(12))
+    expect(track.scrollLeft).not.toBe(11 * TILE + TILE - VIEWPORT)
   })
 
   it('names a score under par by the shot that made it', () => {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, nextTick, watch, ref } from 'vue'
-import { centreOffset, nudgeOffset } from '@/lib/strokeStrip'
+import { centreOffset, revealOffset } from '@/lib/strokeStrip'
 
 // eslint-disable-next-line comment-cap/max-lines -- names the control this replaced and the
 // bug that made it worth replacing, which is the reason not to make the strip move again.
@@ -62,13 +62,13 @@ function anchor() {
   if (!el || !tile) return
   el.scrollLeft = centreOffset(tile.offsetLeft, tile.offsetWidth, el.clientWidth)
 }
-// Nudged, never centred: choosing must not shift the strip under the finger that chose. The
-// track's own scrollLeft, since scrollIntoView walks every ancestor scrollport to the document.
+// A stroke already on screen never moves the strip: choosing must not shift it under the
+// finger that chose. One off screen is centred, which is where the snapping would put it.
 function reveal(s: number | null) {
   const el = track.value
   const tile = s === null ? undefined : tileAt(s)
   if (!el || !tile) return
-  el.scrollLeft = nudgeOffset(el.scrollLeft, el.clientWidth, tile.offsetLeft, tile.offsetWidth)
+  el.scrollLeft = revealOffset(el.scrollLeft, el.clientWidth, tile.offsetLeft, tile.offsetWidth)
 }
 function settle() {
   anchor()
@@ -124,7 +124,7 @@ watch(
       role="radiogroup"
       :aria-label="`Strokes for ${name}`"
       @keydown="onKeydown"
-      class="mt-3 flex gap-2 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="relative mt-3 flex snap-x snap-mandatory gap-2 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       :class="readonly ? 'overflow-x-hidden' : 'overflow-x-auto'"
     >
       <!-- Half the strip less half a tile at each end, so par can sit centred and the low
@@ -141,7 +141,7 @@ watch(
         :aria-checked="s === modelValue"
         :tabindex="s === (modelValue ?? par) ? 0 : -1"
         :disabled="readonly"
-        class="min-h-[76px] w-[5.5rem] shrink-0 rounded-lg px-1 py-2 text-center"
+        class="min-h-[76px] w-[5.5rem] shrink-0 snap-center rounded-lg px-1 py-2 text-center"
         :class="s === modelValue ? 'bg-mrc-accent text-white' : 'text-mrc-charcoal'"
         @click="select(s)"
       >
