@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, nextTick, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import type { Hole, HoleStatus, MatchPlayer, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
 import { recordsScorePerPlayer } from '@/lib/matchFormat'
@@ -153,6 +153,20 @@ const resultCls = computed(() => {
 function open(hole: number) {
   router.push({ name: 'hole', params: { tournamentId: props.tournamentId, matchId: props.matchId, hole } })
 }
+
+// Saving a hole comes back here, and on a phone the card runs past the fold at about the
+// tenth — so the hole just written has to be brought to where it can be read.
+const route = useRoute()
+watch(
+  [() => route.hash, front],
+  async () => {
+    const hole = route.hash.match(/^#hole-(\d+)$/)?.[1]
+    if (!hole) return
+    await nextTick()
+    document.getElementById(`hole-${hole}`)?.scrollIntoView({ block: 'center' })
+  },
+  { immediate: true },
+)
 </script>
 <template>
   <div>

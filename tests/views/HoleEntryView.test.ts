@@ -171,7 +171,9 @@ describe('HoleEntryView saving', () => {
     expect(saveButton(w).text()).not.toContain('Save')
   })
 
-  it('walks to the next hole while the match is still live', async () => {
+  // The next score is a fairway away, and this page hides the tab bar — so the card is both
+  // where the match is and the only way to the other matches a scorer watches between holes.
+  it('goes back to the scorecard once the hole is saved', async () => {
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
 
@@ -179,8 +181,9 @@ describe('HoleEntryView saving', () => {
     await flushPromises()
 
     expect(submitScore).toHaveBeenCalledTimes(1) // the whole hole in one write
-    expect(router.currentRoute.value.name).toBe('hole')
-    expect(router.currentRoute.value.params.hole).toBe('16')
+    expect(router.currentRoute.value.name).toBe('match')
+    // Named so the card can scroll to it: on a phone the rows run past the fold at the tenth.
+    expect(router.currentRoute.value.hash).toBe('#hole-15')
   })
 
   it("sends every side's score for the hole in one request", async () => {
