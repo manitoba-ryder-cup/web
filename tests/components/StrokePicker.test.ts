@@ -64,18 +64,45 @@ describe('StrokePicker', () => {
     expect(mount(StrokePicker, { props: { ...base, modelValue: 3, priorStrokes: 11, priorPar: 12 } }).text()).toContain('14 (-2)')
   })
 
-  it('fills nothing when the hole was never scored', () => {
-    // Sitting on par is fine; filling it is not — that reads as a par nobody made.
-    const w = mount(StrokePicker, { props: { ...base, unscored: true, readonly: true } })
+  it('fills nothing when no score has been chosen', () => {
+    // Sitting on par is fine; filling it is not — that reads as a par nobody made, and on a
+    // live hole it is what Save would write.
+    const w = mount(StrokePicker, { props: { ...base, modelValue: null } })
 
     expect(chosen(w)).toHaveLength(0)
     expect(tiles(w).every((t) => !t.classes().includes('bg-mrc-accent'))).toBe(true)
   })
 
-  it('holds the running total at the last hole played when this one was never scored', () => {
-    const w = mount(StrokePicker, { props: { ...base, unscored: true, readonly: true, priorStrokes: 15, priorPar: 12 } })
+  it('holds the running total at the last hole played while nothing is chosen', () => {
+    const w = mount(StrokePicker, { props: { ...base, modelValue: null, priorStrokes: 15, priorPar: 12 } })
 
     expect(w.text()).toContain('15 (+3)')
+  })
+
+  // A radiogroup with nothing checked still has to be reachable, and par is where the strip
+  // is already parked.
+  it('keeps a tab stop on par while nothing is chosen', () => {
+    const w = mount(StrokePicker, { props: { ...base, modelValue: null } })
+
+    const tabbable = tiles(w).filter((t) => t.attributes('tabindex') === '0')
+    expect(tabbable).toHaveLength(1)
+    expect(tabbable[0].text()).toContain('4')
+  })
+
+  it('takes par on the first arrow rather than stepping past it', async () => {
+    const w = mount(StrokePicker, { props: { ...base, modelValue: null } })
+
+    await w.get('[role="radiogroup"]').trigger('keydown', { key: 'ArrowRight' })
+
+    expect(w.emitted('update:modelValue')?.at(-1)).toEqual([4])
+  })
+
+  it('leaves the strip parked on par when nothing is chosen', async () => {
+    const w = mount(StrokePicker, { props: { ...base, par: 3, modelValue: null } })
+
+    const track = await withLayout(w)
+
+    expect(track.scrollLeft).toBe(centreOf(3))
   })
 
   it('does not emit when a readonly strip is tapped', () => {

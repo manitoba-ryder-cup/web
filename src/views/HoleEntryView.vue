@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
-import { ApiError, type MatchSide } from '@/api/types'
+import { ApiError, type MatchSide, type ScoreEntry } from '@/api/types'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { useAfterHoleSaved } from '@/composables/useAfterWrite'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
@@ -91,10 +91,21 @@ function rebuild() {
     holeStates: holeStates.value,
   })
 }
-// A scored hole opens on its scores, an unplayed one on par.
+// A scored hole opens on its scores. An unplayed one opens on nothing chosen, so a hole
+// only looked at cannot be saved as four pars by a reflex tap.
 watch([() => props.hole, left, right, holeInfo], rebuild, { immediate: true })
 
 const saving = ref(false)
+// All of them or none, because the hole is written whole: a strip nobody has touched has to
+// stop the write rather than drop out of it and leave a half-scored hole behind.
+const scores = computed<ScoreEntry[] | null>(() => {
+  const out: ScoreEntry[] = []
+  for (const e of entries.value) {
+    if (e.strokes === null) return null
+    out.push({ team_id: e.teamId, player_id: e.playerId, strokes: e.strokes })
+  }
+  return out
+})
 // A save in flight keeps its button: the write that closes a match out is what makes the hole
 // read-only, and the control must not vanish under the thumb still pressing it.
 const showSave = computed(() => !readonly.value || saving.value)
@@ -116,15 +127,14 @@ function goToHole(hole: number) {
 // Back to the card, not on to the next hole: the next score is a fairway away, and this page
 // hides the tab bar, so the card is the only way to the other matches a scorer is watching.
 async function saveHole() {
+  const payload = scores.value
+  if (!payload) return
   saving.value = true
   saveError.value = ''
   try {
     // One write for the hole: it lands whole or not at all, so a dropped connection can
     // never leave one side scored and the other not.
-    const status = await scorecardApi.submitHoleScores(props.matchId, {
-      hole_number: holeNumber.value,
-      scores: entries.value.map((e) => ({ team_id: e.teamId, player_id: e.playerId, strokes: e.strokes })),
-    })
+    const status = await scorecardApi.submitHoleScores(props.matchId, { hole_number: holeNumber.value, scores: payload })
     if (status.finished) {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
@@ -199,7 +209,6 @@ async function saveHole() {
             :par="holeInfo.par"
             :name="e.name"
             :readonly="readonly"
-            :unscored="readonly && !e.scored"
             :prior-strokes="e.priorStrokes"
             :prior-par="e.priorPar"
           />
@@ -210,7 +219,7 @@ async function saveHole() {
           v-if="showSave"
           type="button"
           class="mt-6 w-full rounded-md bg-mrc-accent py-4 font-semibold text-white transition hover:bg-mrc-accent-dark disabled:opacity-60"
-          :disabled="saving"
+          :disabled="saving || !scores"
           @click="saveHole"
         >
           {{ saving ? 'Saving…' : 'Save' }}

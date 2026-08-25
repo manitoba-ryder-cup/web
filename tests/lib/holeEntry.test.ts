@@ -36,15 +36,15 @@ function singlesHole(hole: number, bluePlayerStrokes: number, redPlayerStrokes: 
 const at = (holeNumber: number, perPlayer = true, holeStates: HoleStatus[] = []) => ({ perPlayer, holeNumber, holes, holeStates })
 
 describe('buildHoleEntries', () => {
-  it('starts an unscored hole at par', () => {
+  // Par used to be the seed, which made a hole nobody had touched indistinguishable from one
+  // recorded as par — and one reflex tap on Save turned the first into the second.
+  it('starts an unscored hole with nothing chosen', () => {
     const entries = buildHoleEntries([singlesBlue, singlesRed], at(7))
 
-    expect(entries.map((e) => e.strokes)).toEqual([4, 4])
+    expect(entries.map((e) => e.strokes)).toEqual([null, null])
   })
 
-  it('flags whether the strokes came from a recorded score or are just par', () => {
-    // The strip renders an unscored hole blank, so it has to tell a recorded par from a
-    // defaulted one.
+  it('leaves a side with no score of its own unchosen on a hole the other side played', () => {
     const scored = status(7, [
       { team_id: 'blue', strokes: 4, player_scores: [{ player_id: 'p1', strokes: 4 }] },
       { team_id: 'red', strokes: 6, player_scores: [] },
@@ -52,13 +52,13 @@ describe('buildHoleEntries', () => {
 
     const entries = buildHoleEntries([singlesBlue, singlesRed], at(7, true, [scored]))
 
-    expect(entries.map((e) => e.scored)).toEqual([true, false])
+    expect(entries.map((e) => e.strokes)).toEqual([4, null])
   })
 
-  it('flags a whole unscored hole as unscored', () => {
+  it('leaves a whole unscored hole unchosen for both sides', () => {
     const entries = buildHoleEntries([blue, red], at(7, false))
 
-    expect(entries.map((e) => e.scored)).toEqual([false, false])
+    expect(entries.map((e) => e.strokes)).toEqual([null, null])
   })
 
   it('prefills each player from the recorded score', () => {
@@ -116,15 +116,13 @@ describe('buildHoleEntries', () => {
     ])
   })
 
-  it('falls back to par for a player with no recorded score', () => {
-    // Unscored players must open on par rather than borrow a teammate's score. Hole 7 is a par 5
-    // so the recorded 4 cannot be confused with the default.
+  it("leaves a player with no recorded score unchosen rather than borrowing a teammate's", () => {
     const parFive = holes.map((h) => (h.number === 7 ? { ...h, par: 5 } : h))
     const scored = status(7, [{ team_id: 'blue', strokes: 4, player_scores: [{ player_id: 'p1', strokes: 4 }] }])
 
     const entries = buildHoleEntries([blue, red], { perPlayer: true, holeNumber: 7, holes: parFive, holeStates: [scored] })
 
-    expect(entries.map((e) => e.strokes)).toEqual([4, 5, 5, 5])
+    expect(entries.map((e) => e.strokes)).toEqual([4, null, null, null])
   })
 
   describe('running totals', () => {

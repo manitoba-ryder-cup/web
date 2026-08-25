@@ -12,27 +12,29 @@ import { centreOffset, nudgeOffset } from '@/lib/strokeStrip'
 // so the readout is a running total; 0/0 reads as this hole alone.
 const props = withDefaults(
   defineProps<{
-    modelValue: number
+    // Null until a score is chosen. The strip still parks on par, but filling it would read
+    // as a par nobody made and would save as one.
+    modelValue: number | null
     par: number
     name: string
     readonly?: boolean
-    unscored?: boolean
     priorStrokes?: number
     priorPar?: number
   }>(),
-  { readonly: false, unscored: false, priorStrokes: 0, priorPar: 0 },
+  { readonly: false, priorStrokes: 0, priorPar: 0 },
 )
 const emit = defineEmits<{ 'update:modelValue': [strokes: number] }>()
 
 const MAX = 20
+const KEYS = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End']
 const strokes = Array.from({ length: MAX }, (_, i) => i + 1)
 const track = ref<HTMLElement | null>(null)
 
-// An unscored hole adds nothing to either side of the comparison — the strip sits on par
-// but that par was never made — so the readout is the round as it stood before it.
-const total = computed(() => props.priorStrokes + (props.unscored ? 0 : props.modelValue))
+// An unchosen hole adds nothing to either side of the comparison — the strip sits on par but
+// that par was never made — so the readout is the round as it stood before it.
+const total = computed(() => props.priorStrokes + (props.modelValue ?? 0))
 const rel = computed(() => {
-  const d = total.value - (props.priorPar + (props.unscored ? 0 : props.par))
+  const d = total.value - (props.priorPar + (props.modelValue === null ? 0 : props.par))
   return d === 0 ? 'E' : d > 0 ? `+${d}` : `${d}`
 })
 
@@ -62,9 +64,9 @@ function anchor() {
 }
 // Nudged, never centred: choosing must not shift the strip under the finger that chose. The
 // track's own scrollLeft, since scrollIntoView walks every ancestor scrollport to the document.
-function reveal(s: number) {
+function reveal(s: number | null) {
   const el = track.value
-  const tile = tileAt(s)
+  const tile = s === null ? undefined : tileAt(s)
   if (!el || !tile) return
   el.scrollLeft = nudgeOffset(el.scrollLeft, el.clientWidth, tile.offsetLeft, tile.offsetWidth)
 }
@@ -79,19 +81,19 @@ function select(s: number) {
 // One tab stop per player, arrows to move. Reaching a tile is a tap, a deliberate key, or
 // scrolling to it — never Tab passing through on its way to Save.
 function onKeydown(e: KeyboardEvent) {
-  if (props.readonly) return
-  const to =
-    e.key === 'ArrowRight' || e.key === 'ArrowDown'
-      ? Math.min(MAX, props.modelValue + 1)
-      : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
-        ? Math.max(1, props.modelValue - 1)
-        : e.key === 'Home'
-          ? 1
-          : e.key === 'End'
-            ? MAX
-            : 0
-  if (!to) return
+  if (props.readonly || !KEYS.includes(e.key)) return
   e.preventDefault()
+  // With nothing chosen the first key takes par, so reaching it is not a step past and back.
+  const to =
+    props.modelValue === null
+      ? props.par
+      : e.key === 'ArrowRight' || e.key === 'ArrowDown'
+        ? Math.min(MAX, props.modelValue + 1)
+        : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+          ? Math.max(1, props.modelValue - 1)
+          : e.key === 'Home'
+            ? 1
+            : MAX
   select(to)
   // preventScroll so the browser's own nudge doesn't fight reveal's.
   nextTick(() => tileAt(to)?.focus({ preventScroll: true }))
@@ -136,11 +138,11 @@ watch(
         type="button"
         data-stroke
         role="radio"
-        :aria-checked="!unscored && s === modelValue"
-        :tabindex="s === modelValue ? 0 : -1"
+        :aria-checked="s === modelValue"
+        :tabindex="s === (modelValue ?? par) ? 0 : -1"
         :disabled="readonly"
         class="min-h-[76px] w-[5.5rem] shrink-0 rounded-lg px-1 py-2 text-center"
-        :class="!unscored && s === modelValue ? 'bg-mrc-accent text-white' : 'text-mrc-charcoal'"
+        :class="s === modelValue ? 'bg-mrc-accent text-white' : 'text-mrc-charcoal'"
         @click="select(s)"
       >
         <span class="block text-5xl font-bold leading-none tabular-nums">{{ s }}</span>

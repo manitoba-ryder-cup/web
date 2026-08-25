@@ -1,15 +1,14 @@
 import type { Hole, HoleStatus, MatchSide } from '@/api/types'
 import { playerNames, playerSurnames } from '@/lib/matchResult'
 
-// `scored` separates a recorded par from par-as-a-default, which the strip renders
-// differently. priorStrokes/priorPar are the round up to but not including this hole.
+// Null strokes are a hole nobody has recorded, which the strip renders with nothing chosen
+// rather than parked on par. priorStrokes/priorPar are the round up to but not including it.
 export interface HoleEntry {
   key: string
   teamId: string
   playerId: string | null
   name: string
-  strokes: number
-  scored: boolean
+  strokes: number | null
   priorStrokes: number
   priorPar: number
 }
@@ -33,7 +32,6 @@ function strokesOn(state: HoleStatus, teamId: string, playerId: string | null): 
 // breakdown, not the side's `strokes` — in Fourball that's only the better of the two.
 export function buildHoleEntries(sides: MatchSide[], { perPlayer, holeNumber, holes, holeStates }: Options): HoleEntry[] {
   const parOf = new Map(holes.map((h) => [h.number, h.par]))
-  const par = parOf.get(holeNumber) ?? 4
   const scored = holeStates.find((h) => h.hole_number === holeNumber) ?? null
 
   // A hole with no score contributes to neither total: adding its par without its strokes
@@ -56,14 +54,12 @@ export function buildHoleEntries(sides: MatchSide[], { perPlayer, holeNumber, ho
   for (const side of sides) {
     for (const player of perPlayer ? side.players : [null]) {
       const playerId = player?.player_id ?? null
-      const strokes = scored ? strokesOn(scored, side.team_id, playerId) : null
       entries.push({
         key: player?.player_id ?? side.team_id,
         teamId: side.team_id,
         playerId,
         name: player ? playerNames([player]) : playerSurnames(side.players),
-        strokes: strokes ?? par,
-        scored: strokes !== null,
+        strokes: scored ? strokesOn(scored, side.team_id, playerId) : null,
         ...prior(side.team_id, playerId),
       })
     }

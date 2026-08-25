@@ -98,6 +98,12 @@ function saveButton(w: ReturnType<typeof mount>) {
   return w.findAll('button').find((b) => b.attributes('data-stroke') === undefined && b.attributes('aria-label') === undefined)
 }
 const chevron = (w: ReturnType<typeof mount>, dir: 'Previous' | 'Next') => w.get(`[aria-label="${dir} hole"]`)
+// An unrecorded hole opens with nothing chosen, so anything that saves has to choose first —
+// the taps a scorer makes.
+async function pick(w: ReturnType<typeof mount>, strokes = 4) {
+  for (const strip of w.findAll('[role="radiogroup"]')) await strip.findAll('[data-stroke]')[strokes - 1].trigger('click')
+  await flushPromises()
+}
 const stepBlocked = (w: ReturnType<typeof mount>, dir: 'Previous' | 'Next') => chevron(w, dir).attributes('aria-disabled') === 'true'
 
 async function openHole(hole = '15') {
@@ -134,6 +140,7 @@ describe('HoleEntryView saving', () => {
     holeStates = [scoredFifteenth]
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
+    await pick(w)
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
@@ -195,6 +202,7 @@ describe('HoleEntryView saving', () => {
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
 
+    await pick(w)
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
@@ -204,30 +212,71 @@ describe('HoleEntryView saving', () => {
   })
 
   it("sends every side's score for the hole in one request", async () => {
-    // Both sides in one body is what makes the write atomic — a half-scored hole stops
-    // being reachable, rather than being something the reader has to cope with.
+    // Both sides in one body is what makes the write atomic. A double rather than the par
+    // the strip parks on, so the body cannot be something nobody chose.
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
 
+    await pick(w, 6)
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
     expect(submitScore).toHaveBeenCalledWith('m1', {
       hole_number: 15,
       scores: [
-        { team_id: 'blue', player_id: 'p1', strokes: 4 },
-        { team_id: 'red', player_id: 'p2', strokes: 4 },
+        { team_id: 'blue', player_id: 'p1', strokes: 6 },
+        { team_id: 'red', player_id: 'p2', strokes: 6 },
       ],
     })
   })
 
+  // Par used to be the seed, so a hole opened to look at and left by the Save button under
+  // the thumb went down as a par nobody made.
+  it('records nothing when Save is pressed on a hole nobody has touched', async () => {
+    const w = await openHole('15')
+
+    await saveButton(w)!.trigger('click')
+    await flushPromises()
+
+    expect(submitScore).not.toHaveBeenCalled()
+  })
+
+  it('offers no save until every player on the hole has a score', async () => {
+    const w = await openHole('15')
+    expect(saveButton(w)!.attributes('disabled')).toBeDefined()
+
+    await pick(w)
+
+    expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
+  })
+
+  // The hole is written whole, so half of it chosen is not most of the way there.
+  it('will not save a hole with one side chosen and the other not', async () => {
+    const w = await openHole('15')
+
+    await w.findAll('[role="radiogroup"]')[0].findAll('[data-stroke]')[3].trigger('click')
+    await flushPromises()
+
+    expect(saveButton(w)!.attributes('disabled')).toBeDefined()
+  })
+
+  // A recorded hole opens on its scores, so correcting one costs no taps it did not before.
+  it('offers a save straight away on a hole already recorded', async () => {
+    holeStates = [scoredFifteenth]
+
+    const w = await openHole('15')
+
+    expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
+  })
+
   it('refetches the match after a save, so what was written is what gets read', async () => {
     // The page loads once. Without a refetch the scores just written are invisible to it:
-    // revisiting the hole shows par again, and saving from there overwrites them.
+    // revisiting the hole reads as unrecorded, and the card behind it says the same.
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
     expect(getMatchScores).toHaveBeenCalledTimes(1)
 
+    await pick(w)
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
@@ -240,6 +289,7 @@ describe('HoleEntryView saving', () => {
     submitScore.mockResolvedValue(closedOut)
     const w = await openHole('15')
 
+    await pick(w)
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
@@ -252,6 +302,7 @@ describe('HoleEntryView saving', () => {
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
 
+    await pick(w)
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
@@ -265,6 +316,7 @@ describe('HoleEntryView saving', () => {
     const w = await openHole('15')
     const push = vi.spyOn(router, 'push').mockReturnValue(new Promise(() => {})) // never lands
 
+    await pick(w)
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
@@ -276,6 +328,7 @@ describe('HoleEntryView saving', () => {
     submitScore.mockRejectedValue(new ApiError(409, 'match is complete'))
     const w = await openHole('16')
 
+    await pick(w)
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
@@ -307,6 +360,7 @@ describe('HoleEntryView saving', () => {
 
     expect(saveButton(w)).toBeDefined()
 
+    await pick(w)
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
@@ -471,6 +525,7 @@ describe('HoleEntryView stepping between holes', () => {
     submitScore.mockRejectedValue(new ApiError(409, 'match is complete'))
     const w = await open('16')
 
+    await pick(w)
     await saveButton(w)!.trigger('click')
     await flushPromises()
     expect(w.text()).toContain('closed to scoring')
