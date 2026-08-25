@@ -7,14 +7,15 @@ import { useAsync } from '@/composables/useAsync'
 import { toast } from '@/composables/useToast'
 import { useBusy } from '@/composables/useBusy'
 import { playerSurnames } from '@/lib/matchResult'
-import { formatTeeTime, teeDayKey, teeDayLabel, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
+import { formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
+import SkeletonTabs from '@/components/skeleton/SkeletonTabs.vue'
 import SkeletonList from '@/components/skeleton/SkeletonList.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
-import CapsLabel from '@/components/typography/CapsLabel.vue'
+import BaseTabs from '@/components/base/BaseTabs.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseLabel from '@/components/base/BaseLabel.vue'
 import BaseAlert from '@/components/base/BaseAlert.vue'
@@ -42,19 +43,21 @@ const matches = computed(() => data.value?.matches ?? [])
 const matchFormats = computed(() => data.value?.matchFormats ?? [])
 const courses = computed(() => data.value?.courses ?? [])
 
-// The running order, which is what setup is actually arranging. Grouped by day because the
-// time on a row carries no date, and two days of a cup both start at eight.
-const days = computed(() => {
-  const groups = new Map<string, MatchResult[]>()
-  for (const m of [...matches.value].sort((a, b) => a.tee_time.localeCompare(b.tee_time))) {
-    groups.set(teeDayKey(m.tee_time), [...(groups.get(teeDayKey(m.tee_time)) ?? []), m])
-  }
-  return [...groups.values()].map((ms) => ({ key: teeDayKey(ms[0].tee_time), label: teeDayLabel(ms[0].tee_time), matches: ms }))
+// Rounds are set one at a time over the event, so a tab per format keeps you on the round you
+// are setting. Within one, the tee time is what tells unassigned matches apart.
+const formats = computed(() => {
+  const seen: string[] = []
+  for (const m of matches.value) if (!seen.includes(m.format_name)) seen.push(m.format_name)
+  return seen
 })
-
-// The last match on the sheet: what a new one is most likely to follow, and what its course,
-// format and tee time default from.
-const latest = computed(() => [...matches.value].sort((a, b) => a.tee_time.localeCompare(b.tee_time)).pop() ?? null)
+const byFormat = computed(() => {
+  const rank = (m: MatchResult) => m.tee_time
+  const map: Record<string, MatchResult[]> = {}
+  for (const f of formats.value) {
+    map[f] = matches.value.filter((m) => m.format_name === f).sort((a, b) => rank(a).localeCompare(rank(b)))
+  }
+  return map
+})
 
 // A short "Bale/Phin vs Fordyce/Ray" for each match, or a hint when a side is empty.
 function pairing(sides: { players: { player_id: string; first_name: string; last_name: string }[] }[]): string {
@@ -63,11 +66,12 @@ function pairing(sides: { players: { player_id: string; first_name: string; last
 }
 
 // --- Add match ---
-const adding = ref(false)
+// The form lives under whichever format tab it was opened from (adding === that format).
+const adding = ref<string | null>(null)
 const creating = ref(false)
 const formError = ref('')
 const courseTees = ref<TeeSetSummary[]>([])
-const form = reactive({ formatId: '', courseId: '', teeColorId: '', teeTime: '', handicapped: false })
+const form = reactive({ courseId: '', teeColorId: '', teeTime: '', handicapped: false })
 // A tee time is typed as the wall clock the tee sheet says; the course it is played at is
 // what turns that into an instant.
 const selectedCourseZone = computed(() => courses.value.find((c) => c.id === form.courseId)?.time_zone ?? 'America/Winnipeg')
@@ -84,19 +88,24 @@ async function loadTees() {
   }
 }
 
-// Everything defaults off the last match on the sheet, because matches are added in runs: the
-// next slot ten minutes later, at the same course, in the same format.
-async function openForm() {
+async function openForm(format: string) {
   formError.value = ''
-  const last = latest.value
-  form.formatId = matchFormats.value.find((f) => f.name === last?.format_name)?.id ?? matchFormats.value[0]?.id ?? ''
-  form.courseId = courses.value.find((c) => c.name === last?.course_name)?.id ?? courses.value[0]?.id ?? ''
-  form.teeTime = last
-    ? utcToEventInput(new Date(new Date(last.tee_time).getTime() + 10 * 60000).toISOString(), selectedCourseZone.value)
+  const siblings = byFormat.value[format] ?? []
+  // Default the tee time to 10 minutes after the round's latest match (the next slot), or
+  // the tournament's first morning when the round is empty.
+  const latest = siblings
+    .map((m) => m.tee_time)
+    .sort()
+    .pop()
+  form.teeTime = latest
+    ? utcToEventInput(new Date(new Date(latest).getTime() + 10 * 60000).toISOString(), selectedCourseZone.value)
     : `${tournament.value?.start_date ?? ''}T08:00`
+  // Default the course to the one this round already uses (matched by name), else the first.
+  const usedName = siblings.find((m) => m.course_name)?.course_name
+  form.courseId = courses.value.find((c) => c.name === usedName)?.id ?? courses.value[0]?.id ?? ''
   form.handicapped = false
   await loadTees()
-  adding.value = true
+  adding.value = format
 }
 
 const { isBusy, run } = useBusy()
@@ -119,9 +128,10 @@ async function removeMatch(match: MatchResult) {
   )
 }
 
-async function submit() {
-  if (!form.formatId || !form.courseId || !form.teeColorId || !form.teeTime) {
-    formError.value = 'Pick a format, course, tee and tee time.'
+async function submit(format: string) {
+  const formatId = matchFormats.value.find((f) => f.name === format)?.id
+  if (!formatId || !form.courseId || !form.teeColorId || !form.teeTime) {
+    formError.value = 'Pick a course, tee and tee time.'
     return
   }
   creating.value = true
@@ -130,11 +140,11 @@ async function submit() {
     await scorecardApi.createMatch(props.id, {
       course_id: form.courseId,
       tee_color_id: form.teeColorId,
-      match_format_id: form.formatId,
+      match_format_id: formatId,
       tee_time: eventInputToUtc(form.teeTime, selectedCourseZone.value),
       handicapped: form.handicapped,
     })
-    adding.value = false
+    adding.value = null
     await refresh()
     toast.success('Match created')
   } catch {
@@ -155,7 +165,8 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
         <SkeletonBlock radius="md" class="h-20 w-full" />
         <div class="mt-8">
           <FullBleed>
-            <div class="px-4"><SkeletonBlock class="mb-2 h-3 w-24" /><SkeletonList :rows="5" /></div>
+            <SkeletonTabs />
+            <div class="px-4 pt-6"><SkeletonList :rows="5" /></div>
           </FullBleed>
         </div>
       </template>
@@ -186,23 +197,18 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
       </RouterLink>
 
       <section class="mt-8">
-        <FullBleed>
-          <div class="px-4">
-            <!-- One sheet in tee-time order. Grouped by day and not by format: the format is a
-                 property of a match now, and a match that changes one should not leave the list. -->
-            <div v-for="day in days" :key="day.key" class="mb-6">
-              <CapsLabel as="h3" size="sm" class="mb-2 text-mrc-muted">{{ day.label }}</CapsLabel>
+        <!-- The active format is mirrored in the hash, so you return to the round you were setting. -->
+        <FullBleed v-if="formats.length">
+          <BaseTabs :tabs="formats" v-slot="{ tab }">
+            <div class="px-4">
               <div class="overflow-hidden rounded-md border border-mrc-line bg-mrc-surface shadow">
-                <div v-for="m in day.matches" :key="m.match_id" class="flex items-stretch border-b border-mrc-line last:border-b-0">
+                <div v-for="m in byFormat[tab]" :key="m.match_id" class="flex items-stretch border-b border-mrc-line last:border-b-0">
                   <RouterLink
                     :to="{ name: 'admin-lineup', params: { id, matchId: m.match_id } }"
                     class="group flex min-w-0 flex-1 items-center justify-between px-4 py-3 transition hover:bg-mrc-panel"
                   >
                     <div class="min-w-0">
-                      <p class="flex items-baseline gap-2">
-                        <span class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time) }}</span>
-                        <span class="truncate text-sm text-mrc-muted">{{ m.format_name }}</span>
-                      </p>
+                      <p class="font-semibold tabular-nums">{{ formatTeeTime(m.tee_time) }}</p>
                       <p class="truncate text-sm text-mrc-muted">{{ pairing(m.sides) }}</p>
                     </div>
                     <ChevronRightIcon class="shrink-0 text-mrc-faint transition group-hover:text-mrc-accent" />
@@ -219,47 +225,50 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                   </button>
                 </div>
               </div>
-            </div>
-            <p v-if="!matches.length" class="mb-3 text-mrc-muted">No matches yet. Add the first one below.</p>
 
-            <button v-if="!adding" type="button" @click="openForm()" class="text-sm font-semibold text-mrc-accent hover:underline">
-              + Add match
-            </button>
-            <div v-else class="space-y-3 rounded-md border border-mrc-line bg-mrc-panel p-4">
-              <BaseAlert v-if="formError" variant="error">{{ formError }}</BaseAlert>
-              <div>
-                <BaseLabel>Format</BaseLabel>
-                <select v-model="form.formatId" :class="fieldClass">
-                  <option v-for="f in matchFormats" :key="f.id" :value="f.id">{{ f.name }}</option>
-                </select>
-              </div>
-              <div>
-                <BaseLabel>Course</BaseLabel>
-                <select v-model="form.courseId" @change="loadTees" :class="fieldClass">
-                  <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
-                </select>
-              </div>
-              <div>
-                <BaseLabel>Tee</BaseLabel>
-                <select v-model="form.teeColorId" :class="fieldClass" :disabled="!courseTees.length">
-                  <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
-                </select>
-                <p v-if="form.courseId && !courseTees.length" class="mt-1 text-sm text-mrc-muted">This course has no tee sets set up.</p>
-              </div>
-              <div>
-                <BaseLabel>Tee time</BaseLabel>
-                <input type="datetime-local" v-model="form.teeTime" required :class="fieldClass" />
-              </div>
-              <label class="flex items-center gap-2 text-sm text-mrc-charcoal">
-                <input type="checkbox" v-model="form.handicapped" class="[color-scheme:light]" /> Handicapped (net scoring)
-              </label>
-              <div class="flex gap-2 pt-1">
-                <BaseButton :loading="creating" :disabled="!form.teeColorId || !form.teeTime" @click="submit()">Create match</BaseButton>
-                <BaseButton variant="secondary" @click="adding = false">Cancel</BaseButton>
+              <!-- Add another match to this round. Course/tee default to what the round uses; the
+                   tee time defaults to the next slot. -->
+              <button
+                v-if="adding !== tab"
+                type="button"
+                @click="openForm(tab)"
+                class="mt-3 text-sm font-semibold text-mrc-accent hover:underline"
+              >
+                + Add {{ tab }} match
+              </button>
+              <div v-else class="mt-3 space-y-3 rounded-md border border-mrc-line bg-mrc-panel p-4">
+                <BaseAlert v-if="formError" variant="error">{{ formError }}</BaseAlert>
+                <div>
+                  <BaseLabel>Course</BaseLabel>
+                  <select v-model="form.courseId" @change="loadTees" :class="fieldClass">
+                    <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
+                  </select>
+                </div>
+                <div>
+                  <BaseLabel>Tee</BaseLabel>
+                  <select v-model="form.teeColorId" :class="fieldClass" :disabled="!courseTees.length">
+                    <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
+                  </select>
+                  <p v-if="form.courseId && !courseTees.length" class="mt-1 text-sm text-mrc-muted">This course has no tee sets set up.</p>
+                </div>
+                <div>
+                  <BaseLabel>Tee time</BaseLabel>
+                  <input type="datetime-local" v-model="form.teeTime" required :class="fieldClass" />
+                </div>
+                <label class="flex items-center gap-2 text-sm text-mrc-charcoal">
+                  <input type="checkbox" v-model="form.handicapped" class="[color-scheme:light]" /> Handicapped (net scoring)
+                </label>
+                <div class="flex gap-2 pt-1">
+                  <BaseButton :loading="creating" :disabled="!form.teeColorId || !form.teeTime" @click="submit(tab)"
+                    >Create match</BaseButton
+                  >
+                  <BaseButton variant="secondary" @click="adding = null">Cancel</BaseButton>
+                </div>
               </div>
             </div>
-          </div>
+          </BaseTabs>
         </FullBleed>
+        <p v-else class="text-mrc-muted">No matches have been created for this tournament yet.</p>
       </section>
     </AsyncState>
   </PageLayout>
