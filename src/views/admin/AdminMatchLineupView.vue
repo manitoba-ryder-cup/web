@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { ApiError, type LineupPlayer, type TeeSetSummary, type UpdateMatchBody } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
@@ -176,6 +177,7 @@ function edits() {
 
 // Details before the lineup, and only what moved. A scored match takes a tee time and refuses
 // a lineup, so in this order the edit it allows lands and the one it refuses says why.
+const router = useRouter()
 const save = () =>
   run(
     'save',
@@ -183,11 +185,15 @@ const save = () =>
       try {
         if (teeSetChanged.value || teeTimeChanged.value) await scorecardApi.updateMatch(props.matchId, edits())
         if (lineupChanged.value) await scorecardApi.setLineup(props.matchId, lineup.value)
-        toast.success('Match saved')
       } catch (err) {
         if (!(err instanceof ApiError) || err.status !== 409) throw err
         toast.error(err.message)
+        return
       }
+      toast.success('Match saved')
+      // The row on the list carries the tee time and the pairing, which is the change in the
+      // context it was made for. A refusal returned above, because that half did not save.
+      await router.push({ name: 'admin-tournament', params: { id: props.id } })
     },
     { error: "Couldn't save those changes. Please try again." },
   )

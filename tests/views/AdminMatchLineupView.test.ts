@@ -314,6 +314,31 @@ describe('AdminMatchLineupView', () => {
     expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 
+  // The setup list carries the tee time and the pairing, so it shows the change in the context
+  // it was made for. Getting there is also where the next match is.
+  it('returns to the setup list once the save lands', async () => {
+    await router.push('/')
+    const w = await mounted()
+    await w.find('#tee').setValue('white')
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('admin-tournament')
+    expect(router.currentRoute.value.params.id).toBe('t1')
+  })
+
+  // A refusal is the half that did not save, and the list has nothing to say about it.
+  it('stays put when the server refuses', async () => {
+    vi.mocked(scorecardApi.updateMatch).mockRejectedValue(new ApiError(409, 'That match has scores.'))
+    await router.push('/')
+    const w = await mounted()
+    await w.find('#tee').setValue('white')
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).not.toBe('admin-tournament')
+  })
+
   const detailsForm = (w: ReturnType<typeof mount>) => w.find('form')
   const saveButton = (w: ReturnType<typeof mount>) => w.findAll('button').find((b) => b.text() === 'Save')!
 
