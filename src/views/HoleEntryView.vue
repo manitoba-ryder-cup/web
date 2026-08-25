@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { ApiError, type MatchSide } from '@/api/types'
 import { useMatchContext } from '@/composables/useMatchContext'
+import { useAfterHoleSaved } from '@/composables/useAfterWrite'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
 import { matchCompleteMessage } from '@/lib/matchResult'
 import { hasStarted, holeOpen } from '@/lib/scoringWindow'
@@ -23,8 +24,9 @@ const props = defineProps<{ tournamentId: string; matchId: string; hole: string 
 const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
-// Loads once — walking to the next hole only re-derives from what is already here.
-const { error, loading, retry, refresh, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+const afterHoleSaved = useAfterHoleSaved()
+// Loads once — a read-only walk to the next hole only re-derives from what is already here.
+const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
   () => props.matchId,
 )
@@ -88,22 +90,27 @@ watch([() => props.hole, left, right, holeInfo], rebuild, { immediate: true })
 
 const saving = ref(false)
 const buttonLabel = computed(() => {
-  const last = holeNumber.value >= 18
-  if (readonly.value) return last ? 'Back to Scorecard' : 'Next Hole'
-  return last ? 'Save & Finish' : 'Save & Next Hole'
+  if (readonly.value) return holeNumber.value >= 18 ? 'Back to Scorecard' : 'Next Hole'
+  return 'Save'
 })
 
 // Awaited, so the button stays disabled until the route has changed: re-enabling mid-
-// transition let a second tap land hole 16 in behind the scorecard.
-function goToScorecard() {
-  return router.push({ name: 'match', params: { tournamentId: props.tournamentId, matchId: props.matchId } })
+// transition leaves a second tap free to write the same hole again.
+function goToScorecard(hole?: number) {
+  return router.push({
+    name: 'match',
+    params: { tournamentId: props.tournamentId, matchId: props.matchId },
+    ...(hole ? { hash: `#hole-${hole}` } : {}),
+  })
 }
 function goNext() {
   const n = holeNumber.value
   if (n >= 18) return goToScorecard()
   return router.push({ name: 'hole', params: { tournamentId: props.tournamentId, matchId: props.matchId, hole: n + 1 } })
 }
-async function saveAndNext() {
+// Back to the card, not on to the next hole: the next score is a fairway away, and this page
+// hides the tab bar, so the card is the only way to the other matches a scorer is watching.
+async function saveHole() {
   if (readonly.value) return goNext()
   saving.value = true
   saveError.value = ''
@@ -114,18 +121,12 @@ async function saveAndNext() {
       hole_number: holeNumber.value,
       scores: entries.value.map((e) => ({ team_id: e.teamId, player_id: e.playerId, strokes: e.strokes })),
     })
-    // No next hole to walk to. Each hole taps back from the scorecard, so a wrong score is still
-    // a tap from being fixed and the toast only explains why Save did not move on.
     if (status.finished) {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
-      await goToScorecard()
-      return
     }
-    // The page loads once, so without this the next hole's running totals omit what was just
-    // written, and coming back here shows par — saving from there would overwrite it.
-    await refresh()
-    await goNext()
+    await afterHoleSaved(props.tournamentId, props.matchId)
+    await goToScorecard(holeNumber.value)
   } catch (err) {
     // The server answers 409 for a shut window and for a hole a decided match never reached, and
     // this cannot tell them apart — so the sentence has to hold for both.
@@ -213,7 +214,7 @@ async function saveAndNext() {
           type="button"
           class="mt-6 w-full rounded-md bg-mrc-accent py-4 font-semibold text-white transition hover:bg-mrc-accent-dark disabled:opacity-60"
           :disabled="saving"
-          @click="saveAndNext"
+          @click="saveHole"
         >
           {{ saving ? 'Saving…' : buttonLabel }}
         </button>

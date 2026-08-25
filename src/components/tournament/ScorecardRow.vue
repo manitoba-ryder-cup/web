@@ -11,6 +11,7 @@ defineEmits<{ open: [hole: number] }>()
 </script>
 <template>
   <tr
+    :id="`hole-${row.hole}`"
     class="divide-x divide-mrc-line border-t border-mrc-line"
     :class="tappable ? 'cursor-pointer hover:bg-mrc-accent/5' : ''"
     @click="tappable && $emit('open', row.hole)"
