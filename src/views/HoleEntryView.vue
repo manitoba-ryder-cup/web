@@ -24,7 +24,7 @@ const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
 const afterHoleSaved = useAfterHoleSaved()
-// Loads once — a read-only walk to the next hole only re-derives from what is already here.
+// Loads once — stepping between holes only re-derives from what is already here.
 const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
   () => props.matchId,
@@ -221,14 +221,15 @@ async function saveHole() {
         </div>
 
         <p v-if="saveError" class="mt-6 text-center text-sm text-mrc-red-team">{{ saveError }}</p>
-        <p v-else-if="showSave && missing" id="save-waiting" class="mt-6 text-center text-sm text-mrc-muted">
+        <p v-else-if="showSave && missing" id="save-waiting" aria-live="polite" class="mt-6 text-center text-sm text-mrc-muted">
           {{ missing }} {{ missing === 1 ? 'score' : 'scores' }} still to enter.
         </p>
         <button
           v-if="showSave"
           type="button"
-          class="mt-6 w-full rounded-md bg-mrc-accent py-4 font-semibold text-white transition hover:bg-mrc-accent-dark disabled:opacity-60"
-          :disabled="saving || !scores"
+          class="mt-6 w-full rounded-md bg-mrc-accent py-4 font-semibold text-white transition hover:bg-mrc-accent-dark disabled:opacity-60 aria-disabled:opacity-60"
+          :disabled="saving"
+          :aria-disabled="!scores"
           :aria-describedby="missing ? 'save-waiting' : undefined"
           @click="saveHole"
         >
