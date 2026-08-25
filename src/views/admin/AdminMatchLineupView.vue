@@ -196,7 +196,7 @@ const save = () =>
   )
 </script>
 <template>
-  <PageLayout :title="match?.format_name ?? 'Match'" image="/img/oceanside.webp">
+  <PageLayout title="Edit Match" image="/img/oceanside.webp">
     <AsyncState :loading="loading" :error="error" :retry="retry">
       <template #loading>
         <SkeletonBlock class="mx-auto mb-4 h-4 w-72" />
@@ -239,7 +239,9 @@ const save = () =>
               <input id="tee-time" v-model="teeTimeInput" type="datetime-local" required :class="fieldClass" />
             </div>
           </div>
-          <BaseButton type="submit" :loading="isBusy('details')" :disabled="!changed">Save</BaseButton>
+          <div class="flex justify-end">
+            <BaseButton type="submit" :loading="isBusy('details')" :disabled="!changed">Save</BaseButton>
+          </div>
         </form>
 
         <CapsLabel as="h2" size="sm" class="mb-3 text-mrc-muted">Players</CapsLabel>

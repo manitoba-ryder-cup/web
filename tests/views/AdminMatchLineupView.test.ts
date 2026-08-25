@@ -110,7 +110,9 @@ describe('AdminMatchLineupView', () => {
     await flushPromises()
 
     expect(w.find('[data-testid="skeleton"]').exists()).toBe(false)
-    expect(w.text()).toContain('Singles')
+    // The form itself, not a format name: the picker lists every format, so its text says
+    // nothing about whether this match resolved.
+    expect(w.find('#format').exists()).toBe(true)
   })
 
   // Read at the course: 14:00Z is 09:00 at Elmhurst, so that is what the input shows — not
