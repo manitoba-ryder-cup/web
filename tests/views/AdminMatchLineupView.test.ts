@@ -24,6 +24,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { ApiError } from '@/api/types'
 import AdminMatchLineupView from '@/views/admin/AdminMatchLineupView.vue'
+import { utcToEventInput } from '@/lib/teeTime'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -195,14 +196,37 @@ describe('AdminMatchLineupView', () => {
     expect((w.find('#tee').element as HTMLSelectElement).value).toBe('gold')
   })
 
-  it('sends only the course and tee when the tee set moves', async () => {
+  // The tee time rides along with the tee set, because a course change moves the zone the clock
+  // is read in and the field would otherwise disagree with what the page shows a moment later.
+  it('sends the tee time with the tee set, and nothing else', async () => {
     vi.mocked(scorecardApi.updateMatch).mockResolvedValue({} as never)
     const w = await mounted()
     await w.find('#tee').setValue('white')
     await detailsForm(w).trigger('submit')
     await flushPromises()
 
-    expect(scorecardApi.updateMatch).toHaveBeenCalledWith('m1', { course_id: 'c1', tee_color_id: 'white' })
+    // Same course, so the instant is unchanged — the stored 14:00Z, sent back as it stands.
+    expect(scorecardApi.updateMatch).toHaveBeenCalledWith('m1', {
+      course_id: 'c1',
+      tee_color_id: 'white',
+      tee_time: '2026-07-01T14:00:00.000Z',
+    })
+  })
+
+  // A course in another zone keeps the wall clock the tee sheet says, so the instant moves.
+  // Reading it back at the new course then shows what the field showed when Save was pressed.
+  it('keeps the clock when the course moves to another zone', async () => {
+    vi.mocked(scorecardApi.updateMatch).mockResolvedValue({} as never)
+    const w = await mounted()
+    const shown = (w.find('input[type="datetime-local"]').element as HTMLInputElement).value
+
+    await w.find('#course').setValue('c2')
+    await flushPromises()
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    const sent = vi.mocked(scorecardApi.updateMatch).mock.calls.at(-1)![1].tee_time!
+    expect(utcToEventInput(sent, 'America/Edmonton')).toBe(shown)
   })
 
   // Changing the course reloads its tees, since a colour is a tee set on one course and
@@ -432,6 +456,24 @@ describe('AdminMatchLineupView', () => {
 
     expect((w.find('#course').element as HTMLSelectElement).value).toBe('c1')
     expect((w.find('#tee').element as HTMLSelectElement).value).toBe('gold')
+  })
+
+  // A retry re-issues the request that failed. Bare, it falls through to the first tee in the
+  // list — which after a failed initial load arms a tee set change on the match's own course.
+  it('retries the tee load without arming a change nobody made', async () => {
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValueOnce(new Error('offline'))
+    const w = await mounted()
+    expect(w.text()).toContain("Couldn't load this course's tees")
+
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Try again')!
+      .trigger('click')
+    await flushPromises()
+
+    // gold is the match's stored tee and second in the list, so the first-tee fallback shows.
+    expect((w.find('#tee').element as HTMLSelectElement).value).toBe('gold')
+    expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 
   const detailsForm = (w: ReturnType<typeof mount>) => w.find('form')

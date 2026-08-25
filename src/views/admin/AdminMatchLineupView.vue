@@ -117,8 +117,6 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
 }
 
 const courses = computed(() => data.value?.courses ?? [])
-// The stored course, not the one in the picker: an unsaved change must not re-read the clock
-// on a tee time it has not moved.
 const zoneOf = (courseId: string | undefined) => courses.value.find((c) => c.id === courseId)?.time_zone ?? 'America/Winnipeg'
 
 // Reading back: the stored course, so picking another does not re-read a tee time nobody moved.
@@ -157,10 +155,16 @@ watch(
 // A token, because switching course twice quickly can land the first response last and leave
 // the course reading one thing and the tees another — a pair the server refuses as a 400.
 let teeRequest = 0
+let lastSelect: string | undefined
 const teesFailed = ref(false)
+
+// The retry re-issues what failed. Called bare it would fall through to the first tee in the
+// list, which on a failed initial load arms a tee set change on the match's own course.
+const retryTees = () => loadTees(lastSelect)
 
 async function loadTees(select?: string) {
   const mine = ++teeRequest
+  lastSelect = select
   const forCourse = teeSet.courseId
   courseTees.value = []
   teesFailed.value = false
@@ -200,7 +204,11 @@ function edits() {
     body.course_id = teeSet.courseId
     body.tee_color_id = teeSet.teeColorId
   }
-  if (teeTimeChanged.value) body.tee_time = eventInputToUtc(teeTimeInput.value, zoneBeingSaved.value)
+  // Sent when the course moves even if nobody touched the clock: the tee sheet at the new
+  // course says the time on screen, and holding the instant instead would shift it.
+  if (teeTimeChanged.value || teeSetChanged.value) {
+    body.tee_time = eventInputToUtc(teeTimeInput.value, zoneBeingSaved.value)
+  }
   return body
 }
 
@@ -253,10 +261,16 @@ const save = () =>
               <select id="tee" v-model="teeSet.teeColorId" :class="fieldClass" :disabled="!courseTees.length">
                 <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
               </select>
-              <p v-if="teesFailed" class="mt-1 text-sm">
-                <span class="text-mrc-charcoal">Couldn't load this course's tees.</span>
-                <button type="button" class="ml-1 font-semibold text-mrc-accent hover:underline" @click="loadTees()">Try again</button>
-              </p>
+              <template v-if="teesFailed">
+                <p class="mt-1 text-sm text-mrc-charcoal">Couldn't load this course's tees.</p>
+                <button
+                  type="button"
+                  class="mt-2 w-full rounded-md bg-mrc-accent py-3 font-semibold text-white transition hover:bg-mrc-accent-dark"
+                  @click="retryTees"
+                >
+                  Try again
+                </button>
+              </template>
             </div>
             <div class="min-w-0 flex-1">
               <BaseLabel for="tee-time">Tee time</BaseLabel>
