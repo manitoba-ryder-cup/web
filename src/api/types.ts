@@ -76,6 +76,12 @@ export interface UpdateMatchBody {
   tee_time?: string
   handicapped?: boolean
 }
+// One player on one side. A lineup is sent whole, so how many a side is the format's rule and
+// the server answers it against the set it is being asked to write.
+export interface LineupPlayer {
+  player_id: string
+  team_id: string
+}
 export interface PlayerSummary {
   id: string
   first_name: string

@@ -16,6 +16,7 @@ vi.mock('@/api/scorecard', () => ({
     listMatchFormats: vi.fn(),
     getCourseTees: vi.fn(),
     updateMatch: vi.fn(),
+    setLineup: vi.fn(),
   },
 }))
 
@@ -74,7 +75,12 @@ describe('AdminMatchLineupView', () => {
       { id: 'blue-1', color: 'Blue', captain: null, points: 0 },
       { id: 'red-1', color: 'Red', captain: null, points: 0 },
     ])
-    vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([])
+    // Two drafted players a side, so there is somebody to name and somebody left over.
+    vi.mocked(scorecardApi.getTournamentPlayers).mockResolvedValue([
+      { player_id: 'red-a', team_id: 'red-1', first_name: 'Red', last_name: 'Alpha', tier: 'gold' },
+      { player_id: 'red-b', team_id: 'red-1', first_name: 'Red', last_name: 'Bravo', tier: 'blue' },
+      { player_id: 'blue-a', team_id: 'blue-1', first_name: 'Blue', last_name: 'Alpha', tier: 'gold' },
+    ] as never)
     // Banff is an hour behind Elmhurst, which is what lets a test tell the course's clock
     // from the fallback. Chicago, the previous second course, shares Winnipeg's offset.
     vi.mocked(scorecardApi.listCourses).mockResolvedValue([
@@ -252,6 +258,60 @@ describe('AdminMatchLineupView', () => {
     const w = await mounted()
 
     expect(w.text()).toContain('0/3')
+  })
+
+  const playerPill = (w: ReturnType<typeof mount>, name: string) => w.findAll('button').find((b) => b.text().includes(name))
+
+  // Naming a player is an edit to the page, not a request. The whole lineup goes at once, so
+  // there is nothing to send until every side has been named and Save is pressed.
+  it('stages a player rather than writing them', async () => {
+    const w = await mounted()
+    await playerPill(w, 'Red Alpha')!.trigger('click')
+
+    expect(scorecardApi.setLineup).not.toHaveBeenCalled()
+    expect(saveButton(w).attributes('disabled')).toBeUndefined()
+  })
+
+  it('sends the whole lineup on save', async () => {
+    const w = await mounted()
+    await playerPill(w, 'Red Alpha')!.trigger('click')
+    await playerPill(w, 'Blue Alpha')!.trigger('click')
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    expect(scorecardApi.setLineup).toHaveBeenCalledWith('m1', [
+      { player_id: 'red-a', team_id: 'red-1' },
+      { player_id: 'blue-a', team_id: 'blue-1' },
+    ])
+  })
+
+  // Fourball, so the side still has room and the choices stay on screen. Under singles the
+  // block is hidden once a side is full, which would pass whatever the filter did.
+  it('takes a named player out of the choices while the side has room', async () => {
+    vi.mocked(scorecardApi.listMatches).mockResolvedValue([
+      {
+        id: 'm1',
+        tournament_id: 't1',
+        course_id: 'c1',
+        tee_color_id: 'gold',
+        match_format_id: 'f2',
+        tee_time: '2026-09-18T13:00:00Z',
+        handicapped: false,
+      },
+    ])
+    const w = await mounted()
+    expect(w.text()).toContain('0/2')
+
+    await playerPill(w, 'Red Alpha')!.trigger('click')
+
+    expect(w.text()).toContain('1/2')
+    expect(playerPill(w, 'Red Alpha')).toBeUndefined()
+    expect(playerPill(w, 'Red Bravo')).toBeDefined()
+  })
+
+  it('has nothing to save until the lineup actually changes', async () => {
+    const w = await mounted()
+    expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 
   const detailsForm = (w: ReturnType<typeof mount>) => w.find('form')

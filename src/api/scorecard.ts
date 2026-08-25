@@ -1,5 +1,6 @@
 import { ApiClient } from './client'
 import type {
+  LineupPlayer,
   Course,
   CreateMatchBody,
   UpdateMatchBody,
@@ -72,9 +73,7 @@ export const scorecardApi = {
   setTeamCaptain: (teamId: string, captainId: string) => sc().put<void>(`/v1/teams/${teamId}/captain`, { captain_id: captainId }),
   clearTeamCaptain: (teamId: string) => sc().del<void>(`/v1/teams/${teamId}/captain`),
   // Assign a drafted player (with their team) to a match, or remove them from it.
-  addParticipant: (matchId: string, playerId: string, teamId: string) =>
-    sc().post<void>(`/v1/matches/${matchId}/participants`, { player_id: playerId, team_id: teamId }),
-  removeParticipant: (matchId: string, playerId: string) => sc().del<void>(`/v1/matches/${matchId}/participants/${playerId}`),
+  setLineup: (matchId: string, participants: LineupPlayer[]) => sc().put<void>(`/v1/matches/${matchId}/participants`, { participants }),
   resetMatch: (matchId: string) => sc().del<void>(`/v1/matches/${matchId}/scores`),
   // Match setup: courses + their tee sets feed the create-match form.
   listCourses: () => sc().get<Course[]>('/v1/courses'),
