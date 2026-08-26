@@ -83,9 +83,15 @@ describe('placeholderPairing', () => {
   it('draws a slot each for a format that fields two', () => {
     expect(placeholderPairing(2).map((p) => `${p.first_name} ${p.last_name}`)).toEqual(['Player One', 'Player Two'])
   })
-  // The card is a pairing against a pairing, so a side with nothing to draw would collapse it.
-  it('draws a slot even for a side size it cannot make sense of', () => {
-    expect(placeholderPairing(0)).toHaveLength(1)
+  // The card is a pairing against a pairing, so a side with nothing to draw collapses it — and
+  // a server without the field sends nothing, which the type says cannot happen.
+  it.each([
+    ['zero', 0],
+    ['missing', undefined],
+    ['not a number', 'two'],
+    ['negative', -1],
+  ])('draws a slot for a side size that is %s', (_label, size) => {
+    expect(placeholderPairing(size as number)).toHaveLength(1)
   })
   it('gives each placeholder a stable, unique key', () => {
     const ids = placeholderPairing(2).map((p) => p.player_id)

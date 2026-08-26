@@ -26,6 +26,9 @@ import { ApiError } from '@/api/types'
 import AdminMatchLineupView from '@/views/admin/AdminMatchLineupView.vue'
 import { utcToEventInput } from '@/lib/teeTime'
 
+// How many a side the match's format takes; a test that needs another size sets it.
+let sideSize = 1
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [{ path: '/admin/:id', name: 'admin-tournament', component: { template: '<div/>' } }],
@@ -33,6 +36,8 @@ const router = createRouter({
 
 describe('AdminMatchLineupView', () => {
   beforeEach(() => {
+    // Reset here, not at the end of the test that changes it: an expect above can throw first.
+    sideSize = 1
     toasts.length = 0
     vi.clearAllMocks()
     // A refetch after saving has to return what was saved, or the view looks permanently unsaved
@@ -54,7 +59,7 @@ describe('AdminMatchLineupView', () => {
       {
         match_id: 'm1',
         format_name: 'Singles',
-        players_per_side: 1,
+        players_per_side: sideSize,
         scores_per_player: true,
         finished: false,
         winner_team_id: null,
@@ -278,9 +283,7 @@ describe('AdminMatchLineupView', () => {
   // How many a side is the format's to say. Read off the name, every format but Singles was
   // taken to hold two, which was true only until one of them did not.
   it('counts the slots a side from the format rather than its name', async () => {
-    vi.mocked(scorecardApi.listMatchFormats).mockResolvedValue([
-      { id: 'f1', name: 'Singles', players_per_side: 3, scores_per_player: true },
-    ])
+    sideSize = 3
     const w = await mounted()
 
     expect(w.text()).toContain('0/3')
@@ -322,20 +325,10 @@ describe('AdminMatchLineupView', () => {
     ])
   })
 
-  // Fourball, so the side still has room and the choices stay on screen. Under singles the
-  // block is hidden once a side is full, which would pass whatever the filter did.
+  // Two a side, so the side still has room and the choices stay on screen. With one a side the
+  // block is hidden once it is full, which would pass whatever the filter did.
   it('takes a named player out of the choices while the side has room', async () => {
-    vi.mocked(scorecardApi.listMatches).mockResolvedValue([
-      {
-        id: 'm1',
-        tournament_id: 't1',
-        course_id: 'c1',
-        tee_color_id: 'gold',
-        match_format_id: 'f2',
-        tee_time: '2026-09-18T13:00:00Z',
-        handicapped: false,
-      },
-    ])
+    sideSize = 2
     const w = await mounted()
     expect(w.text()).toContain('0/2')
 

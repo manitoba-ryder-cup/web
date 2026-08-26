@@ -45,7 +45,11 @@ export function matchCompleteMessage(state: MatchStatus, sides: MatchSide[]): st
 const PLACEHOLDER_NAMES = ['One', 'Two', 'Three', 'Four']
 
 export function placeholderPairing(playersPerSide: number): MatchPlayer[] {
-  return PLACEHOLDER_NAMES.slice(0, Math.max(1, playersPerSide)).map((name, i) => ({
+  // Guarded on the value, not with Math.max: a server that has not shipped the field sends
+  // nothing, and Math.max(1, undefined) is NaN, which slices to an empty side.
+  const side = Number(playersPerSide)
+  const slots = Number.isFinite(side) && side >= 1 ? Math.floor(side) : 1
+  return PLACEHOLDER_NAMES.slice(0, slots).map((name, i) => ({
     player_id: `placeholder-${i + 1}`,
     first_name: 'Player',
     last_name: name,
