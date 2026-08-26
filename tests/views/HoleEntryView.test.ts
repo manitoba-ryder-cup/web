@@ -340,6 +340,26 @@ describe('HoleEntryView saving', () => {
     expect(saveButton(w)).toBeUndefined()
   })
 
+  // A 4xx carries a sentence the server wrote for a reader; a 5xx carries whatever leaked out
+  // of a failure, which is not an answer about this hole.
+  it("shows the server's refusal, but never a fault's body", async () => {
+    submitScore.mockRejectedValue(new ApiError(400, 'hole 15 already has a score for that player'))
+    const w = await openHole('15')
+    await pick(w)
+    await saveButton(w)!.trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('already has a score')
+
+    submitScore.mockRejectedValue(new ApiError(500, 'pq: deadlock detected on relation scores'))
+    const w2 = await openHole('15')
+    await pick(w2)
+    await saveButton(w2)!.trigger('click')
+    await flushPromises()
+
+    expect(w2.text()).not.toContain('deadlock')
+    expect(w2.text()).toContain('Save failed. Please try again.')
+  })
+
   it('does not extend a finished match onto a hole it never played', async () => {
     match.finished = true
 

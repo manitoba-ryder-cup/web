@@ -17,6 +17,9 @@ export function useCourseTees() {
     const mine = ++request
     asked = { courseId, prefer }
     tees.value = []
+    // Cleared with them: a tee id from the last course outlives the list it came from, and the
+    // pair it makes with the new course is one the API refuses.
+    selected.value = ''
     failed.value = false
     if (!courseId) return
     let loaded: TeeSetSummary[]

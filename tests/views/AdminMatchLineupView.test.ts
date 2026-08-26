@@ -431,6 +431,22 @@ describe('AdminMatchLineupView', () => {
     expect(w.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
   })
 
+  // A course whose tees will not load kept the previous course's tee id armed, so Save offered
+  // to write a pair from two different courses — which the API refuses.
+  it("does not keep the old course's tee when the new one's cannot be loaded", async () => {
+    const w = await mounted()
+    expect((w.find('#tee').element as HTMLSelectElement).value).toBe('gold')
+
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    await w.find('#course').setValue('c2')
+    await flushPromises()
+
+    expect(w.text()).toContain("Couldn't load this course's tees")
+    // Nothing to save: a course with no tee is not a tee set the API would take.
+    const save = w.findAll('button').find((b) => b.text() === 'Save')
+    expect(save?.attributes('disabled')).toBeDefined()
+  })
+
   // Switching course twice quickly can land the first response last, leaving the course reading
   // one thing and the tees another — a pair the server rejects as a 400 with nothing useful.
   it('ignores a tee response the course has already moved past', async () => {

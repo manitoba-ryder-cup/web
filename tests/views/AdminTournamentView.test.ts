@@ -12,6 +12,7 @@ vi.mock('@/api/scorecard', () => ({
     getTournamentResults: vi.fn(),
     listMatchFormats: vi.fn(),
     listCourses: vi.fn(),
+    getCourseTees: vi.fn(),
     deleteMatch: vi.fn(),
   },
 }))
@@ -62,7 +63,13 @@ describe('AdminTournamentView', () => {
     vi.mocked(scorecardApi.listMatchFormats).mockResolvedValue([
       { id: 'f1', name: 'Singles', players_per_side: 1, scores_per_player: true },
     ])
-    vi.mocked(scorecardApi.listCourses).mockResolvedValue([{ id: 'c1', name: 'Elmhurst', time_zone: 'America/Winnipeg' }])
+    vi.mocked(scorecardApi.listCourses).mockResolvedValue([
+      { id: 'c1', name: 'Elmhurst', time_zone: 'America/Winnipeg' },
+      { id: 'c2', name: 'Banff Springs', time_zone: 'America/Edmonton' },
+    ])
+    vi.mocked(scorecardApi.getCourseTees).mockResolvedValue([
+      { course_id: 'c1', tee_color_id: 'gold', color: 'Gold', slope: 120, rating: 70 },
+    ])
   })
 
   // The whole route already requires tournaments:write, so the control needs no gate of its own.
@@ -108,6 +115,37 @@ describe('AdminTournamentView', () => {
     const link = wrapper.findAll('a').find((a) => a.attributes('href')?.includes('/matches/m1'))
     expect(link).toBeTruthy()
     expect(link!.findAll('button')).toHaveLength(0)
+  })
+
+  // Switch course twice on a slow link and the first response can land last, leaving a course
+  // and a tee from two different courses in a body the API refuses.
+  it('ignores a tee response the course has already moved past', async () => {
+    const elmhurst = [{ course_id: 'c1', tee_color_id: 'gold', color: 'Gold', slope: 120, rating: 70 }]
+    const banff = [{ course_id: 'c2', tee_color_id: 'banff-blue', color: 'Banff Blue', slope: 113, rating: 72 }]
+    const w = await mounted()
+    // The form waits on its first tee load, so that one answers straight away.
+    await w
+      .findAll('button')
+      .find((b) => b.text().includes('Add'))!
+      .trigger('click')
+    await flushPromises()
+
+    const deferred: ((tees: unknown) => void)[] = []
+    vi.mocked(scorecardApi.getCourseTees).mockImplementation(
+      () => new Promise((resolve) => deferred.push(resolve as (tees: unknown) => void)) as never,
+    )
+    const course = w.findAll('select').find((sel) => sel.findAll('option').some((o) => o.text() === 'Banff Springs'))!
+    await course.setValue('c2')
+    await course.setValue('c1')
+    // The current pick answers first and the one it replaced second, which is the interleaving
+    // that leaves an earlier response landing last.
+    deferred[1]?.(elmhurst)
+    deferred[0]?.(banff)
+    await flushPromises()
+
+    const tee = w.findAll('select').find((sel) => sel.findAll('option').some((o) => o.text() === 'Gold'))
+    expect((course.element as HTMLSelectElement).value).toBe('c1')
+    expect(tee && (tee.element as HTMLSelectElement).value).toBe('gold')
   })
 
   it('shows a skeleton while loading, not the empty-state copy', async () => {

@@ -2,14 +2,15 @@
 import { ref, reactive, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
-import { type MatchResult, type TeeSetSummary } from '@/api/types'
+import { type MatchResult } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { toast } from '@/composables/useToast'
 import { useBusy } from '@/composables/useBusy'
+import { useCourseTees } from '@/composables/useCourseTees'
 import { isStatus } from '@/lib/apiError'
 import { displayError } from '@/lib/displayError'
 import { playerSurnames } from '@/lib/matchResult'
-import { formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
+import { CUP_TIME_ZONE, formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -72,23 +73,11 @@ function pairing(sides: { players: { player_id: string; first_name: string; last
 const adding = ref<string | null>(null)
 const creating = ref(false)
 const formError = ref('')
-const courseTees = ref<TeeSetSummary[]>([])
-const form = reactive({ courseId: '', teeColorId: '', teeTime: '', handicapped: false })
+const { tees: courseTees, selected: teeColorId, load: loadTees } = useCourseTees()
+const form = reactive({ courseId: '', teeTime: '', handicapped: false })
 // A tee time is typed as the wall clock the tee sheet says; the course it is played at is
 // what turns that into an instant.
-const selectedCourseZone = computed(() => courses.value.find((c) => c.id === form.courseId)?.time_zone ?? 'America/Winnipeg')
-
-async function loadTees() {
-  form.teeColorId = ''
-  courseTees.value = []
-  if (!form.courseId) return
-  try {
-    courseTees.value = await scorecardApi.getCourseTees(form.courseId)
-    form.teeColorId = courseTees.value[0]?.tee_color_id ?? ''
-  } catch {
-    courseTees.value = []
-  }
-}
+const selectedCourseZone = computed(() => courses.value.find((c) => c.id === form.courseId)?.time_zone ?? CUP_TIME_ZONE)
 
 async function openForm(format: string) {
   formError.value = ''
@@ -106,7 +95,7 @@ async function openForm(format: string) {
   const usedName = siblings.find((m) => m.course_name)?.course_name
   form.courseId = courses.value.find((c) => c.name === usedName)?.id ?? courses.value[0]?.id ?? ''
   form.handicapped = false
-  await loadTees()
+  await loadTees(form.courseId)
   adding.value = format
 }
 
@@ -132,7 +121,7 @@ async function removeMatch(match: MatchResult) {
 
 async function submit(format: string) {
   const formatId = matchFormats.value.find((f) => f.name === format)?.id
-  if (!formatId || !form.courseId || !form.teeColorId || !form.teeTime) {
+  if (!formatId || !form.courseId || !teeColorId.value || !form.teeTime) {
     formError.value = 'Pick a course, tee and tee time.'
     return
   }
@@ -141,7 +130,7 @@ async function submit(format: string) {
   try {
     await scorecardApi.createMatch(props.id, {
       course_id: form.courseId,
-      tee_color_id: form.teeColorId,
+      tee_color_id: teeColorId.value,
       match_format_id: formatId,
       tee_time: eventInputToUtc(form.teeTime, selectedCourseZone.value),
       handicapped: form.handicapped,
@@ -242,13 +231,13 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                 <BaseAlert v-if="formError" variant="error">{{ formError }}</BaseAlert>
                 <div>
                   <BaseLabel>Course</BaseLabel>
-                  <select v-model="form.courseId" @change="loadTees" :class="fieldClass">
+                  <select v-model="form.courseId" @change="loadTees(form.courseId)" :class="fieldClass">
                     <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
                   </select>
                 </div>
                 <div>
                   <BaseLabel>Tee</BaseLabel>
-                  <select v-model="form.teeColorId" :class="fieldClass" :disabled="!courseTees.length">
+                  <select v-model="teeColorId" :class="fieldClass" :disabled="!courseTees.length">
                     <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
                   </select>
                   <p v-if="form.courseId && !courseTees.length" class="mt-1 text-sm text-mrc-muted">This course has no tee sets set up.</p>
@@ -261,9 +250,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                   <input type="checkbox" v-model="form.handicapped" class="[color-scheme:light]" /> Handicapped (net scoring)
                 </label>
                 <div class="flex gap-2 pt-1">
-                  <BaseButton :loading="creating" :disabled="!form.teeColorId || !form.teeTime" @click="submit(tab)"
-                    >Create match</BaseButton
-                  >
+                  <BaseButton :loading="creating" :disabled="!teeColorId || !form.teeTime" @click="submit(tab)">Create match</BaseButton>
                   <BaseButton variant="secondary" @click="adding = null">Cancel</BaseButton>
                 </div>
               </div>

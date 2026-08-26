@@ -2,8 +2,9 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
-import { ApiError, type MatchSide, type ScoreEntry } from '@/api/types'
-import { isStatus } from '@/lib/apiError'
+import type { MatchSide, ScoreEntry } from '@/api/types'
+import { isRefusal, isStatus } from '@/lib/apiError'
+import { displayError } from '@/lib/displayError'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { useAfterHoleSaved } from '@/composables/useAfterWrite'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
@@ -154,7 +155,7 @@ async function saveHole() {
       refusedHole.value = hole
       saveError.value = 'This hole is closed to scoring — the match finished before it, or its window has shut.'
     } else {
-      saveError.value = err instanceof ApiError ? `Save failed — ${err.message}` : 'Save failed. Please try again.'
+      saveError.value = isRefusal(err) ? `Save failed — ${displayError(err)}` : 'Save failed. Please try again.'
     }
   } finally {
     saving.value = false

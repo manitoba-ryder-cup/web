@@ -9,8 +9,8 @@ import { useCourseTees } from '@/composables/useCourseTees'
 import { toast } from '@/composables/useToast'
 import { displayError } from '@/lib/displayError'
 import { isRefusal } from '@/lib/apiError'
-import { availableForTeam, playersTakenElsewhere } from '@/lib/lineup'
-import { utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
+import { availableForTeam, playersSpent } from '@/lib/lineup'
+import { CUP_TIME_ZONE, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import TierDot from '@/components/base/TierDot.vue'
@@ -84,12 +84,11 @@ const removeFromLineup = (playerId: string) => (lineup.value = lineup.value.filt
 const panels = computed(() => {
   const m = match.value
   if (!m) return []
-  const taken = playersTakenElsewhere(matches.value, props.matchId, m.format_name)
-  for (const p of lineup.value) taken.add(p.player_id)
+  const spent = playersSpent(matches.value, props.matchId, m.format_name, lineup.value)
   return teams.value.map((team) => ({
     team,
     assigned: lineup.value.filter((p) => p.team_id === team.id).map((p) => ({ player_id: p.player_id, ...nameOf(p.player_id) })),
-    available: availableForTeam(roster.value, team.id, taken),
+    available: availableForTeam(roster.value, team.id, spent),
     colors: teamColor(team.color),
   }))
 })
@@ -114,9 +113,6 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
 }
 
 const courses = computed(() => data.value?.courses ?? [])
-// Every course carries a zone; this covers the frame before the list has landed, where the
-// cup's own zone is a better guess than the reader's.
-const CUP_TIME_ZONE = 'America/Winnipeg'
 const zoneOf = (id: string | undefined) => courses.value.find((c) => c.id === id)?.time_zone ?? CUP_TIME_ZONE
 
 // Reading back: the stored course, so picking another does not re-read a tee time nobody moved.
