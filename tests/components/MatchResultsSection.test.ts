@@ -18,6 +18,7 @@ function match(o: Partial<MatchResult> = {}): MatchResult {
   return {
     match_id: 'm1',
     format_name: 'Fourball',
+    players_per_side: 2,
     scores_per_player: true,
     finished: true,
     winner_team_id: 't-red',
@@ -92,6 +93,7 @@ describe('MatchResultsSection', () => {
     const unassigned = match({
       match_id: 'm9',
       format_name: 'Fourball',
+      players_per_side: 2,
       scores_per_player: true,
       finished: false,
       winner_team_id: null,
@@ -107,10 +109,33 @@ describe('MatchResultsSection', () => {
     expect(w.text()).toContain('Two') // Fourball → two a side
   })
 
+  // The other side size, so the card is drawn from what the format says rather than from a
+  // number that happens to suit the fourballs.
+  it('draws one placeholder a side for a format that fields one', () => {
+    const unassigned = match({
+      match_id: 'm9',
+      format_name: 'Singles',
+      players_per_side: 1,
+      scores_per_player: true,
+      finished: false,
+      winner_team_id: null,
+      sides: [],
+      hole_results: [],
+    })
+    const w = mount(MatchResultsSection, {
+      props: { matches: [unassigned], teams, tournamentId: 't1' },
+      global: { plugins: [router] },
+    })
+
+    expect(w.text()).toContain('One')
+    expect(w.text()).not.toContain('Two')
+  })
+
   it('shows AS (not "In progress") and blue/red borders for an all-square unassigned match', () => {
     const unassigned = match({
       match_id: 'm9',
       format_name: 'Fourball',
+      players_per_side: 2,
       scores_per_player: true,
       finished: false,
       winner_team_id: null,

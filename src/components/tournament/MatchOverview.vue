@@ -15,8 +15,8 @@ const { left, right, colorFor } = useMatchSides(
 
 // A seeded-but-unassigned slot has no sides yet; fall back to a placeholder pairing so the
 // card still reads as "pairing vs pairing" instead of collapsing to just the result.
-const leftPlayers = computed(() => (left.value?.players.length ? left.value.players : placeholderPairing(props.match.format_name)))
-const rightPlayers = computed(() => (right.value?.players.length ? right.value.players : placeholderPairing(props.match.format_name)))
+const leftPlayers = computed(() => (left.value?.players.length ? left.value.players : placeholderPairing(props.match.players_per_side)))
+const rightPlayers = computed(() => (right.value?.players.length ? right.value.players : placeholderPairing(props.match.players_per_side)))
 
 // Teams are known from the draft, so an unassigned card still shows the colours. They arrive
 // in render order, so position is the side.

@@ -42,12 +42,14 @@ export function matchCompleteMessage(state: MatchStatus, sides: MatchSide[]): st
 
 // The slot exists, the lineup does not — mirrors the old app so an unassigned card still
 // reads as a pairing.
-export function placeholderPairing(format: string): MatchPlayer[] {
-  const players: MatchPlayer[] = [{ player_id: 'placeholder-1', first_name: 'Player', last_name: 'One' }]
-  if (format !== 'Singles') {
-    players.push({ player_id: 'placeholder-2', first_name: 'Player', last_name: 'Two' })
-  }
-  return players
+const PLACEHOLDER_NAMES = ['One', 'Two', 'Three', 'Four']
+
+export function placeholderPairing(playersPerSide: number): MatchPlayer[] {
+  return PLACEHOLDER_NAMES.slice(0, Math.max(1, playersPerSide)).map((name, i) => ({
+    player_id: `placeholder-${i + 1}`,
+    first_name: 'Player',
+    last_name: name,
+  }))
 }
 
 export function playerNames(players: MatchPlayer[]): string {

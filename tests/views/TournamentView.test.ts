@@ -19,6 +19,7 @@ vi.mock('@/api/scorecard', () => ({
       {
         match_id: 'm1',
         format_name: 'Singles',
+        players_per_side: 1,
         scores_per_player: true,
         finished: true,
         winner_team_id: 'red-1',
@@ -43,6 +44,7 @@ import TournamentView from '@/views/TournamentView.vue'
 const LIVE_MATCH: MatchResult = {
   match_id: 'm1',
   format_name: 'Singles',
+  players_per_side: 1,
   scores_per_player: true,
   finished: true,
   winner_team_id: 'red-1',
