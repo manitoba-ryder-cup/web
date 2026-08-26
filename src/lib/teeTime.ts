@@ -37,6 +37,9 @@ function eventParts(d: Date, tz: string): Record<string, string> {
     }, {})
 }
 
+// Where a course's own zone is not known yet: the tee sheet's zone beats the reader's.
+export const CUP_TIME_ZONE = 'America/Winnipeg'
+
 // UTC instant → a `<input type="datetime-local">` value ("YYYY-MM-DDTHH:mm") in event time.
 export function utcToEventInput(iso: string, tz: string): string {
   const p = eventParts(new Date(iso), tz)
