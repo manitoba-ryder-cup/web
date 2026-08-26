@@ -1,8 +1,8 @@
 import type { Hole, HoleStatus, MatchSide } from '@/api/types'
 import { playerNames, playerSurnames } from '@/lib/matchResult'
 
-// Null strokes are a hole nobody has recorded, which the strip renders with nothing chosen
-// rather than parked on par. priorStrokes/priorPar are the round up to but not including it.
+// Null strokes are a hole nobody has recorded. priorStrokes/priorPar are the round up to but
+// not including it.
 export interface HoleEntry {
   key: string
   teamId: string
@@ -20,7 +20,6 @@ interface Options {
   holeStates: HoleStatus[] // every scored hole of the match
 }
 
-// What this team or player shot on a hole, or null if they have no score on it.
 function strokesOn(state: HoleStatus, teamId: string, playerId: string | null): number | null {
   const team = state.team_scores.find((t) => t.team_id === teamId)
   if (!team) return null

@@ -3,13 +3,13 @@ import { computed, onMounted, onBeforeUnmount, nextTick, watch, ref } from 'vue'
 import { centreOffset, revealOffset } from '@/lib/strokeStrip'
 
 // eslint-disable-next-line comment-cap/max-lines -- names the control this replaced and the
-// bug that made it worth replacing, which is the reason not to make the strip move again.
+// bug that made it worth replacing, which is the reason never to let the scroll select again.
 // Par sits in the same place in every player's strip, so the fill's position is the score
-// against par and a hole reads down the column. The strip never moves itself: choosing fills
-// a tile where it sits rather than sliding it to the middle, so scrolling cannot select
-// either. The control this replaced read whatever the scroll centred, and a stray drag or a
-// focus recorded a score nobody picked. priorStrokes/priorPar are the round before this hole,
-// so the readout is a running total; 0/0 reads as this hole alone.
+// against par and a hole reads down the column. Choosing fills the tile where it sits, and the
+// strip moves only to bring a stroke off the end into view — it never reads its own scroll to
+// decide anything. The control this replaced selected whatever the scroll had centred, so a
+// stray drag or a focus recorded a score nobody picked. priorStrokes/priorPar are the round
+// before this hole, so the readout is a running total; 0/0 reads as this hole alone.
 const props = withDefaults(
   defineProps<{
     // Null until a score is chosen. The strip still parks on par, but filling it would read
@@ -105,8 +105,8 @@ onMounted(() => {
 })
 onBeforeUnmount(() => window.removeEventListener('resize', settle))
 
-// Par first: walking to the next hole reuses this component with a new par and a new
-// default, and re-pinning has to happen before the score is brought into view.
+// Par first: stepping between holes reuses this component with a new par and a new score, and
+// re-pinning has to happen before that score is brought into view.
 watch(() => props.par, settle)
 watch(
   () => props.modelValue,
