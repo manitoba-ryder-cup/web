@@ -2,10 +2,12 @@
 import { ref, reactive, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
-import { ApiError, type MatchResult, type TeeSetSummary } from '@/api/types'
+import { type MatchResult, type TeeSetSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { toast } from '@/composables/useToast'
 import { useBusy } from '@/composables/useBusy'
+import { isStatus } from '@/lib/apiError'
+import { displayError } from '@/lib/displayError'
 import { playerSurnames } from '@/lib/matchResult'
 import { formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -120,8 +122,8 @@ async function removeMatch(match: MatchResult) {
         await scorecardApi.deleteMatch(match.match_id)
         toast.success('Match deleted')
       } catch (err) {
-        if (!(err instanceof ApiError) || err.status !== 409) throw err
-        toast.error(err.message)
+        if (!isStatus(err, 409)) throw err
+        toast.error(displayError(err))
       }
     },
     { error: 'Could not delete the match. Please try again.' },

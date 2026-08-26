@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
-import { ApiError, type LineupPlayer, type TeeSetSummary, type UpdateMatchBody } from '@/api/types'
+import { type LineupPlayer, type UpdateMatchBody } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
+import { useCourseTees } from '@/composables/useCourseTees'
 import { toast } from '@/composables/useToast'
+import { displayError } from '@/lib/displayError'
+import { isRefusal } from '@/lib/apiError'
+import { availableForTeam, playersTakenElsewhere } from '@/lib/lineup'
 import { utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -77,24 +81,17 @@ const lineupChanged = computed(() => asKey(lineup.value) !== asKey(storedLineup.
 const addToLineup = (playerId: string, teamId: string) => lineup.value.push({ player_id: playerId, team_id: teamId })
 const removeFromLineup = (playerId: string) => (lineup.value = lineup.value.filter((p) => p.player_id !== playerId))
 
-// A player plays at most once per round, so availability is scoped to the whole format: every
-// drafted player except those already placed in any match of this round, or in this draft.
 const panels = computed(() => {
   const m = match.value
   if (!m) return []
-  const bookedInRound = new Set<string>()
-  for (const other of matches.value) {
-    if (other.match_id === props.matchId || other.format_name !== m.format_name) continue
-    for (const side of other.sides) for (const pl of side.players) bookedInRound.add(pl.player_id)
-  }
-  const named = new Set(lineup.value.map((p) => p.player_id))
-  return teams.value.map((team) => {
-    const assigned = lineup.value.filter((p) => p.team_id === team.id).map((p) => ({ player_id: p.player_id, ...nameOf(p.player_id) }))
-    const available = roster.value
-      .filter((p) => p.team_id === team.id && !bookedInRound.has(p.player_id) && !named.has(p.player_id))
-      .sort((a, b) => a.last_name.localeCompare(b.last_name))
-    return { team, assigned, available, colors: teamColor(team.color) }
-  })
+  const taken = playersTakenElsewhere(matches.value, props.matchId, m.format_name)
+  for (const p of lineup.value) taken.add(p.player_id)
+  return teams.value.map((team) => ({
+    team,
+    assigned: lineup.value.filter((p) => p.team_id === team.id).map((p) => ({ player_id: p.player_id, ...nameOf(p.player_id) })),
+    available: availableForTeam(roster.value, team.id, taken),
+    colors: teamColor(team.color),
+  }))
 })
 
 // The draft holds ids; the roster is where the names are.
@@ -117,13 +114,16 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
 }
 
 const courses = computed(() => data.value?.courses ?? [])
-const zoneOf = (courseId: string | undefined) => courses.value.find((c) => c.id === courseId)?.time_zone ?? 'America/Winnipeg'
+// Every course carries a zone; this covers the frame before the list has landed, where the
+// cup's own zone is a better guess than the reader's.
+const CUP_TIME_ZONE = 'America/Winnipeg'
+const zoneOf = (id: string | undefined) => courses.value.find((c) => c.id === id)?.time_zone ?? CUP_TIME_ZONE
 
 // Reading back: the stored course, so picking another does not re-read a tee time nobody moved.
 const courseZone = computed(() => zoneOf(record.value?.course_id))
 // Writing: the course being saved, or a wall clock typed off the new tee sheet lands in the
 // zone of the old one.
-const zoneBeingSaved = computed(() => (teeSetChanged.value ? zoneOf(teeSet.courseId) : courseZone.value))
+const zoneBeingSaved = computed(() => (teeSetChanged.value ? zoneOf(courseId.value) : courseZone.value))
 
 // A watcher, not an initial value: the match arrives after mount, and this has to re-settle
 // after each save.
@@ -139,54 +139,22 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
 
 // Which tees a match is played from decides the par and stroke index its scores are read
 // against, so it belongs to the match rather than the round.
-const teeSet = reactive({ courseId: '', teeColorId: '' })
-const courseTees = ref<TeeSetSummary[]>([])
+const courseId = ref('')
+const { tees: courseTees, failed: teesFailed, selected: teeColorId, load: loadTees, retry: retryTees } = useCourseTees()
 
 watch(
   record,
   (m) => {
-    if (!m || teeSet.courseId === m.course_id) return
-    teeSet.courseId = m.course_id
-    void loadTees(m.tee_color_id)
+    if (!m || courseId.value === m.course_id) return
+    courseId.value = m.course_id
+    void loadTees(m.course_id, m.tee_color_id)
   },
   { immediate: true },
 )
 
-// A token, because switching course twice quickly can land the first response last and leave
-// the course reading one thing and the tees another — a pair the server refuses as a 400.
-let teeRequest = 0
-let lastSelect: string | undefined
-const teesFailed = ref(false)
-
-// The retry re-issues what failed. Called bare it would fall through to the first tee in the
-// list, which on a failed initial load arms a tee set change on the match's own course.
-const retryTees = () => loadTees(lastSelect)
-
-async function loadTees(select?: string) {
-  const mine = ++teeRequest
-  lastSelect = select
-  const forCourse = teeSet.courseId
-  courseTees.value = []
-  teesFailed.value = false
-  if (!forCourse) return
-  let loaded: TeeSetSummary[]
-  try {
-    loaded = await scorecardApi.getCourseTees(forCourse)
-  } catch {
-    if (mine === teeRequest) teesFailed.value = true
-    return
-  }
-  if (mine !== teeRequest) return
-  courseTees.value = loaded
-  const wanted = select && loaded.some((t) => t.tee_color_id === select) ? select : ''
-  teeSet.teeColorId = wanted || loaded[0]?.tee_color_id || ''
-}
-
 const teeSetChanged = computed(
   () =>
-    !!record.value &&
-    !!teeSet.teeColorId &&
-    (teeSet.courseId !== record.value.course_id || teeSet.teeColorId !== record.value.tee_color_id),
+    !!record.value && !!teeColorId.value && (courseId.value !== record.value.course_id || teeColorId.value !== record.value.tee_color_id),
 )
 
 // Every side holding exactly what the format takes, which is what the API will accept. The
@@ -201,8 +169,8 @@ const savable = computed(() => changed.value && (!lineupChanged.value || lineupC
 function edits() {
   const body: UpdateMatchBody = {}
   if (teeSetChanged.value) {
-    body.course_id = teeSet.courseId
-    body.tee_color_id = teeSet.teeColorId
+    body.course_id = courseId.value
+    body.tee_color_id = teeColorId.value
   }
   // Sent when the course moves even if nobody touched the clock: the tee sheet at the new
   // course says the time on screen, and holding the instant instead would shift it.
@@ -223,10 +191,10 @@ const save = () =>
         if (teeSetChanged.value || teeTimeChanged.value) await scorecardApi.updateMatch(props.matchId, edits())
         if (lineupChanged.value) await scorecardApi.setLineup(props.matchId, lineup.value)
       } catch (err) {
-        // Any 4xx: a lineup naming an undrafted player answers 400 and a deleted match 404,
-        // and "please try again" invites a retry that cannot work.
-        if (!(err instanceof ApiError) || err.status < 400 || err.status >= 500) throw err
-        toast.error(err.message)
+        // A lineup naming an undrafted player answers 400 and a deleted match 404, and
+        // "please try again" invites a retry that cannot work.
+        if (!isRefusal(err)) throw err
+        toast.error(displayError(err))
         return
       }
       toast.success('Match saved')
@@ -251,14 +219,14 @@ const save = () =>
                leaves the instant alone and re-reads it, which the tee time shows happening. -->
           <div class="mb-3">
             <BaseLabel for="course">Course</BaseLabel>
-            <select id="course" v-model="teeSet.courseId" :class="fieldClass" @change="loadTees()">
+            <select id="course" v-model="courseId" :class="fieldClass" @change="loadTees(courseId)">
               <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
           </div>
           <div class="mb-4 flex gap-3">
             <div class="min-w-0 flex-1">
               <BaseLabel for="tee">Tees</BaseLabel>
-              <select id="tee" v-model="teeSet.teeColorId" :class="fieldClass" :disabled="!courseTees.length">
+              <select id="tee" v-model="teeColorId" :class="fieldClass" :disabled="!courseTees.length">
                 <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
               </select>
               <template v-if="teesFailed">

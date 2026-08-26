@@ -3,9 +3,11 @@ import { computed, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { ApiError, type MatchSide, type ScoreEntry } from '@/api/types'
+import { isStatus } from '@/lib/apiError'
 import { useMatchContext } from '@/composables/useMatchContext'
 import { useAfterHoleSaved } from '@/composables/useAfterWrite'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
+import { recordsScorePerPlayer } from '@/lib/matchFormat'
 import { matchCompleteMessage } from '@/lib/matchResult'
 import { hasStarted, holeOpen } from '@/lib/scoringWindow'
 import { formatTeeTime, teeDayLabel } from '@/lib/teeTime'
@@ -79,9 +81,7 @@ const sendAway = computed(() => {
 // guards — a shared link, a typed URL — is exactly the one that never triggers it.
 watch(sendAway, (to) => to && router.replace(to), { immediate: true })
 
-// Singles/Fourball record a score per player; one-ball formats (Alt Shot/Scramble/Scotch)
-// record one score per team (player_id null).
-const perPlayer = computed(() => ['Singles', 'Fourball'].includes(match.value?.format_name ?? ''))
+const perPlayer = computed(() => recordsScorePerPlayer(match.value?.format_name))
 
 const entries = ref<HoleEntry[]>([])
 
@@ -149,7 +149,7 @@ async function saveHole() {
   } catch (err) {
     // The server answers 409 for a shut window and for a hole a decided match never reached, and
     // this cannot tell them apart — so the sentence has to hold for both.
-    if (err instanceof ApiError && err.status === 409) {
+    if (isStatus(err, 409)) {
       finishedByWrite.value = true
       refusedHole.value = hole
       saveError.value = 'This hole is closed to scoring — the match finished before it, or its window has shut.'
