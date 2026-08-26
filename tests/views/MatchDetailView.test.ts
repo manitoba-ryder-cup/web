@@ -28,6 +28,7 @@ const withWindow = <T extends { tee_time: string }>(m: T, teeTime: string): T =>
 const withLineup: MatchResult = {
   match_id: 'm1',
   format_name: 'Singles',
+  scores_per_player: true,
   finished: false,
   winner_team_id: null,
   leader_team_id: null,
@@ -89,6 +90,72 @@ describe('MatchDetailView', () => {
   // throw first, and a scored hole would then leak into every test after it.
   beforeEach(() => {
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
+    vi.mocked(scorecardApi.getTournamentResults).mockImplementation(() => Promise.resolve(cup()))
+  })
+
+  // The card takes the scoring grain from the match rather than reading it off the format's
+  // name, so this page is the only thing carrying it across — silently, if it stops.
+  it('tells the card whether the format scores each player', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([
+      {
+        ...withLineup,
+        format_name: 'Fourball',
+        scores_per_player: true,
+        sides: [
+          {
+            team_id: 'blue',
+            players: [
+              { player_id: 'p1', first_name: 'Justin', last_name: 'Rabe' },
+              { player_id: 'p3', first_name: 'Keith', last_name: 'Van Walleghem' },
+            ],
+          },
+          {
+            team_id: 'red',
+            players: [
+              { player_id: 'p2', first_name: 'Harbs', last_name: 'Benning' },
+              { player_id: 'p4', first_name: 'Connor', last_name: 'Macaulay' },
+            ],
+          },
+        ],
+      },
+    ])
+
+    const w = await open()
+
+    // The per-player switch only exists on a card told the scores are recorded that way.
+    expect(w.find('[role="radiogroup"]').exists()).toBe(true)
+  })
+
+  // The other direction, at the same seam: a one-ball format fields two a side too, so player
+  // count cannot stand in for the grain — the switch would open onto eighteen dashes.
+  it('tells the card when a two-a-side format still records one ball', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([
+      {
+        ...withLineup,
+        format_name: 'Alt Shot',
+        scores_per_player: false,
+        sides: [
+          {
+            team_id: 'blue',
+            players: [
+              { player_id: 'p1', first_name: 'Justin', last_name: 'Rabe' },
+              { player_id: 'p3', first_name: 'Keith', last_name: 'Van Walleghem' },
+            ],
+          },
+          {
+            team_id: 'red',
+            players: [
+              { player_id: 'p2', first_name: 'Harbs', last_name: 'Benning' },
+              { player_id: 'p4', first_name: 'Connor', last_name: 'Macaulay' },
+            ],
+          },
+        ],
+      },
+    ])
+
+    const w = await open()
+
+    expect(w.find('[role="radiogroup"]').exists()).toBe(false)
   })
 
   beforeEach(() => match.mockReturnValue(withLineup))

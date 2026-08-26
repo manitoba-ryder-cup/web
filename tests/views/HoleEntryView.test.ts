@@ -27,6 +27,7 @@ const withWindow = <T extends { tee_time: string }>(m: T, teeTime: string): T =>
 const match: MatchResult = {
   match_id: 'm1',
   format_name: 'Singles',
+  scores_per_player: true,
   finished: false,
   winner_team_id: null,
   leader_team_id: null,
@@ -42,6 +43,8 @@ const match: MatchResult = {
   scoring_closes_at: new Date(new Date(teeingOffNow).getTime() + 12 * 3600000).toISOString(),
   course_name: 'Clear Lake',
 }
+// What the fixture is when a test has not changed it — the reset below puts it back.
+const singles = { format_name: match.format_name, scores_per_player: match.scores_per_player, sides: match.sides }
 const holes = Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, hdcp: i + 1, yards: 400 }))
 // The 15th as it was played: a hole the match already carries a score for, which is what
 // separates correcting one from extending a decided match onto a hole it never reached.
@@ -124,7 +127,7 @@ describe('HoleEntryView saving', () => {
     getMatchScores.mockClear()
     holeStates = []
     toasts.length = 0
-    Object.assign(match, { finished: false, leader_team_id: null, lead: 0 })
+    Object.assign(match, { finished: false, leader_team_id: null, lead: 0, ...singles })
   })
   // Spies here stub the router; a leaked one silently redirects the next test.
   afterEach(() => vi.restoreAllMocks())
@@ -196,6 +199,48 @@ describe('HoleEntryView saving', () => {
     expect(w.text()).not.toContain("hasn't started yet")
     expect(w.find('[data-stroke]').exists()).toBe(true)
     expect(saveButton(w)).toBeUndefined()
+  })
+
+  // A one-ball format fields two a side and records one score for the pair, so a strip each
+  // would offer four scores where the server takes two — and it takes them without complaint.
+  it('offers one strip a side for a format that records one ball', async () => {
+    Object.assign(match, {
+      format_name: 'Alt Shot',
+      scores_per_player: false,
+      sides: [
+        {
+          team_id: 'blue',
+          players: [
+            { player_id: 'p1', first_name: 'Justin', last_name: 'Rabe' },
+            { player_id: 'p3', first_name: 'Keith', last_name: 'Van Walleghem' },
+          ],
+        },
+        {
+          team_id: 'red',
+          players: [
+            { player_id: 'p2', first_name: 'Harbs', last_name: 'Benning' },
+            { player_id: 'p4', first_name: 'Connor', last_name: 'Macaulay' },
+          ],
+        },
+      ],
+    })
+    submitScore.mockResolvedValue(open)
+
+    const w = await openHole('15')
+    expect(w.findAll('[role="radiogroup"]')).toHaveLength(2)
+
+    await pick(w)
+    await saveButton(w)!.trigger('click')
+    await flushPromises()
+
+    // One score per side, and no player named: the pair played one ball between them.
+    expect(submitScore).toHaveBeenCalledWith('m1', {
+      hole_number: 15,
+      scores: [
+        { team_id: 'blue', player_id: null, strokes: 4 },
+        { team_id: 'red', player_id: null, strokes: 4 },
+      ],
+    })
   })
 
   it('goes back to the scorecard once the hole is saved', async () => {
@@ -479,7 +524,7 @@ describe('HoleEntryView stepping between holes', () => {
     vi.clearAllMocks()
     toasts.length = 0
     holeStates = []
-    match.finished = false
+    Object.assign(match, { finished: false, ...singles })
     match.scoring_opens_at = new Date(new Date(teeingOffNow).getTime() - 2 * 3600000).toISOString()
   })
 

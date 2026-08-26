@@ -120,6 +120,7 @@ const rightLabel = computed(() => (right.value ? playerInitials(right.value.play
           :hole-info="holeInfo"
           :course-name="match.course_name"
           :format-name="match.format_name"
+          :scores-per-player="match.scores_per_player"
           :result-label="match.finished ? resultText(match) : undefined"
           :tournament-id="tournamentId"
           :match-id="matchId"

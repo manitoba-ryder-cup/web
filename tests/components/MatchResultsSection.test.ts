@@ -18,6 +18,7 @@ function match(o: Partial<MatchResult> = {}): MatchResult {
   return {
     match_id: 'm1',
     format_name: 'Fourball',
+    scores_per_player: true,
     finished: true,
     winner_team_id: 't-red',
     leader_team_id: 't-red',
@@ -91,6 +92,7 @@ describe('MatchResultsSection', () => {
     const unassigned = match({
       match_id: 'm9',
       format_name: 'Fourball',
+      scores_per_player: true,
       finished: false,
       winner_team_id: null,
       sides: [],
@@ -109,6 +111,7 @@ describe('MatchResultsSection', () => {
     const unassigned = match({
       match_id: 'm9',
       format_name: 'Fourball',
+      scores_per_player: true,
       finished: false,
       winner_team_id: null,
       lead: 0,
