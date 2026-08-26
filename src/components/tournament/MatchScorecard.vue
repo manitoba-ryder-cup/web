@@ -20,7 +20,7 @@ const props = defineProps<{
   rightLabel: string
   courseName?: string
   formatName?: string
-  scoresPerPlayer?: boolean
+  scoresPerPlayer: boolean
   resultLabel?: string
   holeInfo?: Map<number, Hole>
   tournamentId: string
@@ -48,9 +48,9 @@ const viewIndex = computed({
 const viewLabels = computed(() => [props.leftLabel, 'Match', props.rightLabel])
 const sideOf = (v: ScorecardView) => (v === 'right' ? props.rightTeam : props.leftTeam)
 const playersOf = (v: ScorecardView) => (v === 'right' ? props.rightPlayers : props.leftPlayers) ?? []
-// Not "has two players": Alt Shot and Scotch field two and record one ball, so a split
-// column would be eighteen dashes.
-const canSplit = computed(() => !!props.scoresPerPlayer && props.leftPlayers?.length === 2 && props.rightPlayers?.length === 2)
+// Not "has two players": a one-ball format fields two a side and records one score, so a
+// split column would be eighteen dashes.
+const canSplit = computed(() => props.scoresPerPlayer && props.leftPlayers?.length === 2 && props.rightPlayers?.length === 2)
 // Label and colour together, so the header cannot outrun its colours.
 const columns = computed(() => {
   if (view.value === 'match') {
