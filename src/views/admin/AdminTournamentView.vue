@@ -73,7 +73,7 @@ function pairing(sides: { players: { player_id: string; first_name: string; last
 const adding = ref<string | null>(null)
 const creating = ref(false)
 const formError = ref('')
-const { tees: courseTees, selected: teeColorId, load: loadTees } = useCourseTees()
+const { tees: courseTees, failed: teesFailed, selected: teeColorId, load: loadTees, retry: retryTees } = useCourseTees()
 const form = reactive({ courseId: '', teeTime: '', handicapped: false })
 // A tee time is typed as the wall clock the tee sheet says; the course it is played at is
 // what turns that into an instant.
@@ -240,7 +240,19 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                   <select v-model="teeColorId" :class="fieldClass" :disabled="!courseTees.length">
                     <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
                   </select>
-                  <p v-if="form.courseId && !courseTees.length" class="mt-1 text-sm text-mrc-muted">This course has no tee sets set up.</p>
+                  <template v-if="teesFailed">
+                    <p class="mt-1 text-sm text-mrc-charcoal">Couldn't load this course's tees.</p>
+                    <button
+                      type="button"
+                      class="mt-2 w-full rounded-md bg-mrc-accent py-2 font-semibold text-white transition hover:bg-mrc-accent-dark"
+                      @click="retryTees"
+                    >
+                      Try again
+                    </button>
+                  </template>
+                  <p v-else-if="form.courseId && !courseTees.length" class="mt-1 text-sm text-mrc-muted">
+                    This course has no tee sets set up.
+                  </p>
                 </div>
                 <div>
                   <BaseLabel>Tee time</BaseLabel>

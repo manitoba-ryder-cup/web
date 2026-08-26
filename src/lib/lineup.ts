@@ -12,8 +12,7 @@ export function playersSpent(matches: MatchResult[], matchId: string, formatName
   return spent
 }
 
-// This team's drafted players who are still free to be picked. Surname then first name, which
-// is the order every other roster on the site reads in.
+// This team's drafted players who are still free to be picked. Surname then first name.
 export function availableForTeam(roster: TournamentPlayer[], teamId: string, spent: Set<string>): TournamentPlayer[] {
   return roster
     .filter((p) => p.team_id === teamId && !spent.has(p.player_id))

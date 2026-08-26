@@ -117,6 +117,48 @@ describe('AdminTournamentView', () => {
     expect(link!.findAll('button')).toHaveLength(0)
   })
 
+  // Nothing else here proves a course change issues a load at all, so the race test below can
+  // pass without one ever happening.
+  it("loads the new course's tees when the course changes", async () => {
+    const w = await mounted()
+    await w
+      .findAll('button')
+      .find((b) => b.text().includes('Add'))!
+      .trigger('click')
+    await flushPromises()
+
+    vi.mocked(scorecardApi.getCourseTees).mockResolvedValue([
+      { course_id: 'c2', tee_color_id: 'banff-blue', color: 'Banff Blue', slope: 113, rating: 72 },
+    ])
+    const course = w.findAll('select').find((sel) => sel.findAll('option').some((o) => o.text() === 'Banff Springs'))!
+    await course.setValue('c2')
+    await flushPromises()
+
+    expect(scorecardApi.getCourseTees).toHaveBeenLastCalledWith('c2')
+    const tee = w.findAll('select').find((sel) => sel.findAll('option').some((o) => o.text() === 'Banff Blue'))
+    expect(tee && (tee.element as HTMLSelectElement).value).toBe('banff-blue')
+  })
+
+  // A failed load is not an empty one: "no tee sets set up" is a claim about loaded data that
+  // an errored load satisfies just as well, and Create is disabled with no way back.
+  it('says a tee load failed rather than calling the course empty', async () => {
+    const w = await mounted()
+    await w
+      .findAll('button')
+      .find((b) => b.text().includes('Add'))!
+      .trigger('click')
+    await flushPromises()
+
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    const course = w.findAll('select').find((sel) => sel.findAll('option').some((o) => o.text() === 'Banff Springs'))!
+    await course.setValue('c2')
+    await flushPromises()
+
+    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).not.toContain('no tee sets set up')
+    expect(w.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
+  })
+
   // Switch course twice on a slow link and the first response can land last, leaving a course
   // and a tee from two different courses in a body the API refuses.
   it('ignores a tee response the course has already moved past', async () => {

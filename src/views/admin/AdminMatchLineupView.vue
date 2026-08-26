@@ -148,6 +148,10 @@ watch(
   { immediate: true },
 )
 
+// Back on the match's own course, its own tee is what to restore: without that, a round trip
+// through another course arms a tee change nobody asked for.
+const onCourseChange = () => loadTees(courseId.value, courseId.value === record.value?.course_id ? record.value.tee_color_id : undefined)
+
 const teeSetChanged = computed(
   () =>
     !!record.value && !!teeColorId.value && (courseId.value !== record.value.course_id || teeColorId.value !== record.value.tee_color_id),
@@ -158,7 +162,10 @@ const teeSetChanged = computed(
 const lineupComplete = computed(() => panels.value.length > 0 && panels.value.every((p) => p.assigned.length === slots.value))
 
 const changed = computed(() => teeSetChanged.value || teeTimeChanged.value || lineupChanged.value)
-const savable = computed(() => changed.value && (!lineupChanged.value || lineupComplete.value))
+// A course picked with no tee to go with it — still loading, or the load failed. Saving here
+// would write everything except the course and call it done.
+const teeSetUnresolved = computed(() => !!record.value && courseId.value !== record.value.course_id && !teeColorId.value)
+const savable = computed(() => changed.value && !teeSetUnresolved.value && (!lineupChanged.value || lineupComplete.value))
 
 // Only what moved is sent. An edit that leaves the tee set alone must not mention it: the
 // API refuses a scored match's tee set, and re-sending the stored value is not a change.
@@ -215,7 +222,7 @@ const save = () =>
                leaves the instant alone and re-reads it, which the tee time shows happening. -->
           <div class="mb-3">
             <BaseLabel for="course">Course</BaseLabel>
-            <select id="course" v-model="courseId" :class="fieldClass" @change="loadTees(courseId)">
+            <select id="course" v-model="courseId" :class="fieldClass" @change="onCourseChange">
               <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
           </div>
