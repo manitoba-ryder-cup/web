@@ -118,6 +118,7 @@ function card(props: Record<string, unknown> = {}, attach = false) {
       leftLabel: 'JR / KV',
       rightLabel: 'HB / CM',
       formatName: 'Fourball',
+      scoresPerPlayer: true,
       holeInfo,
       tournamentId: 't1',
       matchId: 'm1',
@@ -219,7 +220,7 @@ describe('MatchScorecard', () => {
 
   // Singles fields one a side, so there is nothing to split.
   it('offers no switch where a side is one player', () => {
-    const w = card({ formatName: 'Singles', leftPlayers: [leftPlayers[0]], rightPlayers: [rightPlayers[0]] })
+    const w = card({ formatName: 'Singles', scoresPerPlayer: true, leftPlayers: [leftPlayers[0]], rightPlayers: [rightPlayers[0]] })
 
     expect(w.find('[role="radiogroup"]').exists()).toBe(false)
   })
@@ -227,7 +228,7 @@ describe('MatchScorecard', () => {
   // Alt Shot and Scotch field two a side and record one ball, so player_scores comes back
   // empty. Splitting on player count alone offered the switch and then showed 18 dashes.
   it('offers no switch for a one-ball format, whatever the side size', () => {
-    const w = card({ formatName: 'Alt Shot' })
+    const w = card({ formatName: 'Alt Shot', scoresPerPlayer: false })
 
     expect(w.find('[role="radiogroup"]').exists()).toBe(false)
   })

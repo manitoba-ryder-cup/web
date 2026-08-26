@@ -14,6 +14,7 @@ function match(overrides: Partial<MatchResult> = {}): MatchResult {
   return {
     match_id: 'm1',
     format_name: 'Singles',
+    scores_per_player: true,
     finished: true,
     winner_team_id: 't-1',
     leader_team_id: 't-1',

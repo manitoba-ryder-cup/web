@@ -14,6 +14,7 @@ const teeTime = new Date(Date.now() - 3600000).toISOString()
 const match: MatchResult = {
   match_id: 'm1',
   format_name: 'Singles',
+  scores_per_player: true,
   finished: true, // decided, and hole 16 is one it never reached
   winner_team_id: 'blue',
   leader_team_id: 'blue',

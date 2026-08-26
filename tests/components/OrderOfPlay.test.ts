@@ -18,6 +18,7 @@ function match(o: Partial<MatchResult> = {}): MatchResult {
   return {
     match_id: 'm1',
     format_name: 'Fourball',
+    scores_per_player: true,
     finished: false,
     winner_team_id: null,
     leader_team_id: null,

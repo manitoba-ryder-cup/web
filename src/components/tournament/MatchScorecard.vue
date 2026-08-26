@@ -3,7 +3,6 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Hole, HoleStatus, MatchPlayer, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
-import { recordsScorePerPlayer } from '@/lib/matchFormat'
 import { playerInitials } from '@/lib/matchResult'
 import type { HoleRow, ScorecardView } from './scorecard'
 import ScorecardRow from './ScorecardRow.vue'
@@ -21,6 +20,7 @@ const props = defineProps<{
   rightLabel: string
   courseName?: string
   formatName?: string
+  scoresPerPlayer?: boolean
   resultLabel?: string
   holeInfo?: Map<number, Hole>
   tournamentId: string
@@ -50,9 +50,7 @@ const sideOf = (v: ScorecardView) => (v === 'right' ? props.rightTeam : props.le
 const playersOf = (v: ScorecardView) => (v === 'right' ? props.rightPlayers : props.leftPlayers) ?? []
 // Not "has two players": Alt Shot and Scotch field two and record one ball, so a split
 // column would be eighteen dashes.
-const canSplit = computed(
-  () => recordsScorePerPlayer(props.formatName) && props.leftPlayers?.length === 2 && props.rightPlayers?.length === 2,
-)
+const canSplit = computed(() => !!props.scoresPerPlayer && props.leftPlayers?.length === 2 && props.rightPlayers?.length === 2)
 // Label and colour together, so the header cannot outrun its colours.
 const columns = computed(() => {
   if (view.value === 'match') {

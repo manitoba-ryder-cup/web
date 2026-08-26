@@ -30,6 +30,7 @@ function match(teeTime: string, format: string, finished = false) {
   return {
     match_id: teeTime + format,
     format_name: format,
+    scores_per_player: false,
     sides: [],
     hole_results: [],
     finished,
