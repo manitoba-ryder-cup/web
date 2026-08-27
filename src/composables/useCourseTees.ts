@@ -1,43 +1,36 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
-import type { TeeSetSummary } from '@/api/types'
+import { useAsync } from '@/composables/useAsync'
 
-// The tees a course offers, and which of them is picked. Held here rather than in the page
-// because the interesting part is the race, and that is the same wherever it is used.
+// The tees a course offers, and which of them is picked. Keyed by course, so a response for one
+// the picker has already moved past lands under its own key rather than over this one.
 export function useCourseTees() {
-  const tees = ref<TeeSetSummary[]>([])
-  const failed = ref(false)
-  const selected = ref('')
-  // A token, because switching course twice quickly can land the first response last and leave
-  // the course reading one thing and the tees another — a pair the server refuses as a 400.
-  let request = 0
-  let asked: { courseId: string; prefer?: string } = { courseId: '' }
+  const courseId = ref('')
+  const prefer = ref<string | undefined>()
+  const picked = ref('')
 
-  async function load(courseId: string, prefer?: string) {
-    const mine = ++request
-    asked = { courseId, prefer }
-    tees.value = []
-    // Cleared with them: a tee id from the last course outlives the list it came from, and the
-    // pair it makes with the new course is one the API refuses.
-    selected.value = ''
-    failed.value = false
-    if (!courseId) return
-    let loaded: TeeSetSummary[]
-    try {
-      loaded = await scorecardApi.getCourseTees(courseId)
-    } catch {
-      if (mine === request) failed.value = true
-      return
-    }
-    if (mine !== request) return
-    tees.value = loaded
-    const wanted = prefer && loaded.some((t) => t.tee_color_id === prefer) ? prefer : ''
-    selected.value = wanted || loaded[0]?.tee_color_id || ''
+  const { data, error, loading, retry } = useAsync(
+    () => ['course-tees', courseId.value],
+    () => (courseId.value ? scorecardApi.getCourseTees(courseId.value) : Promise.resolve([])),
+  )
+  const tees = computed(() => data.value ?? [])
+  const failed = computed(() => !!error.value)
+  const offered = (id: string | undefined) => !!id && tees.value.some((t) => t.tee_color_id === id)
+
+  // Derived, not assigned on arrival: a pick that is still offered stands, and anything else
+  // falls to the preference and then the first tee — whether the list just came or was here.
+  const selected = computed({
+    get: () => (offered(picked.value) ? picked.value : offered(prefer.value) ? prefer.value! : (tees.value[0]?.tee_color_id ?? '')),
+    set: (value: string) => (picked.value = value),
+  })
+
+  // The preference is kept rather than consumed, so a retry lands on it too: falling to the
+  // first tee after a failed first load arms a tee change nobody asked for.
+  function load(id: string, want?: string) {
+    courseId.value = id
+    prefer.value = want
+    picked.value = ''
   }
 
-  // Re-issues what failed, preference and all. Called bare it would fall through to the first
-  // tee in the list, which on a failed initial load arms a tee change on the match's own course.
-  const retry = () => load(asked.courseId, asked.prefer)
-
-  return { tees, failed, selected, load, retry }
+  return { tees, failed, loading, selected, load, retry }
 }

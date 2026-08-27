@@ -94,6 +94,51 @@ describe('AdminTournamentView', () => {
     return wrapper.findAll('button').find((b) => b.attributes('aria-label')?.startsWith('Delete the'))
   }
 
+  const addButton = (w: ReturnType<typeof mount>) => w.findAll('button').find((b) => b.text().startsWith('+ Add'))
+  // Neither select carries an id; the tee one is the only one offering tee colours.
+  const teeSelect = (w: ReturnType<typeof mount>) =>
+    w.findAll('select').find((sel) => sel.findAll('option').some((o) => o.attributes('value') === 'gold'))
+
+  // The ordinary setup flow: add a match, then add another. The course has not changed, so
+  // nothing new arrives to derive a tee from — and Create is gated on having one.
+  it('still has a tee selected when the form is reopened on the same course', async () => {
+    const w = await mounted()
+    await addButton(w)!.trigger('click')
+    await flushPromises()
+    const first = (teeSelect(w)!.element as HTMLSelectElement).value
+    expect(first).not.toBe('')
+
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Cancel')!
+      .trigger('click')
+    await addButton(w)!.trigger('click')
+    await flushPromises()
+
+    expect((teeSelect(w)!.element as HTMLSelectElement).value).toBe(first)
+  })
+
+  // A claim about loaded data that an unloaded one satisfies just as well: the form opens
+  // without waiting, so the tees are still in flight when it first renders.
+  it('does not call a course empty while its tees are loading', async () => {
+    let release!: () => void
+    vi.mocked(scorecardApi.getCourseTees).mockImplementation(
+      () =>
+        new Promise(
+          (resolve) => (release = () => resolve([{ course_id: 'c1', tee_color_id: 'gold', color: 'Gold', slope: 120, rating: 70 }])),
+        ),
+    )
+    const w = await mounted()
+    await addButton(w)!.trigger('click')
+    await flushPromises()
+
+    expect(w.text()).not.toContain('This course has no tee sets set up.')
+
+    release()
+    await flushPromises()
+    expect(w.text()).not.toContain('This course has no tee sets set up.')
+  })
+
   // useAsync reports an error only with nothing to show, so a 404 behind a cached copy is
   // swallowed and the card renders a match that is gone. Dropped, because there is no fetch.
   it('drops the deleted match from the cache', async () => {
@@ -218,7 +263,7 @@ describe('AdminTournamentView', () => {
     const elmhurst = [{ course_id: 'c1', tee_color_id: 'gold', color: 'Gold', slope: 120, rating: 70 }]
     const banff = [{ course_id: 'c2', tee_color_id: 'banff-blue', color: 'Banff Blue', slope: 113, rating: 72 }]
     const w = await mounted()
-    // The form waits on its first tee load, so that one answers straight away.
+    // Opened before the deferring mock goes in, so this load is not one of the two below.
     await w
       .findAll('button')
       .find((b) => b.text().includes('Add'))!

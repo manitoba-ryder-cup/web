@@ -74,13 +74,20 @@ function pairing(sides: { players: { player_id: string; first_name: string; last
 const adding = ref<string | null>(null)
 const creating = ref(false)
 const formError = ref('')
-const { tees: courseTees, failed: teesFailed, selected: teeColorId, load: loadTees, retry: retryTees } = useCourseTees()
+const {
+  tees: courseTees,
+  failed: teesFailed,
+  loading: teesLoading,
+  selected: teeColorId,
+  load: loadTees,
+  retry: retryTees,
+} = useCourseTees()
 const form = reactive({ courseId: '', teeTime: '', handicapped: false })
 // A tee time is typed as the wall clock the tee sheet says; the course it is played at is
 // what turns that into an instant.
 const selectedCourseZone = computed(() => courses.value.find((c) => c.id === form.courseId)?.time_zone ?? CUP_TIME_ZONE)
 
-async function openForm(format: string) {
+function openForm(format: string) {
   formError.value = ''
   const siblings = byFormat.value[format] ?? []
   // Default the tee time to 10 minutes after the round's latest match (the next slot), or
@@ -96,7 +103,7 @@ async function openForm(format: string) {
   const usedName = siblings.find((m) => m.course_name)?.course_name
   form.courseId = courses.value.find((c) => c.name === usedName)?.id ?? courses.value[0]?.id ?? ''
   form.handicapped = false
-  await loadTees(form.courseId)
+  loadTees(form.courseId)
   adding.value = format
 }
 
@@ -255,7 +262,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                       Try again
                     </button>
                   </template>
-                  <p v-else-if="form.courseId && !courseTees.length" class="mt-1 text-sm text-mrc-muted">
+                  <p v-else-if="form.courseId && !teesLoading && !courseTees.length" class="mt-1 text-sm text-mrc-muted">
                     This course has no tee sets set up.
                   </p>
                 </div>

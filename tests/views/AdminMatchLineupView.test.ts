@@ -255,6 +255,33 @@ describe('AdminMatchLineupView', () => {
     expect((w.find('#tee').element as HTMLSelectElement).value).toBe('blue')
   })
 
+  // A course change starts from the new course's own default. The two share a tee colour here,
+  // so a pick left behind would follow the admin across rather than being replaced.
+  it('does not carry a pick over to the course that replaces it', async () => {
+    vi.mocked(scorecardApi.getMatchHoles).mockResolvedValue([])
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
+    vi.mocked(scorecardApi.getCourseTees).mockImplementation(async (id: string) =>
+      id === 'c2'
+        ? [
+            { course_id: 'c2', tee_color_id: 'black', color: 'Black', slope: 130, rating: 74 },
+            { course_id: 'c2', tee_color_id: 'white', color: 'White', slope: 113, rating: 72 },
+          ]
+        : [
+            { course_id: 'c1', tee_color_id: 'white', color: 'White', slope: 113, rating: 72 },
+            { course_id: 'c1', tee_color_id: 'gold', color: 'Gold', slope: 120, rating: 70 },
+          ],
+    )
+    const w = await mounted()
+    await w.find('#tee').setValue('white')
+    expect((w.find('#tee').element as HTMLSelectElement).value).toBe('white')
+
+    await w.find('#course').setValue('c2')
+    await flushPromises()
+
+    // Black is what c2 offers first; white is only still on screen if the pick came along.
+    expect((w.find('#tee').element as HTMLSelectElement).value).toBe('black')
+  })
+
   // Three refusals reach this one route and only the server knows which, so a copy of any one
   // of them here is the wrong sentence for the other two.
   it('shows the refusal the server sent, not a copy of one of them', async () => {
@@ -562,6 +589,20 @@ describe('AdminMatchLineupView', () => {
     // Once on mount, once after saving.
     expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(2)
     expect(saveButton(w).attributes('disabled')).toBeDefined()
+  })
+
+  // A refusal leaves the admin here to fix it, and useBusy invalidates the tee query on its way
+  // past — so the tee they had changed has to still be changed when the refetch lands.
+  it('keeps a changed tee when the save is refused', async () => {
+    vi.mocked(scorecardApi.updateMatch).mockRejectedValue(new ApiError(409, 'That match has been scored.'))
+    const w = await mounted()
+    await w.find('#tee').setValue('white')
+
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    expect(toasts).toContain('That match has been scored.')
+    expect((w.find('#tee').element as HTMLSelectElement).value).toBe('white')
   })
 
   // useBusy invalidates everything but the match, which is where the pairing this page just
