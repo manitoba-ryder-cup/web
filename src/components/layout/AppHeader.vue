@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { useCupStore } from '@/stores/cup'
+import { useCurrentCup } from '@/composables/useCurrentCup'
 import { navSection, type NavSection } from '@/lib/navSection'
 import NavLink from './NavLink.vue'
 import AccountMenu from './AccountMenu.vue'
@@ -11,9 +11,7 @@ import ArrowLeftIcon from '@/components/icons/ArrowLeftIcon.vue'
 const route = useRoute()
 const back = computed(() => route.meta.back?.(route) ?? null)
 
-const cup = useCupStore()
-cup.load().catch(() => {})
-const scoresTo = computed(() => cup.scoresTo)
+const { scoresTo } = useCurrentCup()
 
 // Same destinations and the same navSection rule the tab bar uses, so the two navs cannot
 // disagree about where the app goes or which screen you are on.

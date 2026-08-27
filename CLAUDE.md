@@ -41,7 +41,7 @@ empty, suspect the tenant before the code.
 | `src/components/base/` | `Base*` primitives + `AsyncState`; the rest of `components/` is grouped by feature |
 | `src/components/skeleton/` | Loading placeholders. `SkeletonBlock` is the atom; the rest compose it. Goes in `AsyncState`'s `#loading` slot |
 | `src/views/` | Route components, all lazy-loaded via dynamic import |
-| `src/stores/` | Pinia. `auth.ts`, and `cup.ts` for which cup is current — the header and tab bar need it before any view has run. Server state lives in the query cache instead, keyed per view |
+| `src/stores/` | Pinia, for `auth.ts` alone. Everything the server owns lives in the query cache, including which cup is current — `useCurrentCup` reads it like any other resource |
 
 **Data views follow one pattern:** `useAsync(key, fetcher)` for
 `{ data, error, loading, retry }`, rendered through `<AsyncState>`. Pass `retry` wherever
