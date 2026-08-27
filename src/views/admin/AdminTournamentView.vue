@@ -74,7 +74,14 @@ function pairing(sides: { players: { player_id: string; first_name: string; last
 const adding = ref<string | null>(null)
 const creating = ref(false)
 const formError = ref('')
-const { tees: courseTees, failed: teesFailed, selected: teeColorId, load: loadTees, retry: retryTees } = useCourseTees()
+const {
+  tees: courseTees,
+  failed: teesFailed,
+  loading: teesLoading,
+  selected: teeColorId,
+  load: loadTees,
+  retry: retryTees,
+} = useCourseTees()
 const form = reactive({ courseId: '', teeTime: '', handicapped: false })
 // A tee time is typed as the wall clock the tee sheet says; the course it is played at is
 // what turns that into an instant.
@@ -255,7 +262,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                       Try again
                     </button>
                   </template>
-                  <p v-else-if="form.courseId && !courseTees.length" class="mt-1 text-sm text-mrc-muted">
+                  <p v-else-if="form.courseId && !teesLoading && !courseTees.length" class="mt-1 text-sm text-mrc-muted">
                     This course has no tee sets set up.
                   </p>
                 </div>
