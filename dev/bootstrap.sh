@@ -32,6 +32,8 @@ PG="${PG_CONTAINER:-mrc-dev-postgres}"
 HEIMDALL_CONTAINER="${HEIMDALL_CONTAINER:-mrc-dev-heimdall}"
 EMAIL="${DEV_EMAIL:-dev@manitobarydercup.com}"
 PASS="${DEV_PASSWORD:-DevPassword123!}"
+SCORER_EMAIL="${DEV_SCORER_EMAIL:-scorer@manitobarydercup.com}"
+SCORER_PASS="${DEV_SCORER_PASSWORD:-ScorerPassword123!}"
 ENV_FILE=".env"
 
 sql() { docker exec -i "$PG" psql -v ON_ERROR_STOP=1 -U superuser -d heimdall "$@"; }
@@ -114,6 +116,75 @@ else
   echo "SCORECARD_PUBLIC_TENANT_ID=$TENANT_ID" >> "$ENV_FILE"
 fi
 
+# --- phase 3b: an account that only scores --------------------------------------------
+# The admin holds every permission, so it is the one account that cannot show what a scorer
+# sees. On the course nobody signs in as an administrator, and the two differ in what the UI
+# offers: the admin area, and Reset Match.
+#
+# Registration is the only way to create a user, and it bootstraps a tenant of its own — an
+# account in the wrong tenant reads as a site with no golf in it. So the user is registered
+# for a real password hash, then moved, and the tenant that came with them is dropped.
+echo "==> Creating the scorer account..."
+if sql -t -A -c "SELECT 1 FROM users WHERE email = '$SCORER_EMAIL'" | grep -q 1; then
+  echo "    (already exists)"
+else
+  curl -sf -X POST "$HEIMDALL/v1/register" -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$SCORER_EMAIL\",\"first_name\":\"Course\",\"last_name\":\"Scorer\"}" >/dev/null
+
+  SCORER_TOKEN=$(docker logs "$HEIMDALL_CONTAINER" 2>&1 | grep email-verification | grep -F "$SCORER_EMAIL" \
+    | tail -1 | grep -oE '[A-Za-z0-9_-]{40,}' | tail -1)
+  if [ -z "$SCORER_TOKEN" ]; then
+    echo "ERROR: no verification token in the log for $SCORER_EMAIL." >&2
+    exit 1
+  fi
+
+  curl -sf -X POST "$HEIMDALL/v1/verify-email" -H 'Content-Type: application/json' \
+    -d "{\"token\":\"$SCORER_TOKEN\",\"password\":\"$SCORER_PASS\"}" >/dev/null
+
+  # Reused if it is already there. Re-creating it answers 500, not a conflict, so a rerun
+  # after a half-finished one would fail here with nothing saying why.
+  ROLE_ID=$(curl -sf "$HEIMDALL/v1/roles" -H "Authorization: Bearer $ACCESS_TOKEN" \
+    | python3 -c 'import json,sys; print(next((r["id"] for r in json.load(sys.stdin)["roles"] if r["name"] == "Scorer"), ""))')
+  if [ -z "$ROLE_ID" ]; then
+    ROLE_ID=$(curl -sf -X POST "$HEIMDALL/v1/roles" -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d '{"name":"Scorer","description":"Enters hole scores on the course. No admin area, no match reset."}' \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+  fi
+  if [ -z "$ROLE_ID" ]; then
+    echo "ERROR: could not create or find the Scorer role." >&2
+    exit 1
+  fi
+
+  PERM_ID=$(sql -t -A -c "SELECT id FROM permissions WHERE name = 'scorecard:scores:write'")
+  curl -sf -X PUT "$HEIMDALL/v1/roles/$ROLE_ID/permissions" -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H 'Content-Type: application/json' -d "{\"permission_ids\":[\"$PERM_ID\"]}" >/dev/null
+
+  # Read as a literal before anything moves. Every one of these deletes is scoped by it, and
+  # a subquery over users.tenant_id would name the shared tenant the moment the move lands.
+  OLD_TENANT=$(sql -t -A -c "SELECT tenant_id FROM users WHERE email = '$SCORER_EMAIL'")
+  if [ -z "$OLD_TENANT" ] || [ "$OLD_TENANT" = "$TENANT_ID" ]; then
+    echo "ERROR: refusing to clean up tenant '$OLD_TENANT' for $SCORER_EMAIL." >&2
+    exit 1
+  fi
+
+  # The move comes first: tenants has the user as a dependant, so it cannot be dropped while
+  # they are still in it. The admin role registration granted them goes with it.
+  sql >/dev/null <<SQL
+BEGIN;
+DELETE FROM user_roles WHERE user_id = (SELECT id FROM users WHERE email = '$SCORER_EMAIL');
+UPDATE users SET tenant_id = '$TENANT_ID' WHERE email = '$SCORER_EMAIL';
+DELETE FROM role_permissions WHERE role_id IN (SELECT id FROM roles WHERE tenant_id = '$OLD_TENANT');
+DELETE FROM roles WHERE tenant_id = '$OLD_TENANT';
+DELETE FROM tenants WHERE id = '$OLD_TENANT';
+COMMIT;
+SQL
+
+  SCORER_ID=$(sql -t -A -c "SELECT id FROM users WHERE email = '$SCORER_EMAIL'")
+  curl -sf -X PUT "$HEIMDALL/v1/users/$SCORER_ID/roles" -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H 'Content-Type: application/json' -d "{\"role_ids\":[\"$ROLE_ID\"]}" >/dev/null
+fi
+
 # --- phase 4: scorecard, now that there is a tenant for it to serve --------------------
 echo "==> Starting scorecard..."
 docker compose up -d scorecard
@@ -125,6 +196,7 @@ Stack ready.
   heimdall   $HEIMDALL
   scorecard  http://localhost:5000
   login      $EMAIL / $PASS
+  scorer     $SCORER_EMAIL / $SCORER_PASS  (scores only — no admin area, no reset)
   tenant     $TENANT_ID  (written to $ENV_FILE)
 
 The database has no golf data yet. Load it with the same tenant:
