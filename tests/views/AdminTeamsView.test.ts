@@ -55,9 +55,16 @@ const teamButton = (w: ReturnType<typeof mount>, colour: string) => w.findAll('b
 // because it was re-read; blocked, anything on screen got there optimistically.
 let releaseRefetch: (() => void) | null = null
 function blockRefetchesAfterTheFirst() {
-  let served = 0
+  let servedRoster = 0
   vi.mocked(scorecardApi.getTournamentPlayers).mockImplementation(() =>
-    served++ === 0 ? Promise.resolve(roster) : new Promise<TournamentPlayer[]>((resolve) => (releaseRefetch = () => resolve(roster))),
+    servedRoster++ === 0 ? Promise.resolve(roster) : new Promise<TournamentPlayer[]>((resolve) => (releaseRefetch = () => resolve(roster))),
+  )
+  // Both, because the roster and the teams are separate resources: holding one no longer
+  // holds the other, and the captain lives on a team.
+  let servedTeams = 0
+  const held = vi.mocked(scorecardApi.getTournamentTeams).getMockImplementation()
+  vi.mocked(scorecardApi.getTournamentTeams).mockImplementation((id: string) =>
+    servedTeams++ === 0 ? (held?.(id) ?? Promise.resolve([])) : new Promise(() => {}),
   )
 }
 

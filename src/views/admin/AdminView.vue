@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { scorecardApi } from '@/api/scorecard'
+import { q } from '@/api/queries'
 import { formatDateRange } from '@/lib/date'
-import { useAsync } from '@/composables/useAsync'
+import { useResource } from '@/composables/useAsync'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonList from '@/components/skeleton/SkeletonList.vue'
@@ -10,7 +10,7 @@ import LinkCard from '@/components/base/LinkCard.vue'
 
 // Admin home: pick a tournament to set up. Most recent first — that's almost always the
 // one being worked on.
-const { data, error, loading, retry } = useAsync(['admin', 'tournaments'], () => scorecardApi.listTournaments())
+const { data, error, loading, retry } = useResource(() => q.tournaments())
 const tournaments = computed(() => [...(data.value ?? [])].sort((a, b) => b.start_date.localeCompare(a.start_date)))
 </script>
 <template>

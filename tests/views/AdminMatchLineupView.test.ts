@@ -35,6 +35,9 @@ import { utcToEventInput } from '@/lib/teeTime'
 // How many a side the match's format takes; a test that needs another size sets it.
 let sideSize = 1
 
+// The match's scores, keyed by what they are rather than by the page asking for them.
+const scoresKey = ['match', 'm1', 'scores']
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [{ path: '/admin/:id', name: 'admin-tournament', component: { template: '<div/>' } }],
@@ -586,8 +589,9 @@ describe('AdminMatchLineupView', () => {
     await detailsForm(w).trigger('submit')
     await flushPromises()
 
-    // Once on mount, once after saving.
-    expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(2)
+    // Once on mount, then twice out: refetched so the page this returns to is warm, and again
+    // with everything else, which is the price of keeping no list of what a write reaches.
+    expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(3)
     expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 
@@ -605,9 +609,9 @@ describe('AdminMatchLineupView', () => {
     expect((w.find('#tee').element as HTMLSelectElement).value).toBe('white')
   })
 
-  // useBusy invalidates everything but the match, which is where the pairing this page just
-  // changed is read from — by the card, and by the strips a scorer enters scores on.
-  it("refetches both of the match's own copies", async () => {
+  // useBusy leaves the match itself stale rather than refetching it, and the pairing this page
+  // just changed is read from there — by the card, and by the strips a scorer enters scores on.
+  it("refetches the match's scores after a save", async () => {
     // A client of its own: the shared one has gcTime 0 and collects an unmounted query at once,
     // so nothing would survive to be stale and this would pass however the refetch was scoped.
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
@@ -615,18 +619,10 @@ describe('AdminMatchLineupView', () => {
     const held = { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([held])
 
-    for (const stub of [CardStub, HoleEntryStub]) {
-      const visited = mount(stub)
-      await flushPromises()
-      visited.unmount()
-    }
-    const copies = [
-      ['match', 't1', 'm1', true],
-      ['match', 't1', 'm1', false],
-    ]
-    for (const key of copies) {
-      expect(queryClient.getQueryData<{ holeStates: unknown[] }>(key)?.holeStates).toHaveLength(1)
-    }
+    const visited = mount(CardStub)
+    await flushPromises()
+    visited.unmount()
+    expect(queryClient.getQueryData<unknown[]>(scoresKey)).toHaveLength(1)
 
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
     const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
@@ -635,14 +631,27 @@ describe('AdminMatchLineupView', () => {
     await detailsForm(w).trigger('submit')
     await flushPromises()
 
-    for (const key of copies) {
-      expect(queryClient.getQueryData<{ holeStates: unknown[] }>(key)?.holeStates).toHaveLength(0)
+    expect(queryClient.getQueryData<unknown[]>(scoresKey)).toHaveLength(0)
+  })
+
+  // One entry, not one per view: the card and the entry page read the same scores, so a write
+  // from here cannot reach one of them and miss the other.
+  it('serves the card and the entry page from one entry', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000, gcTime: 60_000 } } })
+    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+
+    for (const stub of [CardStub, HoleEntryStub]) {
+      const visited = mount(stub)
+      await flushPromises()
+      visited.unmount()
     }
+
+    expect(vi.mocked(scorecardApi.getMatchScores)).toHaveBeenCalledTimes(1)
   })
 
   // The order the save is written in exists so a scored match takes the tee time and refuses
   // only the lineup — so the refusal path is one that has written.
-  it("refetches the match's copies even when the lineup half is refused", async () => {
+  it("refetches the match's scores even when the lineup half is refused", async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
     config.global.plugins = [[VueQueryPlugin, { queryClient }]]
     const held = { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }
@@ -665,6 +674,6 @@ describe('AdminMatchLineupView', () => {
 
     expect(scorecardApi.updateMatch).toHaveBeenCalled()
     expect(toasts).toContain('That match has been scored.')
-    expect(queryClient.getQueryData<{ holeStates: unknown[] }>(['match', 't1', 'm1', true])?.holeStates).toHaveLength(0)
+    expect(queryClient.getQueryData<unknown[]>(scoresKey)).toHaveLength(0)
   })
 })

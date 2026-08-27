@@ -2,7 +2,8 @@
 import { ref, computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import type { TournamentPlayer } from '@/api/types'
-import { useAsync } from '@/composables/useAsync'
+import { q } from '@/api/queries'
+import { combine, useResource } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -20,24 +21,20 @@ import FullBleed from '@/components/layout/FullBleed.vue'
 // write-up each cup — so this is the only place they can be edited.
 const props = defineProps<{ id: string }>()
 
-const { data, error, loading, retry } = useAsync(
-  () => ['admin', 'roster', props.id],
-  async () => {
-    const [roster, players] = await Promise.all([scorecardApi.getTournamentPlayers(props.id), scorecardApi.listPlayers()])
-    return { roster, players }
-  },
-)
+const rosterRes = useResource(() => q.roster(props.id))
+const playersRes = useResource(() => q.players())
+const { error, loading, retry } = combine([rosterRes, playersRes])
 
 const byName = (a: { last_name: string; first_name: string }, b: { last_name: string; first_name: string }) =>
   a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)
 
-const roster = computed(() => [...(data.value?.roster ?? [])].sort(byName))
+const roster = computed(() => [...(rosterRes.data.value ?? [])].sort(byName))
 
 // Anyone not already entered. Entering the same player twice is a 409, so offering them
 // would only produce an error someone has to read.
 const available = computed(() => {
   const entered = new Set(roster.value.map((p) => p.player_id))
-  return [...(data.value?.players ?? [])].filter((p) => !entered.has(p.id)).sort(byName)
+  return [...(playersRes.data.value ?? [])].filter((p) => !entered.has(p.id)).sort(byName)
 })
 
 // `silver` is in the palette but unused, so it sits last rather than being dropped: a cup

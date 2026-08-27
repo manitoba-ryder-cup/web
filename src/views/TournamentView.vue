@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { scorecardApi } from '@/api/scorecard'
-import { useAsync } from '@/composables/useAsync'
+import { q } from '@/api/queries'
+import { combine, useResource } from '@/composables/useAsync'
 import { usePollWhileInPlay } from '@/composables/usePollWhileInPlay'
 import { tournamentEyebrow } from '@/lib/tournament'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -18,22 +18,16 @@ const props = defineProps<{ id: string }>()
 // Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
 // request turns that empty list full.
 const poll = usePollWhileInPlay()
-const { data, error, loading, retry } = useAsync(
-  () => ['tournament', props.id],
-  async () => {
-    const [tournament, teams, results] = await Promise.all([
-      scorecardApi.getTournament(props.id),
-      scorecardApi.getTournamentTeams(props.id),
-      scorecardApi.getTournamentResults(props.id),
-    ])
-    return { tournament, teams, results }
-  },
-  { intervalMs: poll.intervalMs },
-)
+// Only the results are polled. The record and the teams do not move during a round, and
+// re-asking for them twenty seconds apart bought nothing.
+const tournamentRes = useResource(() => q.tournament(props.id))
+const teamsRes = useResource(() => q.teams(props.id))
+const resultsRes = useResource(() => q.results(props.id), { intervalMs: poll.intervalMs })
+const { error, loading, retry } = combine([tournamentRes, teamsRes, resultsRes])
 
-const tournament = computed(() => data.value?.tournament ?? null)
-const teams = computed(() => data.value?.teams ?? [])
-const results = computed(() => data.value?.results ?? [])
+const tournament = computed(() => tournamentRes.data.value ?? null)
+const teams = computed(() => teamsRes.data.value ?? [])
+const results = computed(() => resultsRes.data.value ?? [])
 poll.follow(() => results.value)
 
 const heroEyebrow = computed(() => tournamentEyebrow(tournament.value))

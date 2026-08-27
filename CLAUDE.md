@@ -53,16 +53,20 @@ getter, and the live views drop from twenty seconds to a five-minute heartbeat u
 means something and pure cost on the other 363. Not silence, though: a schedule that has
 yet to be published reads as not in play, and only a request turns that empty list full.
 
-TanStack Query is underneath, so a view renders what it already had and revalidates behind
-it. Three things about that are invisible until they bite. **The key must name everything
-the fetcher reads** — two views sharing one share an answer, and a key that misses a route
-param is how the last player's name ends up under the next player's URL, which the key is
-now the only thing preventing. **A key that depends on a prop is a getter**; an array is
-captured once. And **optimistic updates go through `patch`** — `data` is a readonly view of
-the cache, so assigning into it is dropped rather than refused: the write lands and the row
-never moves. `useAfterWrite` marks everything stale after a write except the
-match context, which hole entry must not have refetched under it — a predicate rather than
-a list of keys, because a list is right only until the next view is added.
+**Cache keys name resources, not pages.** `src/api/queries.ts` is the only place a key is
+written: `q.teams(id)`, `q.results(id)`, `q.matchScores(matchId)`. A view names the ones it
+needs with `useResource` and merges their states with `combine`, so two views asking for the
+same thing share one answer and one write invalidates it for both. Keying by page is what this
+replaced, and it cost two full copies of every match — the card and the entry page differed
+only on whether a missing tee set was fatal, and carrying that in the key meant every write had
+to reach both and kept not doing so.
+
+**A key that depends on a prop is a getter**; an array is captured once. **Optimistic updates
+go through `patch`** — `data` is a readonly view of the cache, so assigning into it is dropped
+rather than refused: the write lands and the row never moves. `useAfterWrite` invalidates
+everything, with no exception to keep in step; `useAfterMatchWrite` additionally refetches the
+two resources a match write changes, awaited, so the page it returns to shows what was written.
+A resource whose id is not known yet takes `enabled` and reads as loading, not as empty.
 
 Pass a skeleton through `AsyncState`'s `#loading` slot rather than letting a view collapse
 to a line of text — and check whether the view renders anything *outside* `AsyncState`

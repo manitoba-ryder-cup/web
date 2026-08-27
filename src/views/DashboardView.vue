@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import type { MatchResult, Tournament, TournamentPhase, TournamentTeam } from '@/api/types'
-import { scorecardApi } from '@/api/scorecard'
-import { useAsync } from '@/composables/useAsync'
+import type { TournamentPhase } from '@/api/types'
+import { q } from '@/api/queries'
+import { combine, useResource } from '@/composables/useAsync'
 import { usePollWhileInPlay } from '@/composables/usePollWhileInPlay'
-import { useCupStore } from '@/stores/cup'
+import { useCurrentCup } from '@/composables/useCurrentCup'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
@@ -21,39 +21,22 @@ import OrderOfPlay from '@/components/tournament/OrderOfPlay.vue'
 import CaptainMatchup from '@/components/tournament/CaptainMatchup.vue'
 
 const route = useRoute()
-const cup = useCupStore()
+const cup = useCurrentCup()
 
 // Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
 // request turns that empty list full — a page open on the morning of would never see it.
 const poll = usePollWhileInPlay()
-const { data, error, loading, retry } = useAsync(
-  ['dashboard'],
-  async () => {
-    // Re-read on every poll: the record carries the phase, so a tab left open across the
-    // first score would otherwise sit on the draft all day.
-    await cup.load()
-    const id = cup.latestId
-    let tournament: Tournament | null = null
-    let teams: TournamentTeam[] = []
-    let results: MatchResult[] = []
-    if (id) {
-      const [t, tm, r] = await Promise.all([
-        scorecardApi.getTournament(id),
-        scorecardApi.getTournamentTeams(id),
-        scorecardApi.getTournamentResults(id),
-      ])
-      tournament = t
-      teams = tm
-      results = r
-    }
-    return { tournament, teams, results }
-  },
-  { intervalMs: poll.intervalMs },
-)
+const enabled = () => cup.known()
+// The record is polled with the results because it carries the phase, and a tab left open
+// across the first score would otherwise sit on the draft all day. The teams do not move.
+const tournamentRes = useResource(() => q.tournament(cup.id()), { enabled, intervalMs: poll.intervalMs })
+const teamsRes = useResource(() => q.teams(cup.id()), { enabled })
+const resultsRes = useResource(() => q.results(cup.id()), { enabled, intervalMs: poll.intervalMs })
+const { error, loading, retry } = combine([cup, tournamentRes, teamsRes, resultsRes])
 
-const tournament = computed(() => data.value?.tournament ?? null)
-const teams = computed(() => data.value?.teams ?? [])
-const results = computed(() => data.value?.results ?? [])
+const tournament = computed(() => tournamentRes.data.value ?? null)
+const teams = computed(() => teamsRes.data.value ?? [])
+const results = computed(() => resultsRes.data.value ?? [])
 poll.follow(() => results.value)
 const { left, right, leftColors, rightColors } = useTeamPair(teams)
 

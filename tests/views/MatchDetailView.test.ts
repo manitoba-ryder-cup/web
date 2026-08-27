@@ -384,9 +384,9 @@ describe('resetting a match', () => {
     expect(scorecardApi.resetMatch).not.toHaveBeenCalled()
   })
 
-  // The hole page is not mounted when the card is, so its copy sits inactive in the cache — and
-  // a query serves what it holds before revalidating, so that copy is what a reader sees.
-  it("clears the hole page's copy of the match too", async () => {
+  // The hole page is not mounted when the card is, so the scores sit inactive in the cache —
+  // and a query serves what it holds before revalidating, so that is what a reader sees next.
+  it('clears the scores the hole page will read next', async () => {
     // A client of its own: the shared one collects an unmounted query at once, so nothing would
     // survive to go stale and this would pass however the refetch was scoped.
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
@@ -394,7 +394,7 @@ describe('resetting a match', () => {
     // still be the one installed first and answer useQueryClient.
     config.global.plugins = [[VueQueryPlugin, { queryClient }]]
     const plugins = [router] as never[]
-    const holeKey = ['match', 't1', 'm1', false]
+    const holeKey = ['match', 'm1', 'scores']
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([
       { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false },
     ])
@@ -402,7 +402,7 @@ describe('resetting a match', () => {
     const visited = mount(HoleEntryStub, { global: { plugins } })
     await flushPromises()
     visited.unmount()
-    expect(queryClient.getQueryData<{ holeStates: unknown[] }>(holeKey)?.holeStates).toHaveLength(1)
+    expect(queryClient.getQueryData<unknown[]>(holeKey)).toHaveLength(1)
 
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
     setActivePinia(createPinia())
@@ -419,7 +419,7 @@ describe('resetting a match', () => {
       .trigger('click')
     await flushPromises()
 
-    expect(queryClient.getQueryData<{ holeStates: unknown[] }>(holeKey)?.holeStates).toHaveLength(0)
+    expect(queryClient.getQueryData<unknown[]>(holeKey)).toHaveLength(0)
   })
 
   it('resets when the item is chosen', async () => {

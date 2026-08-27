@@ -3,7 +3,8 @@ import { ref, reactive, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { type MatchResult } from '@/api/types'
-import { useAsync } from '@/composables/useAsync'
+import { q } from '@/api/queries'
+import { combine, useResource } from '@/composables/useAsync'
 import { toast } from '@/composables/useToast'
 import { useAfterMatchDelete } from '@/composables/useAfterWrite'
 import { useBusy } from '@/composables/useBusy'
@@ -30,22 +31,16 @@ const props = defineProps<{ id: string }>()
 
 // Results carry each match's sides + tee time (for the list); match-formats map a format
 // name to its id (for creating); courses feed the add-match picker.
-const { data, error, loading, refresh, retry } = useAsync(
-  () => ['admin', 'tournament', props.id],
-  async () => {
-    const [tournament, matches, matchFormats, courses] = await Promise.all([
-      scorecardApi.getTournament(props.id),
-      scorecardApi.getTournamentResults(props.id),
-      scorecardApi.listMatchFormats(),
-      scorecardApi.listCourses(),
-    ])
-    return { tournament, matches, matchFormats, courses }
-  },
-)
-const tournament = computed(() => data.value?.tournament ?? null)
-const matches = computed(() => data.value?.matches ?? [])
-const matchFormats = computed(() => data.value?.matchFormats ?? [])
-const courses = computed(() => data.value?.courses ?? [])
+const tournamentRes = useResource(() => q.tournament(props.id))
+const matchesRes = useResource(() => q.results(props.id))
+const formatsRes = useResource(() => q.matchFormats())
+const coursesRes = useResource(() => q.courses())
+const { error, loading, retry } = combine([tournamentRes, matchesRes, formatsRes, coursesRes])
+const refresh = retry
+const tournament = computed(() => tournamentRes.data.value ?? null)
+const matches = computed(() => matchesRes.data.value ?? [])
+const matchFormats = computed(() => formatsRes.data.value ?? [])
+const courses = computed(() => coursesRes.data.value ?? [])
 
 // Rounds are set one at a time over the event, so a tab per format keeps you on the round you
 // are setting. Within one, the tee time is what tells unassigned matches apart.

@@ -43,17 +43,17 @@ describe('useAfterWrite', () => {
     expect(count(player)).toBe(2)
   })
 
-  // The one exception, and the reason this is not simply invalidateQueries(): a refetch
-  // arriving mid-entry moves the ground under someone with strokes already dialled in.
-  it('leaves the match context alone, so hole entry is not refetched under the strips', async () => {
-    const match = ['match', 't1', 'm1', false]
-    const { w, count } = mountWith([match])
+  // No exception any more: it skipped the match because each view held a copy under a key of
+  // its own. One copy now, and the entry page asks for nothing on its own once it has loaded.
+  it('reaches a match as readily as anything else', async () => {
+    const scores = ['match', 'm1', 'scores']
+    const { w, count } = mountWith([scores])
     await flushPromises()
-    expect(count(match)).toBe(1)
+    expect(count(scores)).toBe(1)
 
     await w.vm.afterWrite()
     await flushPromises()
 
-    expect(count(match)).toBe(1)
+    expect(count(scores)).toBe(2)
   })
 })

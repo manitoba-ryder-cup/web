@@ -1,6 +1,6 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
-import { scorecardApi } from '@/api/scorecard'
-import { useAsync } from '@/composables/useAsync'
+import { q } from '@/api/queries'
+import { combine, useResource } from '@/composables/useAsync'
 import { useMatchSides } from '@/composables/useMatchSides'
 
 interface Options {
@@ -20,29 +20,24 @@ export function useMatchContext(
 ) {
   const tid = () => toValue(tournamentId)
   const mid = () => toValue(matchId)
-  const { data, error, loading, refresh, retry } = useAsync(
-    // A getter, not a literal: vue-router reuses this across a change of :matchId, and a key
-    // captured once leaves the previous match's card under the new URL.
-    () => ['match', tid(), mid(), parOptional],
-    async () => {
-      const holes = scorecardApi.getMatchHoles(mid())
-      const [teams, results, holeStates, tee] = await Promise.all([
-        scorecardApi.getTournamentTeams(tid()),
-        scorecardApi.getTournamentResults(tid()),
-        scorecardApi.getMatchScores(mid()),
-        parOptional ? holes.catch(() => []) : holes,
-      ])
-      return { teams, results, holeStates, holes: tee }
-    },
-    // Given, not truthy: `false` and `() => false` say the same thing and split otherwise.
-    intervalMs !== undefined ? { intervalMs } : { refetchOnFocus: false },
-  )
+  // Given, not truthy: `false` and `() => false` say the same thing and split otherwise.
+  const opts = intervalMs !== undefined ? { intervalMs } : { refetchOnFocus: false }
 
-  const teams = computed(() => data.value?.teams ?? [])
-  const results = computed(() => data.value?.results ?? [])
+  const teamsRes = useResource(() => q.teams(tid()), opts)
+  const resultsRes = useResource(() => q.results(tid()), opts)
+  const scoresRes = useResource(() => q.matchScores(mid()), opts)
+  const holesRes = useResource(() => q.matchHoles(mid()), opts)
+
+  // Whether a missing tee set is fatal decides what to render, not what to cache. Carried in
+  // the key it gave each view a whole copy of the match to keep in step.
+  const parts = [teamsRes, resultsRes, scoresRes]
+  const { error, loading, retry } = combine(parOptional ? parts : [...parts, holesRes])
+
+  const teams = computed(() => teamsRes.data.value ?? [])
+  const results = computed(() => resultsRes.data.value ?? [])
   // holeStates is the per-hole match state (who's up); holes is the tee set's par/yardage.
-  const holeStates = computed(() => data.value?.holeStates ?? [])
-  const holes = computed(() => data.value?.holes ?? [])
+  const holeStates = computed(() => scoresRes.data.value ?? [])
+  const holes = computed(() => holesRes.data.value ?? [])
   const match = computed(() => results.value.find((m) => m.match_id === mid()) ?? null)
 
   const { left, right } = useMatchSides(
@@ -50,5 +45,5 @@ export function useMatchContext(
     () => teams.value,
   )
 
-  return { error, loading, refresh, retry, teams, results, holeStates, holes, match, left, right }
+  return { error, loading, refresh: retry, retry, teams, results, holeStates, holes, match, left, right }
 }
