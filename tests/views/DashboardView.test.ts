@@ -207,6 +207,35 @@ describe('DashboardView', () => {
     expect(hero.text()).toContain('3½')
   })
 
+  // Relative to now, not a fixture date: a fixed one in the future stops being one, and this
+  // test would then pass by agreeing with the case below it.
+  it('counts down to the first tee time while it is still ahead', async () => {
+    const tomorrow = new Date(Date.now() + 86_400_000).toISOString()
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(tomorrow, 'Fourball')])
+
+    const w = mountDashboard()
+    await flushPromises()
+
+    const hero = w.get('section').text()
+    expect(hero).toContain('Tees off in')
+    expect(hero).not.toContain('–')
+  })
+
+  // The record turns live on the first score, a hole's play after the first group goes out.
+  // Waiting for it left the hero holding a matchup over the gap the countdown had been filling.
+  it('shows the standing as soon as the countdown runs out, not once a score lands', async () => {
+    // Teed off in the past, and the record still says upcoming because nothing is scored.
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match('2020-01-01T14:00:00Z', 'Fourball')])
+
+    const w = mountDashboard()
+    await flushPromises()
+
+    // The matchup reads "Jones vs Smith"; the standing puts a dash between two point totals.
+    const hero = w.get('section').text()
+    expect(hero).not.toContain('vs')
+    expect(hero).toContain('–')
+  })
+
   // Asserts the points, not the absence of a countdown: `useCountdown` returns null for a past
   // target, so once the fixture date passes that stops telling the two heroes apart.
   it('takes the phase from the record rather than re-deriving it from the results', async () => {
