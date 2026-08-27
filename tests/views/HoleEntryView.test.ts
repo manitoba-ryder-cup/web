@@ -27,6 +27,7 @@ const withWindow = <T extends { tee_time: string }>(m: T, teeTime: string): T =>
 const match: MatchResult = {
   match_id: 'm1',
   format_name: 'Singles',
+  players_per_side: 1,
   scores_per_player: true,
   finished: false,
   winner_team_id: null,
@@ -206,6 +207,7 @@ describe('HoleEntryView saving', () => {
   it('offers one strip a side for a format that records one ball', async () => {
     Object.assign(match, {
       format_name: 'Alt Shot',
+      players_per_side: 2,
       scores_per_player: false,
       sides: [
         {

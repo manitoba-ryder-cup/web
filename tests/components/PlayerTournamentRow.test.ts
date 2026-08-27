@@ -42,6 +42,7 @@ describe('PlayerTournamentRow', () => {
       {
         match_id: 'm1',
         format_name: 'Singles',
+        players_per_side: 1,
         scores_per_player: true,
         finished: true,
         winner_team_id: 'blue-1',

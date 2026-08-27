@@ -14,6 +14,7 @@ function match(overrides: Partial<MatchResult> = {}): MatchResult {
   return {
     match_id: 'm1',
     format_name: 'Singles',
+    players_per_side: 1,
     scores_per_player: true,
     finished: true,
     winner_team_id: 't-1',
@@ -76,14 +77,23 @@ describe('resultText', () => {
 })
 
 describe('placeholderPairing', () => {
-  it('gives one placeholder for Singles (1 v 1)', () => {
-    expect(placeholderPairing('Singles').map((p) => `${p.first_name} ${p.last_name}`)).toEqual(['Player One'])
+  it('draws one slot for a format that fields one a side', () => {
+    expect(placeholderPairing(1).map((p) => `${p.first_name} ${p.last_name}`)).toEqual(['Player One'])
   })
-  it('gives two placeholders for a team format', () => {
-    expect(placeholderPairing('Fourball').map((p) => `${p.first_name} ${p.last_name}`)).toEqual(['Player One', 'Player Two'])
+  it('draws a slot each for a format that fields two', () => {
+    expect(placeholderPairing(2).map((p) => `${p.first_name} ${p.last_name}`)).toEqual(['Player One', 'Player Two'])
+  })
+  // The card is a pairing against a pairing, so a side with nothing to draw collapses it.
+  it.each([
+    ['zero', 0],
+    ['missing', undefined],
+    ['not a number', 'two'],
+    ['negative', -1],
+  ])('draws a slot for a side size that is %s', (_label, size) => {
+    expect(placeholderPairing(size as number)).toHaveLength(1)
   })
   it('gives each placeholder a stable, unique key', () => {
-    const ids = placeholderPairing('Alt Shot').map((p) => p.player_id)
+    const ids = placeholderPairing(2).map((p) => p.player_id)
     expect(new Set(ids).size).toBe(ids.length)
   })
 })

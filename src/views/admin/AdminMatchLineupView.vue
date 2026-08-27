@@ -10,6 +10,7 @@ import { toast } from '@/composables/useToast'
 import { displayError } from '@/lib/displayError'
 import { isRefusal } from '@/lib/apiError'
 import { availableForTeam, playersSpent } from '@/lib/lineup'
+import { sideSize } from '@/lib/matchResult'
 import { CUP_TIME_ZONE, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
@@ -30,15 +31,14 @@ const { data, error, loading, retry } = useAsync(
   // from the result. Keyed by match, eight lineups would fetch the same four endpoints eight times.
   () => ['admin', 'lineup', props.id],
   async () => {
-    const [matches, records, teams, roster, courses, formats] = await Promise.all([
+    const [matches, records, teams, roster, courses] = await Promise.all([
       scorecardApi.getTournamentResults(props.id),
       scorecardApi.listMatches(props.id),
       scorecardApi.getTournamentTeams(props.id),
       scorecardApi.getTournamentPlayers(props.id),
       scorecardApi.listCourses(),
-      scorecardApi.listMatchFormats(),
     ])
-    return { matches, records, teams, roster, courses, formats }
+    return { matches, records, teams, roster, courses }
   },
 )
 
@@ -50,12 +50,9 @@ const match = computed(() => matches.value.find((m) => m.match_id === props.matc
 const teams = computed(() => data.value?.teams ?? [])
 const roster = computed(() => data.value?.roster ?? [])
 
-const formats = computed(() => data.value?.formats ?? [])
-const storedFormat = computed(() => formats.value.find((f) => f.id === record.value?.match_format_id) ?? null)
-
-// The stored format, not the selected one: these gate what the server will accept, and an
-// unsaved pick has not changed that yet.
-const slots = computed(() => storedFormat.value?.players_per_side ?? 2)
+// The match's own format, resolved by the server, rather than its id looked up in a list that
+// may not hold it. Floored, because a side size of nothing hides the controls that fill it.
+const slots = computed(() => sideSize(match.value?.players_per_side))
 
 // The lineup is edited here and written whole, so this holds it until Save. A watcher, not an
 // initial value: the match arrives after mount and this has to re-settle after each save.

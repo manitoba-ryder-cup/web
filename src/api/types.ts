@@ -214,8 +214,9 @@ export interface MatchStatus {
 export interface MatchResult extends MatchStatus {
   match_id: string
   format_name: string
-  // Whether the format records a stroke for each player or one for the side. The server's
-  // answer, so a new format is scored the way it says rather than the way its name reads.
+  // The format's own rules, so a new one plays the way it says rather than the way its name
+  // reads.
+  players_per_side: number
   scores_per_player: boolean
   sides: MatchSide[] // the two competing teams; order/colour is the client's concern
   // Per played hole (in order): winning team's id, or null for a halved hole.
