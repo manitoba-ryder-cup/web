@@ -96,8 +96,8 @@ const router = createRouter({
   ],
 })
 
-// The stroke strip's tiles and the pager's chevrons are buttons too; Save is the one that
-// is neither. Undefined when the hole cannot be recorded, which is the point.
+// The stroke tiles and the pager's chevrons are buttons too; the one that submits is neither,
+// and is found by shape because its label varies. Undefined when the hole cannot be recorded.
 function saveButton(w: ReturnType<typeof mount>) {
   return w.findAll('button').find((b) => b.attributes('data-stroke') === undefined && b.attributes('aria-label') === undefined)
 }
@@ -314,6 +314,28 @@ describe('HoleEntryView saving', () => {
     const w = await openHole('15')
 
     expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
+  })
+
+  it('offers Save on a hole with no score and Update on one already recorded', async () => {
+    const fresh = await openHole('15')
+    expect(saveButton(fresh)!.text()).toBe('Save')
+
+    holeStates = [scoredFifteenth]
+    const played = await openHole('15')
+
+    expect(saveButton(played)!.text()).toBe('Update')
+  })
+
+  it('reports a failed update in the word the button offered', async () => {
+    holeStates = [scoredFifteenth]
+    submitScore.mockRejectedValue(new Error('offline'))
+    const w = await openHole('15')
+
+    await saveButton(w)!.trigger('click')
+    await flushPromises()
+
+    expect(w.text()).toContain('Update failed. Please try again.')
+    expect(w.text()).not.toContain('Save failed')
   })
 
   it('refetches the match after a save, so what was written is what gets read', async () => {
