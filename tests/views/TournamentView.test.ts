@@ -152,6 +152,22 @@ describe('TournamentView polling', () => {
     expect(vi.mocked(scorecardApi.getTournamentResults).mock.calls.length).toBeGreaterThan(1)
   })
 
+  // The score bar's decided half is the teams' points, so they have to keep pace with the
+  // results — polled apart, the bar sits at whatever the standing was when the page opened.
+  it('keeps the teams in step with the results', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue(withWindow(hoursFromNow(-1), hoursFromNow(11)))
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    mount(TournamentView, { props: { id: 't1' }, global: { plugins: [router] } })
+    await flushPromises()
+
+    await vi.advanceTimersByTimeAsync(65_000)
+
+    expect(vi.mocked(scorecardApi.getTournamentTeams).mock.calls.length).toBe(
+      vi.mocked(scorecardApi.getTournamentResults).mock.calls.length,
+    )
+    expect(vi.mocked(scorecardApi.getTournamentTeams).mock.calls.length).toBeGreaterThan(1)
+  })
+
   // Nothing in the data changes when a window opens — the windows were always there — so
   // the escalation comes from the clock. A cadence captured at mount would miss it.
   it('speeds up when a window opens under a page nobody has touched', async () => {
