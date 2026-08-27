@@ -9,6 +9,9 @@ export interface Resource<T> {
 
 const res = <T>(key: readonly unknown[], fetch: () => Promise<T>): Resource<T> => ({ key, fetch })
 
+// What every resource of one match shares, so a write reaching all of them says so once.
+export const matchKey = (matchId: string) => ['match', matchId]
+
 export const q = {
   tournaments: () => res(['tournaments'], () => scorecardApi.listTournaments()),
   tournament: (id: string) => res(['tournament', id], () => scorecardApi.getTournament(id)),
@@ -17,8 +20,8 @@ export const q = {
   roster: (id: string) => res(['tournament', id, 'players'], () => scorecardApi.getTournamentPlayers(id)),
   matches: (id: string) => res(['tournament', id, 'matches'], () => scorecardApi.listMatches(id)),
 
-  matchScores: (id: string) => res(['match', id, 'scores'], () => scorecardApi.getMatchScores(id)),
-  matchHoles: (id: string) => res(['match', id, 'holes'], () => scorecardApi.getMatchHoles(id)),
+  matchScores: (id: string) => res([...matchKey(id), 'scores'], () => scorecardApi.getMatchScores(id)),
+  matchHoles: (id: string) => res([...matchKey(id), 'holes'], () => scorecardApi.getMatchHoles(id)),
 
   player: (id: string) => res(['player', id], () => scorecardApi.getPlayer(id)),
   playerHistory: (id: string) => res(['player', id, 'tournaments'], () => scorecardApi.getPlayerTournaments(id)),

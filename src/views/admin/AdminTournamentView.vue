@@ -115,7 +115,7 @@ async function removeMatch(match: MatchResult) {
         await scorecardApi.deleteMatch(match.match_id)
         // Only here, unlike a save: a refused delete leaves the match where it was, and its
         // copies are still the truth.
-        afterMatchDelete(props.id, match.match_id)
+        afterMatchDelete(match.match_id)
         toast.success('Match deleted')
       } catch (err) {
         if (!isStatus(err, 409)) throw err

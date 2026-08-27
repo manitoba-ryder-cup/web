@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/vue-query'
-import { q } from '@/api/queries'
+import { matchKey, q } from '@/api/queries'
 
 // Everything a write could have touched. Resources are keyed by what they are, so this needs
 // no list of the pages showing them and cannot miss one that was added later.
@@ -25,5 +25,5 @@ export function useAfterMatchWrite() {
 // card still holding a copy serves it, and the 404 behind it is swallowed by a query with data.
 export function useAfterMatchDelete() {
   const queryClient = useQueryClient()
-  return (tournamentId: string, matchId: string) => queryClient.removeQueries({ queryKey: ['match', tournamentId, matchId] })
+  return (matchId: string) => queryClient.removeQueries({ queryKey: matchKey(matchId) })
 }
