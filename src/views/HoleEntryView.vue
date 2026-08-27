@@ -108,6 +108,12 @@ const scores = computed<ScoreEntry[] | null>(() => {
   }
   return out
 })
+// A hole already on the card is being replaced, not filled in. Landing on one that says Update
+// is also how a scorer who tapped the wrong row finds out before overwriting it.
+const action = computed(() =>
+  scoredHoles.value.includes(holeNumber.value) ? { verb: 'Update', busy: 'Updating…' } : { verb: 'Save', busy: 'Saving…' },
+)
+
 // A save in flight keeps its button: the write that closes a match out is what makes the hole
 // read-only, and the control must not vanish under the thumb still pressing it.
 const showSave = computed(() => !readonly.value || saving.value)
@@ -154,7 +160,10 @@ async function saveHole() {
       refusedHole.value = hole
       saveError.value = 'This hole is closed to scoring — the match finished before it, or its window has shut.'
     } else {
-      saveError.value = isRefusal(err) ? `Save failed — ${displayError(err)}` : 'Save failed. Please try again.'
+      // The same word the button offered: one action does not change its name on the way to
+      // reporting that it failed.
+      const failed = `${action.value.verb} failed`
+      saveError.value = isRefusal(err) ? `${failed} — ${displayError(err)}` : `${failed}. Please try again.`
     }
   } finally {
     saving.value = false
@@ -226,7 +235,7 @@ async function saveHole() {
           :disabled="saving || !scores"
           @click="saveHole"
         >
-          {{ saving ? 'Saving…' : 'Save' }}
+          {{ saving ? action.busy : action.verb }}
         </button>
       </template>
       <p v-else class="mt-4 text-mrc-muted">Hole not found.</p>

@@ -316,6 +316,31 @@ describe('HoleEntryView saving', () => {
     expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
   })
 
+  // The card's rows are short and unhighlighted on a phone, which is why the pager exists. A
+  // hole that answers Update is one already played — and a sign of having tapped the wrong row.
+  it('offers Save on a hole with no score and Update on one already recorded', async () => {
+    const fresh = await openHole('15')
+    expect(saveButton(fresh)!.text()).toBe('Save')
+
+    holeStates = [scoredFifteenth]
+    const played = await openHole('15')
+
+    expect(saveButton(played)!.text()).toBe('Update')
+  })
+
+  // One action does not change its name on the way to reporting that it failed.
+  it('reports a failed update in the word the button offered', async () => {
+    holeStates = [scoredFifteenth]
+    submitScore.mockRejectedValue(new Error('offline'))
+    const w = await openHole('15')
+
+    await saveButton(w)!.trigger('click')
+    await flushPromises()
+
+    expect(w.text()).toContain('Update failed. Please try again.')
+    expect(w.text()).not.toContain('Save failed')
+  })
+
   it('refetches the match after a save, so what was written is what gets read', async () => {
     // The page loads once. Without a refetch the scores just written are invisible to it:
     // revisiting the hole reads as unrecorded, and the card behind it says the same.
