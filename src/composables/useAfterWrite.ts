@@ -7,15 +7,9 @@ export function useAfterWrite() {
   return () => queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== 'match' })
 }
 
-// eslint-disable-next-line comment-cap/max-lines -- the two-keys part is why this exists
-// One match is held under a key per view, so a write to it has to reach every copy — the rule
-// above protects a reader entering scores, and leaves the others stale. Refetched rather than
-// invalidated, and awaited, so what the caller shows next is what it just wrote.
+// The key stops short of parOptional so it reaches both of a match's copies, and `all` the one
+// no view has mounted. Refetched, not invalidated, so what the caller shows next is what it just wrote.
 export function useAfterMatchWrite() {
   const queryClient = useQueryClient()
-  return (tournamentId: string, matchId: string) =>
-    queryClient.refetchQueries({
-      type: 'all',
-      predicate: (q) => q.queryKey[0] === 'match' && q.queryKey[1] === tournamentId && q.queryKey[2] === matchId,
-    })
+  return (tournamentId: string, matchId: string) => queryClient.refetchQueries({ queryKey: ['match', tournamentId, matchId], type: 'all' })
 }
