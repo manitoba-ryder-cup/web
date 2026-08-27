@@ -74,11 +74,6 @@ describe('AdminMatchLineupView', () => {
         hole_results: [],
       },
     ])
-    // Singles takes one a side and Fourball two, which is what the lineup is measured against.
-    vi.mocked(scorecardApi.listMatchFormats).mockResolvedValue([
-      { id: 'f1', name: 'Singles', players_per_side: 1, scores_per_player: true },
-      { id: 'f2', name: 'Fourball', players_per_side: 2, scores_per_player: true },
-    ])
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
       { id: 'blue-1', color: 'Blue', captain: null, points: 0 },
       { id: 'red-1', color: 'Red', captain: null, points: 0 },
@@ -287,6 +282,16 @@ describe('AdminMatchLineupView', () => {
     const w = await mounted()
 
     expect(w.text()).toContain('0/3')
+  })
+
+  // A side size of nothing hides the controls that fill it: 0/0, nobody addable, no reason given.
+  it('still offers a pairing when the side size does not arrive', async () => {
+    sideSize = undefined as unknown as number
+
+    const w = await mounted()
+
+    expect(w.text()).not.toContain('0/0')
+    expect(w.text()).toContain('Add a player')
   })
 
   const playerPill = (w: ReturnType<typeof mount>, name: string) => w.findAll('button').find((b) => b.text().includes(name))
