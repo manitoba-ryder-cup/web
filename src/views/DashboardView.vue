@@ -41,15 +41,23 @@ const results = computed(() => resultsRes.data.value ?? [])
 poll.follow(() => results.value)
 const { left, right, leftColors, rightColors } = useTeamPair(teams)
 
+// The states the demo data cannot reach: it is all in the past, and the captains are set.
+// `import.meta.env.DEV` is a literal at build time, so none of this survives into the site.
+function preview(key: string): string | undefined {
+  if (!import.meta.env.DEV) return undefined
+  const value = route.query[key]
+  return typeof value === 'string' ? value : undefined
+}
+
 // `?captains=false` forces the earlier state for previewing against the populated demo.
 const showMatchup = computed(() => {
-  if (route.query.captains === 'false') return false
+  if (preview('captains') === 'false') return false
   return !!(left.value?.captain && right.value?.captain)
 })
 // The phase is the record's: deriving it here called a match started later than the API does.
 // The default covers the moment before the record loads, not an API that omits the field.
 const phase = computed<TournamentPhase>(() => {
-  const override = route.query.phase
+  const override = preview('phase')
   if (override === 'upcoming' || override === 'live' || override === 'finished') return override
   return tournament.value?.phase ?? 'upcoming'
 })
@@ -61,10 +69,8 @@ const previewBase = Date.now()
 // The moment the event tees off: the earliest scheduled match, falling back to the start
 // date. `?days=` overrides it for previewing (demo tournaments are all in the past).
 const teeOffAt = computed<number | null>(() => {
-  const override = Number(route.query.days)
-  if (typeof route.query.days === 'string' && Number.isFinite(override)) {
-    return previewBase + override * 86_400_000
-  }
+  const days = Number(preview('days'))
+  if (Number.isFinite(days)) return previewBase + days * 86_400_000
   const times = results.value.map((m) => new Date(m.tee_time).getTime())
   if (times.length) return Math.min(...times)
   // No schedule yet: aim at the start date read as a local midnight, matching formatDate —
@@ -78,10 +84,8 @@ const { segments } = useCountdown(teeOffAt)
 // The session in play, not the whole order: before the event that is mostly rows carrying a
 // time and nothing else. `?session=N` steps to a later one for a demo.
 const session = computed(() => {
-  const skip = Number(route.query.session)
-  if (typeof route.query.session === 'string' && Number.isFinite(skip)) {
-    return groupIntoSessions(results.value)[skip] ?? null
-  }
+  const skip = Number(preview('session'))
+  if (Number.isFinite(skip)) return groupIntoSessions(results.value)[skip] ?? null
   return currentSession(results.value)
 })
 const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 'Next out'))
