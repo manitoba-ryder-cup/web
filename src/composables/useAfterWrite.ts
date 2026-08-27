@@ -13,3 +13,10 @@ export function useAfterMatchWrite() {
   const queryClient = useQueryClient()
   return (tournamentId: string, matchId: string) => queryClient.refetchQueries({ queryKey: ['match', tournamentId, matchId], type: 'all' })
 }
+
+// A match that is gone. Dropped rather than refetched, because there is nothing to fetch — a
+// card still holding a copy serves it, and the 404 behind it is swallowed by a query with data.
+export function useAfterMatchDelete() {
+  const queryClient = useQueryClient()
+  return (tournamentId: string, matchId: string) => queryClient.removeQueries({ queryKey: ['match', tournamentId, matchId] })
+}

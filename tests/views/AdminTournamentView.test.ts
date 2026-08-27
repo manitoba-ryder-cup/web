@@ -14,9 +14,15 @@ vi.mock('@/api/scorecard', () => ({
     listCourses: vi.fn(),
     getCourseTees: vi.fn(),
     deleteMatch: vi.fn(),
+    getTournamentTeams: vi.fn(),
+    getMatchScores: vi.fn(),
+    getMatchHoles: vi.fn(),
   },
 }))
 
+import { config } from '@vue/test-utils'
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
+import { CardStub } from '../support/cardStub'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { ApiError } from '@/api/types'
@@ -88,6 +94,29 @@ describe('AdminTournamentView', () => {
     return wrapper.findAll('button').find((b) => b.attributes('aria-label')?.startsWith('Delete the'))
   }
 
+  // useAsync reports an error only with nothing to show, so a 404 behind a cached copy is
+  // swallowed and the card renders a match that is gone. Dropped, because there is no fetch.
+  it('drops the deleted match from the cache', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 300_000 } } })
+    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([])
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
+    vi.mocked(scorecardApi.getMatchHoles).mockResolvedValue([])
+    vi.mocked(scorecardApi.deleteMatch).mockResolvedValue(undefined)
+
+    const visited = mount(CardStub)
+    await flushPromises()
+    visited.unmount()
+    const cardKey = ['match', 't1', 'm1', true]
+    expect(queryClient.getQueryData(cardKey)).toBeDefined()
+
+    const wrapper = await mounted()
+    await deleteButton(wrapper)!.trigger('click')
+    await flushPromises()
+
+    expect(queryClient.getQueryData(cardKey)).toBeUndefined()
+  })
+
   it('deletes the match the button belongs to', async () => {
     vi.mocked(scorecardApi.deleteMatch).mockResolvedValue(undefined)
     const wrapper = await mounted()
@@ -96,6 +125,28 @@ describe('AdminTournamentView', () => {
     await flushPromises()
 
     expect(scorecardApi.deleteMatch).toHaveBeenCalledWith('m1')
+  })
+
+  // The other half of the drop above: a match the server would not delete is still there, and
+  // throwing its copies away would send a reader to the server for a card it could already show.
+  it('keeps the copies when the delete is refused', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 300_000 } } })
+    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([])
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
+    vi.mocked(scorecardApi.getMatchHoles).mockResolvedValue([])
+    vi.mocked(scorecardApi.deleteMatch).mockRejectedValue(new ApiError(409, 'That match has scores. Reset it before deleting it.'))
+
+    const visited = mount(CardStub)
+    await flushPromises()
+    visited.unmount()
+    const cardKey = ['match', 't1', 'm1', true]
+
+    const wrapper = await mounted()
+    await deleteButton(wrapper)!.trigger('click')
+    await flushPromises()
+
+    expect(queryClient.getQueryData(cardKey)).toBeDefined()
   })
 
   // A refused delete has something to say and must not read as one that worked. The sentence
