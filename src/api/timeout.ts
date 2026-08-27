@@ -6,8 +6,8 @@ import { ApiError } from './types'
 // the Try again never appears, while the browser gives up on its own schedule, in minutes.
 // Fifteen seconds is far outside anything this API does working — a cold start measured about
 // two. It is this app's verdict, not the server's, so a write cut off here may still have
-// landed: the hole write replaces a hole's scores and is safe to repeat, `createMatch`,
-// `draftPlayer` and `addParticipant` are not. Only the server can close that.
+// landed. The writes that replace what was there are safe to repeat — the hole write and
+// `setLineup`; `createMatch` and `draftPlayer` are not. Only the server can close that.
 const TIMEOUT_MS = 15_000
 
 const NO_BODY = new Set([204, 205, 304])

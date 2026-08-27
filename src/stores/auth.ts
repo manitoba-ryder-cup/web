@@ -57,8 +57,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Every caller joins one rotation. The cookie is single-use, and a second request carrying
-  // a value the first already spent is read as theft and ends the session outright.
+  // Every caller joins one rotation: the cookie is single-use, and a spent value presented
+  // again reads as theft outside the brief grace heimdall allows the client it was issued to.
   function refresh(): Promise<void> {
     rotating ??= rotate().finally(() => {
       rotating = null

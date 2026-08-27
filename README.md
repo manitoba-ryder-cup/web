@@ -3,6 +3,12 @@
 Manitoba Ryder Cup frontend. Vue 3 (`<script setup>`) + Vite + TypeScript + Pinia +
 Tailwind CSS.
 
+The repo also holds `worker/`, the Cloudflare Worker that puts the API on the same origin as
+the site in production — the SPA calls `/api/auth/*` and `/api/scorecard/*` relative, and the
+Worker forwards them to the Cloud Run services with the shared proxy secret attached. In dev
+Vite's proxy stands in for it. See [worker/README.md](worker/README.md); it deploys on its own
+and is not part of `npm run build`.
+
 ## Local dev
 
 Bring up the backing services (heimdall + scorecard + Postgres), then run the frontend
@@ -44,7 +50,8 @@ npm run format        # prettier, write
 npm run format:check  # prettier, check only (what CI gates on)
 ```
 
-CI runs format, lint, typecheck, test and build on every push and pull request.
+CI runs format, lint, typecheck, test and build on every push and pull request, plus a
+separate job type-checking `worker/`, which has its own `package.json` and tsconfig.
 
 ## Git hooks
 

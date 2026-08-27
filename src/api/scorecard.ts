@@ -65,14 +65,17 @@ export const scorecardApi = {
   getPlayerStats: (id: string) => sc().get<PlayerStats>(`/v1/players/${id}/stats`),
 
   // --- Admin writes (tournaments:write scope) ---
-  // Undraft cascades a player out of any matches; reassigning is undraft-then-draft.
+
+  // Undrafting a player named in a lineup is refused with a 409 — substitute them out of the
+  // match first. Moving a drafted player between sides is undraft-then-draft.
   draftPlayer: (teamId: string, playerId: string) => sc().post<void>(`/v1/teams/${teamId}/members`, { player_id: playerId }),
   undraftPlayer: (teamId: string, playerId: string) => sc().del<void>(`/v1/teams/${teamId}/members/${playerId}`),
-  // Designate a team's captain (one per team — this replaces any previous captain), or
-  // clear it (to reassign).
+  // One captain a side. The PUT replaces whoever held it, and the DELETE leaves the side
+  // with none.
   setTeamCaptain: (teamId: string, captainId: string) => sc().put<void>(`/v1/teams/${teamId}/captain`, { captain_id: captainId }),
   clearTeamCaptain: (teamId: string) => sc().del<void>(`/v1/teams/${teamId}/captain`),
-  // Assign a drafted player (with their team) to a match, or remove them from it.
+  // The whole lineup in one write: sized against the format, refused on a scored match, so
+  // there is no per-player add or remove to get half way through.
   setLineup: (matchId: string, participants: LineupPlayer[]) => sc().put<void>(`/v1/matches/${matchId}/participants`, { participants }),
   resetMatch: (matchId: string) => sc().del<void>(`/v1/matches/${matchId}/scores`),
   // Match setup: courses + their tee sets feed the create-match form.
