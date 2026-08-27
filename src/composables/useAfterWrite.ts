@@ -8,10 +8,10 @@ export function useAfterWrite() {
 }
 
 // eslint-disable-next-line comment-cap/max-lines -- the two-keys part is why this exists
-// Saving a hole leaves the entry page, so the rule above protects nothing — and the card it
-// returns to holds the same match under a key of its own. Refetched rather than invalidated,
-// and awaited, so the card renders what was just written.
-export function useAfterHoleSaved() {
+// One match is held under a key per view, so a write to it has to reach every copy — the rule
+// above protects a reader entering scores, and leaves the others stale. Refetched rather than
+// invalidated, and awaited, so what the caller shows next is what it just wrote.
+export function useAfterMatchWrite() {
   const queryClient = useQueryClient()
   return (tournamentId: string, matchId: string) =>
     queryClient.refetchQueries({

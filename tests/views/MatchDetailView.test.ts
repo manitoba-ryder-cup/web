@@ -65,6 +65,9 @@ vi.mock('@/api/scorecard', () => ({
 import { scorecardApi } from '@/api/scorecard'
 import MatchDetailView from '@/views/MatchDetailView.vue'
 import { tokenWithScopes } from '../support/token'
+import { HoleEntryStub } from '../support/holeEntryStub'
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
+import { config } from '@vue/test-utils'
 import { SCOPE_TOURNAMENTS_WRITE, SCOPE_SCORES_WRITE } from '@/api/scopes'
 
 const router = createRouter({
@@ -379,6 +382,44 @@ describe('resetting a match', () => {
 
     expect(w.text()).toContain('Reset Match')
     expect(scorecardApi.resetMatch).not.toHaveBeenCalled()
+  })
+
+  // The hole page is not mounted when the card is, so its copy sits inactive in the cache — and
+  // a query serves what it holds before revalidating, so that copy is what a reader sees.
+  it("clears the hole page's copy of the match too", async () => {
+    // A client of its own: the shared one collects an unmounted query at once, so nothing would
+    // survive to go stale and this would pass however the refetch was scoped.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
+    // Replaced, not added: mount options merge with config.global, and the shared client would
+    // still be the one installed first and answer useQueryClient.
+    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const plugins = [router] as never[]
+    const holeKey = ['match', 't1', 'm1', false]
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([
+      { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false },
+    ])
+
+    const visited = mount(HoleEntryStub, { global: { plugins } })
+    await flushPromises()
+    visited.unmount()
+    expect(queryClient.getQueryData<{ holeStates: unknown[] }>(holeKey)?.holeStates).toHaveLength(1)
+
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
+    setActivePinia(createPinia())
+    useAuthStore().accessToken = tokenWithScopes([SCOPE_TOURNAMENTS_WRITE])
+    await router.push('/t/t1/m/m1')
+    await router.isReady()
+    const card = mount(MatchDetailView, { props: { tournamentId: 't1', matchId: 'm1' }, global: { plugins } })
+    await flushPromises()
+    await (
+      await openMenu(card)
+    )
+      .findAll('button')
+      .find((b) => b.text() === 'Reset Match')!
+      .trigger('click')
+    await flushPromises()
+
+    expect(queryClient.getQueryData<{ holeStates: unknown[] }>(holeKey)?.holeStates).toHaveLength(0)
   })
 
   it('resets when the item is chosen', async () => {

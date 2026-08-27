@@ -6,6 +6,7 @@ import { scorecardApi } from '@/api/scorecard'
 import { useBusy } from '@/composables/useBusy'
 import { toast } from '@/composables/useToast'
 import { useMatchContext } from '@/composables/useMatchContext'
+import { useAfterMatchWrite } from '@/composables/useAfterWrite'
 import { useCoarseClock } from '@/composables/useCoarseClock'
 import { usePollWhileInPlay } from '@/composables/usePollWhileInPlay'
 import { playerInitials, resultText } from '@/lib/matchResult'
@@ -29,7 +30,7 @@ const auth = useAuthStore()
 // pairing opened during the morning session would sit on a frozen standing.
 const now = useCoarseClock()
 const poll = usePollWhileInPlay(now)
-const { error, loading, refresh, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
+const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
   () => props.matchId,
   {
@@ -51,6 +52,7 @@ const menu = ref<InstanceType<typeof BaseMenu> | null>(null)
 
 // One tap, no confirmation: this exists to clear matches scored while testing, and is not
 // expected to be used during a cup. Adding one has been considered and declined.
+const afterMatchWrite = useAfterMatchWrite()
 const { isBusy, run } = useBusy()
 const resetMatch = () =>
   run(
@@ -58,9 +60,9 @@ const resetMatch = () =>
     async () => {
       await scorecardApi.resetMatch(props.matchId)
       menu.value?.close()
-      // This page's own query is the match context, which useAfterWrite leaves alone so a
-      // refetch cannot land under someone entering scores.
-      await refresh()
+      // Every copy of the match, not this page's: the hole a reader taps next is keyed
+      // separately, and left behind it re-opens the scores this just cleared.
+      await afterMatchWrite(props.tournamentId, props.matchId)
       toast.success('Match reset')
     },
     { error: "Couldn't reset the match. Please try again." },
