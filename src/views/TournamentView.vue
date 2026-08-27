@@ -18,11 +18,12 @@ const props = defineProps<{ id: string }>()
 // Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
 // request turns that empty list full.
 const poll = usePollWhileInPlay()
-// Only the results are polled. The record and the teams do not move during a round, and
-// re-asking for them twenty seconds apart bought nothing.
+// The teams are polled with the results: their points are the decided half of the score bar,
+// so leaving them out freezes it at whatever the standing was when the page opened.
+const polled = { intervalMs: poll.intervalMs }
 const tournamentRes = useResource(() => q.tournament(props.id))
-const teamsRes = useResource(() => q.teams(props.id))
-const resultsRes = useResource(() => q.results(props.id), { intervalMs: poll.intervalMs })
+const teamsRes = useResource(() => q.teams(props.id), polled)
+const resultsRes = useResource(() => q.results(props.id), polled)
 const { error, loading, retry } = combine([tournamentRes, teamsRes, resultsRes])
 
 const tournament = computed(() => tournamentRes.data.value ?? null)

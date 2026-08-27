@@ -191,8 +191,8 @@ const save = () =>
         toast.error(displayError(err))
         return
       } finally {
-        // useBusy reaches the lists; the match's own two copies are the ones it leaves, and a
-        // refusal still needs them, because the tee time lands before the lineup is turned down.
+        // Awaited before the push, so the card lands on the pairing just written. In a finally
+        // because a refusal has written too: the tee time goes before the lineup is refused.
         await afterMatchWrite(props.id, props.matchId)
       }
       toast.success('Match saved')

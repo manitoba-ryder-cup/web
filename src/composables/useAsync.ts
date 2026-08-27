@@ -28,19 +28,21 @@ export function useAsync<T>(key: MaybeRefOrGetter<readonly unknown[]>, fetcher: 
     refetchIntervalInBackground: false,
   })
 
+  // A disabled query reports nothing of its own: it is waiting on something whose state the
+  // page already shows, and a stale error or skeleton from it would be that thing said twice.
+  const enabled = computed(() => toValue(options.enabled) ?? true)
+
   // Only a load with nothing to show is the view's failure to report. A poll that blips
   // keeps the last good data on screen rather than blanking a page someone is reading.
-  const error = computed(() => (q.isError.value && q.data.value === undefined ? displayError(q.error.value) : ''))
+  const error = computed(() => (enabled.value && q.isError.value && q.data.value === undefined ? displayError(q.error.value) : ''))
 
   // isPending, not isFetching, or a background revalidation puts the skeleton back over data
   // on screen. The second clause is a retry after a failure, where there is still nothing.
-  const loading = computed(
-    () => (toValue(options.enabled) ?? true) && (q.isPending.value || (q.isFetching.value && q.data.value === undefined)),
-  )
+  const loading = computed(() => enabled.value && (q.isPending.value || (q.isFetching.value && q.data.value === undefined)))
 
-  // Returns the promise: a caller that wants to wait for the result can, and the retry
-  // button ignoring it costs nothing.
-  const refresh = () => q.refetch().then(() => undefined)
+  // Gated, because refetch() does not consult `enabled`: a disabled query would answer a retry
+  // with a request for the id it is still waiting on. The promise is returned for a caller.
+  const refresh = () => (enabled.value ? q.refetch().then(() => undefined) : Promise.resolve())
 
   // `data` is a readonly view of the cache, so assigning through it is dropped rather than
   // refused — the write reaches the server and the row never moves.

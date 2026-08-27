@@ -183,6 +183,25 @@ describe('MatchDetailView', () => {
     expect(w.find('[data-testid="skeleton"]').exists()).toBe(false)
   })
 
+  // A tee set that is merely slower than the other three is not a missing one: the card would
+  // otherwise draw complete with Par and Yds blank and fill them in behind whoever is reading.
+  it('waits for the tee set before drawing the card', async () => {
+    let release!: () => void
+    vi.mocked(scorecardApi.getMatchHoles).mockImplementationOnce(() => new Promise((resolve) => (release = () => resolve([]))))
+    setActivePinia(createPinia())
+    router.push('/t/t1/m/m1')
+    await router.isReady()
+    const w = mount(MatchDetailView, { props: { tournamentId: 't1', matchId: 'm1' }, global: { plugins: [router] } })
+    await flushPromises()
+
+    expect(w.find('[data-testid="skeleton"]').exists()).toBe(true)
+
+    release()
+    await flushPromises()
+
+    expect(w.find('[data-testid="skeleton"]').exists()).toBe(false)
+  })
+
   it('does not offer to set a lineup that is already set', async () => {
     // The card is the whole point of the page once the lineup exists; an admin editing it
     // goes via the hole they want, not a link that reads as unfinished setup.

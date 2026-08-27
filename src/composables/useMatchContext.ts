@@ -28,10 +28,11 @@ export function useMatchContext(
   const scoresRes = useResource(() => q.matchScores(mid()), opts)
   const holesRes = useResource(() => q.matchHoles(mid()), opts)
 
-  // Whether a missing tee set is fatal decides what to render, not what to cache. Carried in
-  // the key it gave each view a whole copy of the match to keep in step.
-  const parts = [teamsRes, resultsRes, scoresRes]
-  const { error, loading, retry } = combine(parOptional ? parts : [...parts, holesRes])
+  const all = [teamsRes, resultsRes, scoresRes, holesRes]
+  const { loading, retry } = combine(all)
+  // Only the error is waived, never the wait: a tee set still on its way is a slow one, not a
+  // missing one, and the card would otherwise fill par in behind whoever is reading it.
+  const { error } = combine(parOptional ? [teamsRes, resultsRes, scoresRes] : all)
 
   const teams = computed(() => teamsRes.data.value ?? [])
   const results = computed(() => resultsRes.data.value ?? [])
@@ -45,5 +46,5 @@ export function useMatchContext(
     () => teams.value,
   )
 
-  return { error, loading, refresh: retry, retry, teams, results, holeStates, holes, match, left, right }
+  return { error, loading, retry, teams, results, holeStates, holes, match, left, right }
 }

@@ -27,11 +27,12 @@ const cup = useCurrentCup()
 // request turns that empty list full — a page open on the morning of would never see it.
 const poll = usePollWhileInPlay()
 const enabled = () => cup.known()
-// The record is polled with the results because it carries the phase, and a tab left open
-// across the first score would otherwise sit on the draft all day. The teams do not move.
-const tournamentRes = useResource(() => q.tournament(cup.id()), { enabled, intervalMs: poll.intervalMs })
-const teamsRes = useResource(() => q.teams(cup.id()), { enabled })
-const resultsRes = useResource(() => q.results(cup.id()), { enabled, intervalMs: poll.intervalMs })
+// All three move while a cup is on: the record carries the phase, the teams carry the points
+// the hero renders as the score, and the results carry the matches under way.
+const polled = { enabled, intervalMs: poll.intervalMs }
+const tournamentRes = useResource(() => q.tournament(cup.id()), polled)
+const teamsRes = useResource(() => q.teams(cup.id()), polled)
+const resultsRes = useResource(() => q.results(cup.id()), polled)
 const { error, loading, retry } = combine([cup, tournamentRes, teamsRes, resultsRes])
 
 const tournament = computed(() => tournamentRes.data.value ?? null)
