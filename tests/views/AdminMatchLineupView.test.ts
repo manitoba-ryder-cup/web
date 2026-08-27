@@ -564,6 +564,20 @@ describe('AdminMatchLineupView', () => {
     expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 
+  // A refusal leaves the admin here to fix it, and useBusy invalidates the tee query on its way
+  // past — so the tee they had changed has to still be changed when the refetch lands.
+  it('keeps a changed tee when the save is refused', async () => {
+    vi.mocked(scorecardApi.updateMatch).mockRejectedValue(new ApiError(409, 'That match has been scored.'))
+    const w = await mounted()
+    await w.find('#tee').setValue('white')
+
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    expect(toasts).toContain('That match has been scored.')
+    expect((w.find('#tee').element as HTMLSelectElement).value).toBe('white')
+  })
+
   // useBusy invalidates everything but the match, which is where the pairing this page just
   // changed is read from — by the card, and by the strips a scorer enters scores on.
   it("refetches both of the match's own copies", async () => {

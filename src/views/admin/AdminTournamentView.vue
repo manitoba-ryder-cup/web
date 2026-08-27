@@ -80,7 +80,7 @@ const form = reactive({ courseId: '', teeTime: '', handicapped: false })
 // what turns that into an instant.
 const selectedCourseZone = computed(() => courses.value.find((c) => c.id === form.courseId)?.time_zone ?? CUP_TIME_ZONE)
 
-async function openForm(format: string) {
+function openForm(format: string) {
   formError.value = ''
   const siblings = byFormat.value[format] ?? []
   // Default the tee time to 10 minutes after the round's latest match (the next slot), or
@@ -96,7 +96,7 @@ async function openForm(format: string) {
   const usedName = siblings.find((m) => m.course_name)?.course_name
   form.courseId = courses.value.find((c) => c.name === usedName)?.id ?? courses.value[0]?.id ?? ''
   form.handicapped = false
-  await loadTees(form.courseId)
+  loadTees(form.courseId)
   adding.value = format
 }
 
