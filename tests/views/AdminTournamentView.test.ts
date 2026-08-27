@@ -263,7 +263,7 @@ describe('AdminTournamentView', () => {
     const elmhurst = [{ course_id: 'c1', tee_color_id: 'gold', color: 'Gold', slope: 120, rating: 70 }]
     const banff = [{ course_id: 'c2', tee_color_id: 'banff-blue', color: 'Banff Blue', slope: 113, rating: 72 }]
     const w = await mounted()
-    // The form waits on its first tee load, so that one answers straight away.
+    // Opened before the deferring mock goes in, so this load is not one of the two below.
     await w
       .findAll('button')
       .find((b) => b.text().includes('Add'))!
