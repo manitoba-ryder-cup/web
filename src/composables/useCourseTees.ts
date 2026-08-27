@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
-import { scorecardApi } from '@/api/scorecard'
-import { useAsync } from '@/composables/useAsync'
+import { q } from '@/api/queries'
+import { useResource } from '@/composables/useAsync'
 
 // The tees a course offers, and which of them is picked. Keyed by course, so a response for one
 // the picker has already moved past lands under its own key rather than over this one.
@@ -9,10 +9,7 @@ export function useCourseTees() {
   const prefer = ref<string | undefined>()
   const picked = ref('')
 
-  const { data, error, loading, retry } = useAsync(
-    () => ['course-tees', courseId.value],
-    () => (courseId.value ? scorecardApi.getCourseTees(courseId.value) : Promise.resolve([])),
-  )
+  const { data, error, loading, retry } = useResource(() => q.courseTees(courseId.value), { enabled: () => !!courseId.value })
   const tees = computed(() => data.value ?? [])
   const failed = computed(() => !!error.value)
   const offered = (id: string | undefined) => !!id && tees.value.some((t) => t.tee_color_id === id)
