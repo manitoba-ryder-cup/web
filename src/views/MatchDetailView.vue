@@ -44,8 +44,8 @@ const rightTeam = computed(() => teams.value.find((t) => t.id === right.value?.t
 // it. Clock-driven: the window opens with time, not with anything in the data.
 poll.follow(() => results.value)
 
-// Not gated on hole_results: it counts only holes both sides scored, so a stored result left
-// behind by a removed participant reads as empty — the one state that needs this.
+// Not gated on hole_results: it counts only holes both sides scored, so a match scored on one
+// side alone has a stored result and no hole results — the state that most needs clearing.
 const canReset = computed(() => auth.hasScope(SCOPE_TOURNAMENTS_WRITE))
 const menu = ref<InstanceType<typeof BaseMenu> | null>(null)
 
