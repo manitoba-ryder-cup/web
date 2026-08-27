@@ -17,10 +17,11 @@
 # SCORECARD_PUBLIC_TENANT_ID=x. It is deliberately not defaulted — a wrong or absent
 # tenant serves an empty site that looks perfectly healthy, which is how it hid before.
 #
-# Production runs this same sequence with different hosts. The one part that will not
-# survive the trip is reading the verification token out of heimdall's log: that works
-# because with no mailer configured heimdall falls back to the console provider, which
-# logs the email instead of sending it. Configure a real mailer and the token goes to an
+# Production runs this same sequence with different hosts. The one part that will not survive
+# the trip is reading the admin's verification token out of heimdall's log: that works because
+# with no mailer configured heimdall falls back to the console provider, which logs the email
+# instead of sending it. Only the registration below does that — the scorer is created through
+# the API, which hands its token back in the response. Configure a real mailer and the token goes to an
 # inbox instead — at which point bootstrap wants a `heimdall bootstrap-tenant` CLI that
 # creates the tenant, user and password directly, rather than this script.
 set -euo pipefail
@@ -32,6 +33,8 @@ PG="${PG_CONTAINER:-mrc-dev-postgres}"
 HEIMDALL_CONTAINER="${HEIMDALL_CONTAINER:-mrc-dev-heimdall}"
 EMAIL="${DEV_EMAIL:-dev@manitobarydercup.com}"
 PASS="${DEV_PASSWORD:-DevPassword123!}"
+SCORER_EMAIL="${DEV_SCORER_EMAIL:-scorer@manitobarydercup.com}"
+SCORER_PASS="${DEV_SCORER_PASSWORD:-ScorerPassword123!}"
 ENV_FILE=".env"
 
 sql() { docker exec -i "$PG" psql -v ON_ERROR_STOP=1 -U superuser -d heimdall "$@"; }
@@ -114,6 +117,48 @@ else
   echo "SCORECARD_PUBLIC_TENANT_ID=$TENANT_ID" >> "$ENV_FILE"
 fi
 
+# --- phase 3b: an account that only scores --------------------------------------------
+# The admin holds every permission, so it is the one account that cannot show what a scorer
+# sees. On the course nobody signs in as an administrator, and the two differ in what the UI
+# offers: the admin area, and Reset Match.
+echo "==> Creating the scorer account..."
+if sql -t -A -c "SELECT 1 FROM users WHERE email = '$SCORER_EMAIL'" | grep -q 1; then
+  echo "    (already exists)"
+else
+  # Reused if it is already there, so a rerun after a half-finished one gets the same role
+  # rather than a second attempt at the name.
+  ROLE_ID=$(curl -sf "$HEIMDALL/v1/roles" -H "Authorization: Bearer $ACCESS_TOKEN" \
+    | python3 -c 'import json,sys; print(next((r["id"] for r in json.load(sys.stdin)["roles"] if r["name"] == "Scorer"), ""))')
+  if [ -z "$ROLE_ID" ]; then
+    ROLE_ID=$(curl -sf -X POST "$HEIMDALL/v1/roles" -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d '{"name":"Scorer","description":"Enters hole scores on the course. No admin area, no match reset."}' \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+  fi
+  if [ -z "$ROLE_ID" ]; then
+    echo "ERROR: could not create or find the Scorer role." >&2
+    exit 1
+  fi
+
+  PERM_ID=$(sql -t -A -c "SELECT id FROM permissions WHERE name = 'scorecard:scores:write'")
+  curl -sf -X PUT "$HEIMDALL/v1/roles/$ROLE_ID/permissions" -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H 'Content-Type: application/json' -d "{\"permission_ids\":[\"$PERM_ID\"]}" >/dev/null
+
+  # In the admin's own tenant, with the role, and the token comes back in the response. The
+  # account this replaces was registered into a tenant of its own and then moved out of it.
+  SCORER_TOKEN=$(curl -sf -X POST "$HEIMDALL/v1/users" -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$SCORER_EMAIL\",\"role_ids\":[\"$ROLE_ID\"]}" \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["verification_token"])')
+  if [ -z "$SCORER_TOKEN" ]; then
+    echo "ERROR: no verification token came back for $SCORER_EMAIL." >&2
+    exit 1
+  fi
+
+  curl -sf -X POST "$HEIMDALL/v1/verify-email" -H 'Content-Type: application/json' \
+    -d "{\"token\":\"$SCORER_TOKEN\",\"password\":\"$SCORER_PASS\"}" >/dev/null
+fi
+
 # --- phase 4: scorecard, now that there is a tenant for it to serve --------------------
 echo "==> Starting scorecard..."
 docker compose up -d scorecard
@@ -125,6 +170,7 @@ Stack ready.
   heimdall   $HEIMDALL
   scorecard  http://localhost:5000
   login      $EMAIL / $PASS
+  scorer     $SCORER_EMAIL / $SCORER_PASS  (scores only — no admin area, no reset)
   tenant     $TENANT_ID  (written to $ENV_FILE)
 
 The database has no golf data yet. Load it with the same tenant:
