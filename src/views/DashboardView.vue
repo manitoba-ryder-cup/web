@@ -124,11 +124,12 @@ const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 
         <template v-else>
           <CapsLabel v-if="heroEyebrow" size="sm" class="text-white/80">{{ heroEyebrow }}</CapsLabel>
 
-          <!-- Upcoming: the matchup (once captains are set) + countdown, not a 0–0 score. -->
-          <template v-if="phase === 'upcoming' && tournament">
+          <!-- Counting down: the matchup and the clock, not a 0-0 score. The standing takes over
+               when the clock runs out, not when the record turns live — that is a hole's play later. -->
+          <template v-if="phase === 'upcoming' && segments && tournament">
             <CaptainMatchup v-if="showMatchup" :teams="teams" size="lg" class="mt-5" />
             <h1 v-else class="mt-4 md:text-5xl">{{ tournament.name }}</h1>
-            <div v-if="segments" class="mt-7">
+            <div class="mt-7">
               <CapsLabel class="mb-3 text-white/60">Tees off in</CapsLabel>
               <div class="flex items-start justify-center gap-5 tabular-nums sm:gap-7">
                 <div v-for="seg in segments" :key="seg.label" class="flex flex-col items-center">
