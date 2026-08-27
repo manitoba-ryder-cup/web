@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { scorecardApi } from '@/api/scorecard'
-import { useAsync } from '@/composables/useAsync'
-import { useCupStore } from '@/stores/cup'
+import { q } from '@/api/queries'
+import { combine, useResource } from '@/composables/useAsync'
+import { useCurrentCup } from '@/composables/useCurrentCup'
 import { tournamentEyebrow } from '@/lib/tournament'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -14,23 +14,18 @@ import PlayerField from '@/components/tournament/PlayerField.vue'
 
 // Named for what people come looking for, not the list it is made of: before the draft that
 // list is all there is, so the field stands in until the teams exist.
-const cup = useCupStore()
-const { data, error, loading, retry } = useAsync(['teams'], async () => {
-  // Resolved once by the shell, so the roster request starts now. The record rides in the same
-  // batch, which costs no depth and keeps the eyebrow answering to edits.
-  await cup.load()
-  const id = cup.latestId
-  const [tournament, roster, teams] = id
-    ? await Promise.all([scorecardApi.getTournament(id), scorecardApi.getTournamentPlayers(id), scorecardApi.getTournamentTeams(id)])
-    : [null, [], []]
-  return { tournament, roster, teams }
-})
+const cup = useCurrentCup()
+const enabled = () => cup.known()
+const tournamentRes = useResource(() => q.tournament(cup.id()), { enabled })
+const rosterRes = useResource(() => q.roster(cup.id()), { enabled })
+const teamsRes = useResource(() => q.teams(cup.id()), { enabled })
+const { error, loading, retry } = combine([cup, tournamentRes, rosterRes, teamsRes])
 
 // Which cup these teams belong to, and where it is played. The page is otherwise undated,
 // and the same address shows a different two dozen names every year.
-const eyebrow = computed(() => tournamentEyebrow(data.value?.tournament))
-const roster = computed(() => data.value?.roster ?? [])
-const teams = computed(() => data.value?.teams ?? [])
+const eyebrow = computed(() => tournamentEyebrow(tournamentRes.data.value ?? null))
+const roster = computed(() => rosterRes.data.value ?? [])
+const teams = computed(() => teamsRes.data.value ?? [])
 
 // The captains are on teams from the start, so "some assigned" is not the draft being
 // done — it counts as drafted only once every entered player has a team.

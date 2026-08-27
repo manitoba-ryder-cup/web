@@ -152,7 +152,7 @@ describe('AdminTournamentView', () => {
     const visited = mount(CardStub)
     await flushPromises()
     visited.unmount()
-    const cardKey = ['match', 't1', 'm1', true]
+    const cardKey = ['match', 'm1', 'scores']
     expect(queryClient.getQueryData(cardKey)).toBeDefined()
 
     const wrapper = await mounted()
@@ -185,7 +185,7 @@ describe('AdminTournamentView', () => {
     const visited = mount(CardStub)
     await flushPromises()
     visited.unmount()
-    const cardKey = ['match', 't1', 'm1', true]
+    const cardKey = ['match', 'm1', 'scores']
 
     const wrapper = await mounted()
     await deleteButton(wrapper)!.trigger('click')

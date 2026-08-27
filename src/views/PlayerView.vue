@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { scorecardApi } from '@/api/scorecard'
-import { useAsync } from '@/composables/useAsync'
+import { q } from '@/api/queries'
+import { combine, useResource } from '@/composables/useAsync'
 import { useHashAccordion } from '@/composables/useHashAccordion'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -18,21 +18,14 @@ import PlayerStats from '@/components/player/PlayerStats.vue'
 const props = defineProps<{ id: string }>()
 
 // One useAsync over all three, so the page has a single loading and error state.
-const { data, error, loading, retry } = useAsync(
-  () => ['player', props.id],
-  async () => {
-    const [player, history, stats] = await Promise.all([
-      scorecardApi.getPlayer(props.id),
-      scorecardApi.getPlayerTournaments(props.id),
-      scorecardApi.getPlayerStats(props.id),
-    ])
-    return { player, history, stats }
-  },
-)
+const playerRes = useResource(() => q.player(props.id))
+const historyRes = useResource(() => q.playerHistory(props.id))
+const statsRes = useResource(() => q.playerStats(props.id))
+const { error, loading, retry } = combine([playerRes, historyRes, statsRes])
 
-const player = computed(() => data.value?.player ?? null)
-const history = computed(() => data.value?.history ?? [])
-const stats = computed(() => data.value?.stats ?? null)
+const player = computed(() => playerRes.data.value ?? null)
+const history = computed(() => historyRes.data.value ?? [])
+const stats = computed(() => statsRes.data.value ?? null)
 const fullName = computed(() => (player.value ? `${player.value.first_name} ${player.value.last_name}` : ''))
 const cupsPlayed = computed(() => history.value.length)
 

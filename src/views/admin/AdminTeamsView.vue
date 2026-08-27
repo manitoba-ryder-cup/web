@@ -2,7 +2,8 @@
 import { ref, computed } from 'vue'
 import { scorecardApi } from '@/api/scorecard'
 import type { TournamentPlayer } from '@/api/types'
-import { useAsync } from '@/composables/useAsync'
+import { q } from '@/api/queries'
+import { combine, useResource } from '@/composables/useAsync'
 import { useBusy } from '@/composables/useBusy'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -13,20 +14,17 @@ import TeamAssignRow from '@/components/admin/TeamAssignRow.vue'
 
 const props = defineProps<{ id: string }>()
 
-const { data, error, loading, refresh, retry, patch } = useAsync(
-  () => ['admin', 'teams', props.id],
-  async () => {
-    const [roster, teams] = await Promise.all([scorecardApi.getTournamentPlayers(props.id), scorecardApi.getTournamentTeams(props.id)])
-    return { roster, teams }
-  },
-)
+const rosterRes = useResource(() => q.roster(props.id))
+const teamsRes = useResource(() => q.teams(props.id))
+const { error, loading, retry } = combine([rosterRes, teamsRes])
+const refresh = retry
 
-const teams = computed(() => data.value?.teams ?? [])
+const teams = computed(() => teamsRes.data.value ?? [])
 const blueId = computed(() => teams.value.find((t) => t.color === 'Blue')?.id ?? null)
 const redId = computed(() => teams.value.find((t) => t.color === 'Red')?.id ?? null)
 
 const roster = computed(() =>
-  [...(data.value?.roster ?? [])].sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)),
+  [...(rosterRes.data.value ?? [])].sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)),
 )
 
 const counts = computed(() => ({
@@ -62,11 +60,9 @@ function assign(p: TournamentPlayer, target: string | null) {
     async () => {
       if (prev) await scorecardApi.undraftPlayer(prev, p.player_id)
       if (target) await scorecardApi.draftPlayer(target, p.player_id)
-      patch((d) => ({
-        roster: d.roster.map((x) => (x.player_id === p.player_id ? { ...x, team_id: target } : x)),
-        // Leaving a team drops any captaincy there (the server clears it on undraft too).
-        teams: d.teams.map((t) => (t.id === prev && t.captain?.id === p.player_id ? { ...t, captain: null } : t)),
-      }))
+      rosterRes.patch((r) => r.map((x) => (x.player_id === p.player_id ? { ...x, team_id: target } : x)))
+      // Leaving a team drops any captaincy there (the server clears it on undraft too).
+      teamsRes.patch((t) => t.map((x) => (x.id === prev && x.captain?.id === p.player_id ? { ...x, captain: null } : x)))
     },
     { error: `Couldn't update ${p.first_name} ${p.last_name}. Please try again.`, onError: refresh },
   )
@@ -95,7 +91,7 @@ function toggleCaptain(p: TournamentPlayer) {
       if (clearing) await scorecardApi.clearTeamCaptain(teamId)
       else await scorecardApi.setTeamCaptain(teamId, p.player_id)
       const captain = clearing ? null : { id: p.player_id, first_name: p.first_name, last_name: p.last_name }
-      patch((d) => ({ ...d, teams: d.teams.map((t) => (t.id === teamId ? { ...t, captain } : t)) }))
+      teamsRes.patch((t) => t.map((x) => (x.id === teamId ? { ...x, captain } : x)))
     },
     { error: "Couldn't update the captain. Please try again." },
   )

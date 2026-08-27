@@ -60,8 +60,8 @@ const resetMatch = () =>
     async () => {
       await scorecardApi.resetMatch(props.matchId)
       menu.value?.close()
-      // Every copy of the match, not this page's: the hole a reader taps next is keyed
-      // separately, and left behind it re-opens the scores this just cleared.
+      // Refetched here rather than left stale: the hole a reader taps next serves what it
+      // holds before revalidating, and would re-open the scores this just cleared.
       await afterMatchWrite(props.tournamentId, props.matchId)
       toast.success('Match reset')
     },

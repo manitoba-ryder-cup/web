@@ -1,22 +1,29 @@
 import { useQueryClient } from '@tanstack/vue-query'
+import { matchKey, q } from '@/api/queries'
 
-// Hole entry is the exception: a refetch mid-entry moves the ground under someone with
-// strokes already dialled in.
+// Everything a write could have touched. Resources are keyed by what they are, so this needs
+// no list of the pages showing them and cannot miss one that was added later.
 export function useAfterWrite() {
   const queryClient = useQueryClient()
-  return () => queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== 'match' })
+  return () => queryClient.invalidateQueries()
 }
 
-// The key stops short of parOptional so it reaches both of a match's copies, and `all` the one
-// no view has mounted. Refetched, not invalidated, so what the caller shows next is what it just wrote.
+// A match write moves the standing too, so the rest is marked stale without a fetch. The two it
+// changed are refetched and awaited: the page this returns to must show what was just written.
 export function useAfterMatchWrite() {
   const queryClient = useQueryClient()
-  return (tournamentId: string, matchId: string) => queryClient.refetchQueries({ queryKey: ['match', tournamentId, matchId], type: 'all' })
+  return async (tournamentId: string, matchId: string) => {
+    queryClient.invalidateQueries({ refetchType: 'none' })
+    await Promise.all([
+      queryClient.refetchQueries({ type: 'all', queryKey: q.matchScores(matchId).key }),
+      queryClient.refetchQueries({ type: 'all', queryKey: q.results(tournamentId).key }),
+    ])
+  }
 }
 
 // A match that is gone. Dropped rather than refetched, because there is nothing to fetch — a
 // card still holding a copy serves it, and the 404 behind it is swallowed by a query with data.
 export function useAfterMatchDelete() {
   const queryClient = useQueryClient()
-  return (tournamentId: string, matchId: string) => queryClient.removeQueries({ queryKey: ['match', tournamentId, matchId] })
+  return (matchId: string) => queryClient.removeQueries({ queryKey: matchKey(matchId) })
 }

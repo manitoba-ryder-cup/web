@@ -75,6 +75,46 @@ describe('DashboardView', () => {
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([])
   })
 
+  // refetch() does not consult `enabled`, so the parts still waiting on an id would each spend
+  // a request asking about a tournament called '' — on the tap that most needs to work.
+  it('asks only for what it can ask for when the cup lookup is retried', async () => {
+    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new Error('offline'))
+    const wrapper = mountDashboard()
+    await flushPromises()
+    vi.clearAllMocks()
+    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new Error('offline'))
+
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Try again')!
+      .trigger('click')
+    await flushPromises()
+
+    expect(scorecardApi.listTournaments).toHaveBeenCalled()
+    expect(scorecardApi.getTournament).not.toHaveBeenCalled()
+    expect(scorecardApi.getTournamentTeams).not.toHaveBeenCalled()
+    expect(scorecardApi.getTournamentResults).not.toHaveBeenCalled()
+  })
+
+  // The 7xl score on the front page is the teams' points, not the results'. Polled with them or
+  // it freezes for the two days the twenty-second cadence exists for.
+  it('keeps the standing up to date while the cup is being played', async () => {
+    vi.useFakeTimers()
+    const live = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    // Open, not merely started: the helper closes the window at the tee time, and a shut one
+    // puts the poll on its five-minute heartbeat where 65 seconds shows nothing.
+    const open = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([{ ...match(live, 'Fourball'), scoring_closes_at: open }])
+    mountDashboard()
+    await vi.advanceTimersByTimeAsync(0)
+    const before = vi.mocked(scorecardApi.getTournamentTeams).mock.calls.length
+
+    await vi.advanceTimersByTimeAsync(65_000)
+
+    expect(vi.mocked(scorecardApi.getTournamentTeams).mock.calls.length).toBeGreaterThan(before)
+    vi.useRealTimers()
+  })
+
   // The identity is fixed for the session, so the record is re-read by id — from the store, a
   // tab open through an edit shows the phase the old start date implied.
   it('reads the cup record itself rather than the one the session resolved with', async () => {

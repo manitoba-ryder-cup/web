@@ -3,7 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { type LineupPlayer, type UpdateMatchBody } from '@/api/types'
-import { useAsync } from '@/composables/useAsync'
+import { q } from '@/api/queries'
+import { combine, useResource } from '@/composables/useAsync'
 import { useAfterMatchWrite } from '@/composables/useAfterWrite'
 import { useBusy } from '@/composables/useBusy'
 import { useCourseTees } from '@/composables/useCourseTees'
@@ -27,29 +28,20 @@ import BaseLabel from '@/components/base/BaseLabel.vue'
 
 const props = defineProps<{ id: string; matchId: string }>()
 
-const { data, error, loading, retry } = useAsync(
-  // Tournament-scoped: every request below is about the tournament and the match only selects
-  // from the result. Keyed by match, eight lineups would fetch the same four endpoints eight times.
-  () => ['admin', 'lineup', props.id],
-  async () => {
-    const [matches, records, teams, roster, courses] = await Promise.all([
-      scorecardApi.getTournamentResults(props.id),
-      scorecardApi.listMatches(props.id),
-      scorecardApi.getTournamentTeams(props.id),
-      scorecardApi.getTournamentPlayers(props.id),
-      scorecardApi.listCourses(),
-    ])
-    return { matches, records, teams, roster, courses }
-  },
-)
+const matchesRes = useResource(() => q.results(props.id))
+const recordsRes = useResource(() => q.matches(props.id))
+const teamsRes = useResource(() => q.teams(props.id))
+const rosterRes = useResource(() => q.roster(props.id))
+const coursesRes = useResource(() => q.courses())
+const { error, loading, retry } = combine([matchesRes, recordsRes, teamsRes, rosterRes, coursesRes])
 
-const matches = computed(() => data.value?.matches ?? [])
+const matches = computed(() => matchesRes.data.value ?? [])
 // The result carries a course name and no ids, and no tee colour at all — the match record is
 // what the pickers below are set from.
-const record = computed(() => (data.value?.records ?? []).find((m) => m.id === props.matchId) ?? null)
+const record = computed(() => (recordsRes.data.value ?? []).find((m) => m.id === props.matchId) ?? null)
 const match = computed(() => matches.value.find((m) => m.match_id === props.matchId) ?? null)
-const teams = computed(() => data.value?.teams ?? [])
-const roster = computed(() => data.value?.roster ?? [])
+const teams = computed(() => teamsRes.data.value ?? [])
+const roster = computed(() => rosterRes.data.value ?? [])
 
 // The match's own format, resolved by the server, rather than its id looked up in a list that
 // may not hold it. Floored, because a side size of nothing hides the controls that fill it.
@@ -110,7 +102,7 @@ function teamLabel(team: { color: string; captain: { last_name: string } | null 
   return team.captain ? `Team ${team.captain.last_name}` : team.color
 }
 
-const courses = computed(() => data.value?.courses ?? [])
+const courses = computed(() => coursesRes.data.value ?? [])
 const zoneOf = (id: string | undefined) => courses.value.find((c) => c.id === id)?.time_zone ?? CUP_TIME_ZONE
 
 // Reading back: the stored course, so picking another does not re-read a tee time nobody moved.
@@ -199,8 +191,8 @@ const save = () =>
         toast.error(displayError(err))
         return
       } finally {
-        // useBusy reaches the lists; the match's own two copies are the ones it leaves, and a
-        // refusal still needs them, because the tee time lands before the lineup is turned down.
+        // Awaited before the push, so the card lands on the pairing just written. In a finally
+        // because a refusal has written too: the tee time goes before the lineup is refused.
         await afterMatchWrite(props.id, props.matchId)
       }
       toast.success('Match saved')
