@@ -96,8 +96,8 @@ const router = createRouter({
   ],
 })
 
-// The stroke strip's tiles and the pager's chevrons are buttons too; Save is the one that
-// is neither. Undefined when the hole cannot be recorded, which is the point.
+// The stroke tiles and the pager's chevrons are buttons too; the one that submits is neither,
+// and is found by shape because its label varies. Undefined when the hole cannot be recorded.
 function saveButton(w: ReturnType<typeof mount>) {
   return w.findAll('button').find((b) => b.attributes('data-stroke') === undefined && b.attributes('aria-label') === undefined)
 }
@@ -316,8 +316,6 @@ describe('HoleEntryView saving', () => {
     expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
   })
 
-  // The card's rows are short and unhighlighted on a phone, which is why the pager exists. A
-  // hole that answers Update is one already played — and a sign of having tapped the wrong row.
   it('offers Save on a hole with no score and Update on one already recorded', async () => {
     const fresh = await openHole('15')
     expect(saveButton(fresh)!.text()).toBe('Save')
@@ -328,7 +326,6 @@ describe('HoleEntryView saving', () => {
     expect(saveButton(played)!.text()).toBe('Update')
   })
 
-  // One action does not change its name on the way to reporting that it failed.
   it('reports a failed update in the word the button offered', async () => {
     holeStates = [scoredFifteenth]
     submitScore.mockRejectedValue(new Error('offline'))

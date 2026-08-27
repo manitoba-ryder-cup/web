@@ -108,8 +108,8 @@ const scores = computed<ScoreEntry[] | null>(() => {
   }
   return out
 })
-// A hole already on the card is being replaced, not filled in. Landing on one that says Update
-// is also how a scorer who tapped the wrong row finds out before overwriting it.
+// A hole offering Update is one already played, which is how a scorer who tapped the wrong
+// row on the card finds out before overwriting it.
 const action = computed(() =>
   scoredHoles.value.includes(holeNumber.value) ? { verb: 'Update', busy: 'Updating…' } : { verb: 'Save', busy: 'Saving…' },
 )
@@ -160,8 +160,6 @@ async function saveHole() {
       refusedHole.value = hole
       saveError.value = 'This hole is closed to scoring — the match finished before it, or its window has shut.'
     } else {
-      // The same word the button offered: one action does not change its name on the way to
-      // reporting that it failed.
       const failed = `${action.value.verb} failed`
       saveError.value = isRefusal(err) ? `${failed} — ${displayError(err)}` : `${failed}. Please try again.`
     }
