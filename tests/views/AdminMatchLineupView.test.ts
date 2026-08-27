@@ -17,11 +17,17 @@ vi.mock('@/api/scorecard', () => ({
     getCourseTees: vi.fn(),
     updateMatch: vi.fn(),
     setLineup: vi.fn(),
+    getMatchScores: vi.fn(),
+    getMatchHoles: vi.fn(),
   },
 }))
 
+import { config } from '@vue/test-utils'
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
+import { CardStub } from '../support/cardStub'
+import { HoleEntryStub } from '../support/holeEntryStub'
 import { ApiError } from '@/api/types'
 import AdminMatchLineupView from '@/views/admin/AdminMatchLineupView.vue'
 import { utcToEventInput } from '@/lib/teeTime'
@@ -102,6 +108,8 @@ describe('AdminMatchLineupView', () => {
         handicapped: false,
       },
     ])
+    vi.mocked(scorecardApi.getMatchHoles).mockResolvedValue([])
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
     vi.mocked(scorecardApi.getCourseTees).mockResolvedValue([
       { course_id: 'c1', tee_color_id: 'white', color: 'White', slope: 113, rating: 72 },
       { course_id: 'c1', tee_color_id: 'gold', color: 'Gold', slope: 120, rating: 70 },
@@ -234,6 +242,8 @@ describe('AdminMatchLineupView', () => {
   // Changing the course reloads its tees, since a colour is a tee set on one course and
   // means nothing on another.
   it('reloads the tees when the course changes', async () => {
+    vi.mocked(scorecardApi.getMatchHoles).mockResolvedValue([])
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
     vi.mocked(scorecardApi.getCourseTees).mockResolvedValue([
       { course_id: 'c2', tee_color_id: 'blue', color: 'Blue', slope: 118, rating: 71 },
     ])
@@ -552,5 +562,68 @@ describe('AdminMatchLineupView', () => {
     // Once on mount, once after saving.
     expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(2)
     expect(saveButton(w).attributes('disabled')).toBeDefined()
+  })
+
+  // useBusy invalidates everything but the match, which is where the pairing this page just
+  // changed is read from — by the card, and by the strips a scorer enters scores on.
+  it("refetches both of the match's own copies", async () => {
+    // A client of its own: the shared one has gcTime 0 and collects an unmounted query at once,
+    // so nothing would survive to be stale and this would pass however the refetch was scoped.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
+    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const held = { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([held])
+
+    for (const stub of [CardStub, HoleEntryStub]) {
+      const visited = mount(stub)
+      await flushPromises()
+      visited.unmount()
+    }
+    const copies = [
+      ['match', 't1', 'm1', true],
+      ['match', 't1', 'm1', false],
+    ]
+    for (const key of copies) {
+      expect(queryClient.getQueryData<{ holeStates: unknown[] }>(key)?.holeStates).toHaveLength(1)
+    }
+
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
+    const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
+    await flushPromises()
+    await w.find('input[type="datetime-local"]').setValue('2026-07-01T10:30')
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    for (const key of copies) {
+      expect(queryClient.getQueryData<{ holeStates: unknown[] }>(key)?.holeStates).toHaveLength(0)
+    }
+  })
+
+  // The order the save is written in exists so a scored match takes the tee time and refuses
+  // only the lineup — so the refusal path is one that has written.
+  it("refetches the match's copies even when the lineup half is refused", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
+    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const held = { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([held])
+
+    const visited = mount(CardStub)
+    await flushPromises()
+    visited.unmount()
+
+    vi.mocked(scorecardApi.setLineup).mockRejectedValue(new ApiError(409, 'That match has been scored.'))
+    vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
+    const w = mount(AdminMatchLineupView, { props: { id: 't1', matchId: 'm1' }, global: { plugins: [router] } })
+    await flushPromises()
+    // Both halves: the tee time is the one that lands, the lineup the one refused.
+    await w.find('input[type="datetime-local"]').setValue('2026-07-01T10:30')
+    await playerPill(w, 'Red Alpha')!.trigger('click')
+    await playerPill(w, 'Blue Alpha')!.trigger('click')
+    await detailsForm(w).trigger('submit')
+    await flushPromises()
+
+    expect(scorecardApi.updateMatch).toHaveBeenCalled()
+    expect(toasts).toContain('That match has been scored.')
+    expect(queryClient.getQueryData<{ holeStates: unknown[] }>(['match', 't1', 'm1', true])?.holeStates).toHaveLength(0)
   })
 })

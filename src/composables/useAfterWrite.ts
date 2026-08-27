@@ -7,15 +7,16 @@ export function useAfterWrite() {
   return () => queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== 'match' })
 }
 
-// eslint-disable-next-line comment-cap/max-lines -- the two-keys part is why this exists
-// Saving a hole leaves the entry page, so the rule above protects nothing — and the card it
-// returns to holds the same match under a key of its own. Refetched rather than invalidated,
-// and awaited, so the card renders what was just written.
-export function useAfterHoleSaved() {
+// The key stops short of parOptional so it reaches both of a match's copies, and `all` the one
+// no view has mounted. Refetched, not invalidated, so what the caller shows next is what it just wrote.
+export function useAfterMatchWrite() {
   const queryClient = useQueryClient()
-  return (tournamentId: string, matchId: string) =>
-    queryClient.refetchQueries({
-      type: 'all',
-      predicate: (q) => q.queryKey[0] === 'match' && q.queryKey[1] === tournamentId && q.queryKey[2] === matchId,
-    })
+  return (tournamentId: string, matchId: string) => queryClient.refetchQueries({ queryKey: ['match', tournamentId, matchId], type: 'all' })
+}
+
+// A match that is gone. Dropped rather than refetched, because there is nothing to fetch — a
+// card still holding a copy serves it, and the 404 behind it is swallowed by a query with data.
+export function useAfterMatchDelete() {
+  const queryClient = useQueryClient()
+  return (tournamentId: string, matchId: string) => queryClient.removeQueries({ queryKey: ['match', tournamentId, matchId] })
 }

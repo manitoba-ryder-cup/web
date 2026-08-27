@@ -5,6 +5,7 @@ import { scorecardApi } from '@/api/scorecard'
 import { type MatchResult } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { toast } from '@/composables/useToast'
+import { useAfterMatchDelete } from '@/composables/useAfterWrite'
 import { useBusy } from '@/composables/useBusy'
 import { useCourseTees } from '@/composables/useCourseTees'
 import { isStatus } from '@/lib/apiError'
@@ -99,6 +100,7 @@ async function openForm(format: string) {
   adding.value = format
 }
 
+const afterMatchDelete = useAfterMatchDelete()
 const { isBusy, run } = useBusy()
 
 // One tap, like the reset on the scorecard: this clears matches entered while setting up, and
@@ -109,6 +111,9 @@ async function removeMatch(match: MatchResult) {
     async () => {
       try {
         await scorecardApi.deleteMatch(match.match_id)
+        // Only here, unlike a save: a refused delete leaves the match where it was, and its
+        // copies are still the truth.
+        afterMatchDelete(props.id, match.match_id)
         toast.success('Match deleted')
       } catch (err) {
         if (!isStatus(err, 409)) throw err

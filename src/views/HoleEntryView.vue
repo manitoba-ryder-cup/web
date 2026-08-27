@@ -6,7 +6,7 @@ import type { MatchSide, ScoreEntry } from '@/api/types'
 import { isRefusal, isStatus } from '@/lib/apiError'
 import { displayError } from '@/lib/displayError'
 import { useMatchContext } from '@/composables/useMatchContext'
-import { useAfterHoleSaved } from '@/composables/useAfterWrite'
+import { useAfterMatchWrite } from '@/composables/useAfterWrite'
 import { buildHoleEntries, type HoleEntry } from '@/lib/holeEntry'
 import { matchCompleteMessage } from '@/lib/matchResult'
 import { hasStarted, holeOpen } from '@/lib/scoringWindow'
@@ -25,7 +25,7 @@ const props = defineProps<{ tournamentId: string; matchId: string; hole: string 
 const router = useRouter()
 const holeNumber = computed(() => Number(props.hole))
 
-const afterHoleSaved = useAfterHoleSaved()
+const afterMatchWrite = useAfterMatchWrite()
 // Loads once — stepping between holes only re-derives from what is already here.
 const { error, loading, retry, teams, results, holeStates, holes, match, left, right } = useMatchContext(
   () => props.tournamentId,
@@ -144,7 +144,7 @@ async function saveHole() {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
     }
-    await afterHoleSaved(props.tournamentId, props.matchId)
+    await afterMatchWrite(props.tournamentId, props.matchId)
     await goToScorecard(hole)
   } catch (err) {
     // The server answers 409 for a shut window and for a hole a decided match never reached, and

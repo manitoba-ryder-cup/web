@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
 import { type LineupPlayer, type UpdateMatchBody } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { useAfterMatchWrite } from '@/composables/useAfterWrite'
 import { useBusy } from '@/composables/useBusy'
 import { useCourseTees } from '@/composables/useCourseTees'
 import { toast } from '@/composables/useToast'
@@ -183,6 +184,7 @@ function edits() {
 // Details before the lineup, and only what moved. A scored match takes a tee time and refuses
 // a lineup, so in this order the edit it allows lands and the one it refuses says why.
 const router = useRouter()
+const afterMatchWrite = useAfterMatchWrite()
 const save = () =>
   run(
     'save',
@@ -196,10 +198,14 @@ const save = () =>
         if (!isRefusal(err)) throw err
         toast.error(displayError(err))
         return
+      } finally {
+        // useBusy reaches the lists; the match's own two copies are the ones it leaves, and a
+        // refusal still needs them, because the tee time lands before the lineup is turned down.
+        await afterMatchWrite(props.id, props.matchId)
       }
       toast.success('Match saved')
       // The row on the list carries the tee time and the pairing, which is the change in the
-      // context it was made for. A refusal returned above, because that half did not save.
+      // context it was made for.
       await router.push({ name: 'admin-tournament', params: { id: props.id } })
     },
     { error: "Couldn't save those changes. Please try again." },
