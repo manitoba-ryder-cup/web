@@ -277,7 +277,6 @@ describe('HoleEntryView saving', () => {
     })
   })
 
-  // The offer an unplayed hole opens with, taken as it stands.
   it('records par on a hole nobody has touched', async () => {
     const w = await openHole('15')
 

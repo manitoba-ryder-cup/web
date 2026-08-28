@@ -1,8 +1,7 @@
 import type { Hole, HoleStatus, MatchSide } from '@/api/types'
 import { playerNames, playerSurnames } from '@/lib/matchResult'
 
-// Strokes open on what was recorded, or on par where nothing was — null only where the tee set
-// is unknown. priorStrokes/priorPar are the round up to but not including this hole.
+// Strokes open on what was recorded, or on par where nothing was
 export interface HoleEntry {
   key: string
   teamId: string

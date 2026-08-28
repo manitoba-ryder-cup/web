@@ -36,8 +36,7 @@ function singlesHole(hole: number, bluePlayerStrokes: number, redPlayerStrokes: 
 const at = (holeNumber: number, perPlayer = true, holeStates: HoleStatus[] = []) => ({ perPlayer, holeNumber, holes, holeStates })
 
 describe('buildHoleEntries', () => {
-  // Most of a round is a tap or two off par, so that is where an unplayed hole opens. What
-  // told a recorded hole from an unrecorded one is the button's word, not an empty strip.
+  // Most of a round is a tap or two off par, so that is where an unplayed hole opens.
   it('starts an unscored hole on par', () => {
     const entries = buildHoleEntries([singlesBlue, singlesRed], at(7))
 
@@ -53,7 +52,6 @@ describe('buildHoleEntries', () => {
     expect(entries.map((e) => e.strokes)).toEqual([3, 3])
   })
 
-  // Nothing to seed from, so nothing is offered — Save stays off rather than sending a guess.
   it('leaves a hole with no tee set behind it unchosen', () => {
     const entries = buildHoleEntries([singlesBlue, singlesRed], { ...at(7), holes: [] })
 
