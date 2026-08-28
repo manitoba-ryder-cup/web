@@ -1,8 +1,7 @@
 import type { Hole, HoleStatus, MatchSide } from '@/api/types'
 import { playerNames, playerSurnames } from '@/lib/matchResult'
 
-// Null strokes are a hole nobody has recorded. priorStrokes/priorPar are the round up to but
-// not including it.
+// Strokes open on what was recorded, or on par where nothing was
 export interface HoleEntry {
   key: string
   teamId: string
@@ -58,7 +57,7 @@ export function buildHoleEntries(sides: MatchSide[], { perPlayer, holeNumber, ho
         teamId: side.team_id,
         playerId,
         name: player ? playerNames([player]) : playerSurnames(side.players),
-        strokes: scored ? strokesOn(scored, side.team_id, playerId) : null,
+        strokes: (scored ? strokesOn(scored, side.team_id, playerId) : null) ?? parOf.get(holeNumber) ?? null,
         ...prior(side.team_id, playerId),
       })
     }
