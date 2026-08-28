@@ -91,6 +91,81 @@ describe('auth store', () => {
     expect(authApi.refresh).toHaveBeenCalledTimes(2)
   })
 
+  // The retries cover the first fourteen seconds and then stop. Nothing else ever asks: reads
+  // are served anonymously, so no 401 is raised and the lazy refresh has nothing to fire on.
+  it('resumes a lookup that never got an answer', async () => {
+    vi.useFakeTimers()
+    const offline = new ApiError(408, 'The server took too long to answer.')
+    vi.mocked(authApi.refresh).mockRejectedValue(offline)
+    const auth = useAuthStore()
+    await auth.restore()
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(auth.isAuthenticated).toBe(false)
+
+    vi.mocked(authApi.refresh).mockResolvedValue(REFRESHED)
+    await auth.resume()
+
+    expect(auth.isAuthenticated).toBe(true)
+    expect(auth.user?.id).toBe('u1')
+  })
+
+  // A refusal is an answer. Asking again spends a request on a session that is over, once per
+  // tab focus for as long as the app is open.
+  it('does not resume a session the server refused', async () => {
+    vi.mocked(authApi.refresh).mockRejectedValue(new ApiError(401, 'Session expired'))
+    const auth = useAuthStore()
+    await auth.restore()
+    vi.mocked(authApi.refresh).mockClear()
+
+    await auth.resume()
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+    expect(auth.isAuthenticated).toBe(false)
+  })
+
+  it('does not resume after signing out', async () => {
+    const auth = useAuthStore()
+    await auth.login('dev@x.com', 'pw')
+    await auth.logout()
+    vi.mocked(authApi.refresh).mockClear()
+
+    await auth.resume()
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+  })
+
+  it('does not resume a session it already has', async () => {
+    const auth = useAuthStore()
+    await auth.restore()
+    expect(auth.isAuthenticated).toBe(true)
+    vi.mocked(authApi.refresh).mockClear()
+
+    await auth.resume()
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+  })
+
+  // Showing a tab fires the event repeatedly. The rotation joins on its own; what stacks
+  // without this is what sits on top of it — a user load each, and a retry loop each.
+  it('answers repeated resumes with one lookup', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValue(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    // Cleared first: the failed lookup and its three retries are already on the counter.
+    vi.mocked(authApi.refresh).mockClear()
+    let release: (v: LoginResponse) => void = () => {}
+    vi.mocked(authApi.refresh).mockReturnValue(new Promise<LoginResponse>((r) => (release = r)))
+    const both = Promise.all([auth.resume(), auth.resume()])
+    release(REFRESHED)
+    await both
+
+    expect(authApi.refresh).toHaveBeenCalledTimes(1)
+    expect(authApi.me).toHaveBeenCalledTimes(1)
+  })
+
   it('logout clears state', async () => {
     const auth = useAuthStore()
     await auth.login('dev@x.com', 'pw')

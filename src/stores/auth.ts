@@ -24,6 +24,10 @@ export const useAuthStore = defineStore('auth', () => {
   const hasScope = (scope: string) => scopes.value.includes(scope)
   // Not refs: nothing renders these, and callers join or compare rather than read.
   let rotating: Promise<void> | null = null
+  let resuming: Promise<void> | null = null
+  // A lookup that never got an answer, as against one that was refused. Only the first is worth
+  // asking again — and nothing else will, since anonymous reads never raise a 401 to ride on.
+  let unanswered = false
   // Signing in, signing out and being refused each decide the session on purpose and start a
   // new epoch. Work already in flight belongs to the one before it and must not write over it.
   let epoch = 0
@@ -32,6 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
     epoch += 1
     accessToken.value = null
     user.value = null
+    unanswered = false
   }
 
   async function login(email: string, password: string) {
@@ -42,6 +47,7 @@ export const useAuthStore = defineStore('auth', () => {
     epoch += 1
     accessToken.value = res.access_token
     user.value = loggedInUser
+    unanswered = false
   }
 
   async function rotate() {
@@ -77,12 +83,24 @@ export const useAuthStore = defineStore('auth', () => {
   async function restore() {
     try {
       await loadSession()
+      unanswered = false
     } catch (err) {
       if (sessionEnded(err)) return clear()
+      unanswered = true
       // Not awaited: the app mounts on the first attempt, and a session that arrives ten
       // seconds later still beats a login form.
       void retryRestore()
     }
+  }
+
+  // Asked again when the network may be back: the cookie outlives the access token by a day, so
+  // a phone that failed to ask should not sit signed out holding a session that never ended.
+  function resume(): Promise<void> {
+    if (!unanswered || accessToken.value) return Promise.resolve()
+    resuming ??= restore().finally(() => {
+      resuming = null
+    })
+    return resuming
   }
 
   async function retryRestore() {
@@ -93,7 +111,9 @@ export const useAuthStore = defineStore('auth', () => {
       // from before that is answering a question nobody is asking any more.
       if (epoch !== mine) return
       try {
-        return await loadSession()
+        await loadSession()
+        unanswered = false
+        return
       } catch (err) {
         if (sessionEnded(err)) return
       }
@@ -108,5 +128,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { accessToken, user, isAuthenticated, scopes, hasScope, login, refresh, restore, logout }
+  return { accessToken, user, isAuthenticated, scopes, hasScope, login, refresh, restore, resume, logout }
 })

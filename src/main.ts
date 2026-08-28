@@ -5,6 +5,7 @@ import './assets/main.css'
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
+import { onReachable } from './lib/reachable'
 import { reloadOnceForStaleChunk } from './lib/staleChunk'
 import { registerSW } from 'virtual:pwa-register'
 import { shouldRetry } from './api/timeout'
@@ -42,3 +43,5 @@ auth.restore().finally(() => {
   app.use(router)
   app.mount('#app')
 })
+// The retries above cover fourteen seconds; past that only a reload asked again.
+onReachable(() => void auth.resume())
