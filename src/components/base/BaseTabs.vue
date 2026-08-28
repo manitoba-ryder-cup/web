@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 // The active tab lives in the URL hash so a refresh or a shared link reopens it. One page
 // can own the hash, so syncHash: false is for a page already spending it elsewhere.
-const props = withDefaults(defineProps<{ tabs: string[]; syncHash?: boolean }>(), { syncHash: true })
+const props = withDefaults(defineProps<{ tabs: string[]; syncHash?: boolean; initial?: string }>(), { syncHash: true, initial: undefined })
 
 const route = useRoute()
 const router = useRouter()
@@ -16,13 +16,16 @@ const slugify = (t: string) =>
     .replace(/^-|-$/g, '')
 const slugs = computed(() => props.tabs.map(slugify))
 
-// The tab the current hash points at, or the first tab when the hash is absent/unknown.
-function indexFromHash(): number {
-  const i = slugs.value.indexOf(route.hash.replace(/^#/, ''))
-  return i >= 0 ? i : 0
+// The hash first, so a shared link opens what it points at. `initial` is where a page with no
+// hash would rather start than the first tab; an unknown one falls through to it as before.
+function initialIndex(): number {
+  const fromHash = slugs.value.indexOf(route.hash.replace(/^#/, ''))
+  if (fromHash >= 0) return fromHash
+  const fromInitial = props.initial ? props.tabs.indexOf(props.initial) : -1
+  return Math.max(fromInitial, 0)
 }
 
-const active = ref(props.syncHash ? indexFromHash() : 0)
+const active = ref(props.syncHash ? initialIndex() : 0)
 
 if (props.syncHash) {
   // replace, not push: a refresh restores the tab without piling up history entries.
@@ -32,8 +35,9 @@ if (props.syncHash) {
   })
 
   // Follow the hash the other way too (back/forward, or a pasted link once tabs are known).
+  // Not `initial`: it moves as the cup is played, and the tab must not change under a reader.
   watch([() => route.hash, slugs], () => {
-    const i = indexFromHash()
+    const i = initialIndex()
     if (i !== active.value) active.value = i
   })
 }

@@ -15,7 +15,7 @@ afterEach(() => {
   mounted.splice(0).forEach((w) => w.unmount())
 })
 
-async function mountTabs(props: { tabs: string[]; syncHash?: boolean }) {
+async function mountTabs(props: { tabs: string[]; syncHash?: boolean; initial?: string }) {
   const w = mount(BaseTabs, {
     props,
     slots: { default: '<template #default="{ tab, index }">{{ index }}:{{ tab }}</template>' },
@@ -86,6 +86,27 @@ describe('BaseTabs', () => {
     await click(w, 'Stats')
     expect(w.text()).toContain('1:Stats')
     expect(router.currentRoute.value.hash).toBe('')
+  })
+
+  it('opens on the tab a caller names when the hash names none', async () => {
+    const w = await mountTabs({ tabs: ['Fourball', 'Alt Shot', 'Singles'], initial: 'Singles' })
+
+    expect(w.text()).toContain('2:Singles')
+  })
+
+  // A shared link is somebody's choice; the caller's is only where to start without one.
+  it('lets the hash win over the tab a caller names', async () => {
+    await router.replace({ path: '/tournaments', hash: '#alt-shot' })
+
+    const w = await mountTabs({ tabs: ['Fourball', 'Alt Shot', 'Singles'], initial: 'Singles' })
+
+    expect(w.text()).toContain('1:Alt Shot')
+  })
+
+  it('falls back to the first tab when the named one is not there', async () => {
+    const w = await mountTabs({ tabs: ['Fourball', 'Singles'], initial: 'Foursomes' })
+
+    expect(w.text()).toContain('0:Fourball')
   })
 
   it('ignores a hash naming no tab it has', async () => {
