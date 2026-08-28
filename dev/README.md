@@ -19,25 +19,37 @@ github/
 ## Usage
 ```sh
 ./dev/generate-keys.sh   # once: dev RSA keypair (heimdall signs, scorecard validates)
-./dev/bootstrap.sh       # start the stack, create the dev user, write .env
+./dev/bootstrap.sh       # start the stack, create the two accounts, write .env
 ```
 
 Keys have to exist first, since heimdall mounts them at startup. `bootstrap.sh` is
 idempotent — re-running it on an already-provisioned stack just brings the services back
 up — and it does the rest in dependency order: postgres + heimdall, register the admin
-user, read the tenant heimdall minted for them, then scorecard.
+user, read the tenant heimdall minted for them, add the scorer to that tenant, then
+scorecard.
 
 Then:
 - heimdall  → http://localhost:8080
 - scorecard → http://localhost:5000
 - postgres  → localhost:5442 (user `superuser` / `superuser`)
-- dev login → `dev@manitobarydercup.com` / `DevPassword123!`
+- admin  → `dev@manitobarydercup.com` / `DevPassword123!`
+- scorer → `scorer@manitobarydercup.com` / `ScorerPassword123!`
 
 ```sh
 docker compose down           # stop (keeps data)
 docker compose down -v        # stop + wipe the database volume
 docker compose up -d --build  # rebuild the services from the sibling repos
 ```
+
+## The two accounts
+The admin holds every permission, which makes it the one account that cannot show what a
+scorer sees — and on the course nobody signs in as an administrator. Both are in the same
+tenant, so both see the same golf.
+
+Signed in as the scorer, entering scores works exactly as it does for the admin. What is
+missing is everything gated on `scorecard:tournaments:write`: no Admin item in the account
+menu, `/admin` redirects to the dashboard, and the scorecard has no Match actions menu, so
+no Reset Match. Use it for anything that pretends to be the day itself.
 
 ## The tenant, and .env
 `bootstrap.sh` writes `SCORECARD_PUBLIC_TENANT_ID` to `.env` (gitignored). Scorecard
@@ -75,6 +87,11 @@ docker compose exec -T scorecard ./scorecard seed-tournament --tenant-id "$TENAN
 - Registration is also what creates the tenant; heimdall has no tenant API. Bootstrap
   logs in and decodes `tenant_id` out of the access token, so the id is heimdall's own
   answer rather than an inference from its schema.
+- The scorer is not registered, because registering would mint a second tenant and an
+  account in the wrong one reads as a site with no golf in it. Bootstrap creates a
+  **Scorer** role holding `scorecard:scores:write` alone, then posts to heimdall's
+  `/v1/users` as the admin — which places the user in the caller's own tenant and returns
+  the verification token in the response, so there is no email and no log to read.
 
 Verify the whole chain:
 ```sh
