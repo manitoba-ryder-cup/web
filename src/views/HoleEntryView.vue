@@ -94,8 +94,8 @@ function rebuild() {
     holeStates: holeStates.value,
   })
 }
-// A scored hole opens on its scores. An unplayed one opens on nothing chosen, so a hole
-// only looked at cannot be saved as four pars by a reflex tap.
+// A scored hole opens on its scores, an unplayed one on par. Nothing chosen used to be what
+// told the two apart; the button says which it is now, so the strips can start somewhere useful.
 watch([() => props.hole, left, right, holeInfo], rebuild, { immediate: true })
 
 // All of them or none, because the hole is written whole: a strip nobody has touched has to

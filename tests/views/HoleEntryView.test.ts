@@ -277,34 +277,26 @@ describe('HoleEntryView saving', () => {
     })
   })
 
-  // Par used to be the seed, so a hole opened to look at and left by the Save button under
-  // the thumb went down as a par nobody made.
-  it('records nothing when Save is pressed on a hole nobody has touched', async () => {
+  // The offer an unplayed hole opens with, taken as it stands.
+  it('records par on a hole nobody has touched', async () => {
     const w = await openHole('15')
 
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
-    expect(submitScore).not.toHaveBeenCalled()
+    expect(submitScore).toHaveBeenCalledWith('m1', {
+      hole_number: 15,
+      scores: [
+        { team_id: 'blue', player_id: 'p1', strokes: 4 },
+        { team_id: 'red', player_id: 'p2', strokes: 4 },
+      ],
+    })
   })
 
-  it('offers no save until every player on the hole has a score', async () => {
+  it('offers a save the moment an unplayed hole opens', async () => {
     const w = await openHole('15')
-    expect(saveButton(w)!.attributes('disabled')).toBeDefined()
-
-    await pick(w)
 
     expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
-  })
-
-  // The hole is written whole, so half of it chosen is not most of the way there.
-  it('will not save a hole with one side chosen and the other not', async () => {
-    const w = await openHole('15')
-
-    await w.findAll('[role="radiogroup"]')[0].findAll('[data-stroke]')[3].trigger('click')
-    await flushPromises()
-
-    expect(saveButton(w)!.attributes('disabled')).toBeDefined()
   })
 
   // A recorded hole opens on its scores, so correcting one costs no taps it did not before.
