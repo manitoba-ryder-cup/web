@@ -30,6 +30,7 @@ vi.mock('@/api/scorecard', () => ({
           { team_id: 'red-1', players: [{ player_id: 'r1', first_name: 'Cara', last_name: 'Lee' }] },
         ],
         hole_results: ['red-1', null, 'blue-1'],
+        tee_time: '2026-09-19T15:00:00Z',
       },
     ]),
   },

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue'
@@ -45,7 +45,19 @@ const matches: MatchResult[] = [
 ]
 
 describe('MatchResultsSection', () => {
-  const mountIt = () => mount(MatchResultsSection, { props: { matches, teams, tournamentId: 't1' }, global: { plugins: [router] } })
+  const mountIt = (over: MatchResult[] = matches) =>
+    mount(MatchResultsSection, { props: { matches: over, teams, tournamentId: 't1' }, global: { plugins: [router] } })
+  const activeTab = (w: ReturnType<typeof mount>) =>
+    w
+      .findAll('button')
+      .find((b) => b.classes().includes('text-mrc-accent'))
+      ?.text()
+
+  // The router is shared, and switching tabs writes the hash — which the next mount would read
+  // as a choice somebody made, hiding what it opens on by default.
+  beforeEach(async () => {
+    await router.replace({ path: '/', hash: '' })
+  })
 
   it('makes a tab per format in first-appearance order', () => {
     expect(
@@ -61,16 +73,33 @@ describe('MatchResultsSection', () => {
     expect(t).toContain('Jones')
   })
 
-  it('shows the result and switches to the in-progress tab', async () => {
+  // What someone tapping Scores mid-round came for: the session with something left to play,
+  // not whichever format happened to tee off first.
+  it('opens on the session still being played', () => {
     const w = mountIt()
-    expect(w.text()).toContain('&') // m1 → "3 & 2"
-    expect(w.text()).toContain('UP') // m2 → "2 up"
-    const singles = w.findAll('button').find((b) => b.text() === 'Singles')!
-    await singles.trigger('click')
+
+    expect(activeTab(w)).toBe('Singles')
     // A live match reads as its running state ("3 UP"), never a placeholder word.
     expect(w.text()).toContain('3')
     expect(w.text()).toContain('UP')
     expect(w.text()).not.toContain('In progress')
+  })
+
+  it('opens on the first tab once every match is done', () => {
+    const w = mountIt(matches.map((m) => ({ ...m, finished: true, winner_team_id: m.winner_team_id ?? 't-red' })))
+
+    expect(activeTab(w)).toBe('Fourball')
+  })
+
+  it('shows a finished result on the tab it belongs to', async () => {
+    const w = mountIt()
+
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Fourball')!
+      .trigger('click')
+
+    expect(w.text()).toContain('&') // m1 → "3 & 2"
   })
 
   it("colours a live match's status in the leader's colour", async () => {
