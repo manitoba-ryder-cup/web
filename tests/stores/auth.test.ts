@@ -145,8 +145,77 @@ describe('auth store', () => {
     expect(authApi.refresh).not.toHaveBeenCalled()
   })
 
-  // Showing a tab fires the event repeatedly. The rotation joins on its own; what stacks
-  // without this is what sits on top of it — a user load each, and a retry loop each.
+  // A phone going in and out of a pocket fires one of these per wake, seconds apart — so the
+  // guard has to hold for as long as the retries do, not just while the first lookup is out.
+  it('answers wakes spread over time with one lookup', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValue(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    await vi.advanceTimersByTimeAsync(20_000)
+    vi.mocked(authApi.refresh).mockClear()
+
+    // Fired, not awaited: a wake does not block on the retries it arms.
+    void auth.resume()
+    await vi.advanceTimersByTimeAsync(2_000)
+    void auth.resume()
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    // The lookup and the three retries behind it. A second lookup means the first wake's
+    // guard was released while its retries were still running.
+    expect(authApi.refresh).toHaveBeenCalledTimes(4)
+  })
+
+  // Mount arms a chain of its own, so a wake during it must join that one rather than start
+  // a second: each chain is three more rotations of a single-use cookie.
+  it('does not add a second chain to the one mounting already armed', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValue(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+
+    await vi.advanceTimersByTimeAsync(2_000)
+    void auth.resume()
+    await vi.advanceTimersByTimeAsync(30_000)
+
+    // Mount's lookup and the wake's, plus one chain of three between them.
+    expect(authApi.refresh).toHaveBeenCalledTimes(5)
+  })
+
+  // The lookup was already in flight when the session ended, so its failure is about a session
+  // that no longer exists — arming a retry off it signs the user back in.
+  it('does not sign a user back in who signed out mid-lookup', async () => {
+    vi.useFakeTimers()
+    const auth = useAuthStore()
+    let reject: (e: unknown) => void = () => {}
+    vi.mocked(authApi.refresh).mockReturnValueOnce(new Promise((_r, rj) => (reject = rj)))
+    const inFlight = auth.restore()
+
+    await auth.logout()
+    reject(new ApiError(408, 'timeout'))
+    await inFlight
+    vi.mocked(authApi.refresh).mockClear()
+    // The network comes back; nothing may act on it.
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(auth.isAuthenticated).toBe(false)
+    expect(authApi.refresh).not.toHaveBeenCalled()
+  })
+
+  it('stops retrying once the session has arrived another way', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+
+    await auth.resume()
+    expect(auth.isAuthenticated).toBe(true)
+    vi.mocked(authApi.refresh).mockClear()
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+  })
+
   it('answers repeated resumes with one lookup', async () => {
     vi.useFakeTimers()
     vi.mocked(authApi.refresh).mockRejectedValue(new ApiError(408, 'timeout'))

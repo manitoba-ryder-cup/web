@@ -43,5 +43,5 @@ auth.restore().finally(() => {
   app.use(router)
   app.mount('#app')
 })
-// The retries above cover fourteen seconds; past that only a reload asked again.
+// Once the retries above stop, this is the only thing that asks again.
 onReachable(() => void auth.resume())

@@ -25,6 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
   // Not refs: nothing renders these, and callers join or compare rather than read.
   let rotating: Promise<void> | null = null
   let resuming: Promise<void> | null = null
+  let retrying: Promise<void> | null = null
   // A lookup that never got an answer, as against one that was refused. Only the first is worth
   // asking again — and nothing else will, since anonymous reads never raise a 401 to ride on.
   let unanswered = false
@@ -80,39 +81,57 @@ export const useAuthStore = defineStore('auth', () => {
     if (epoch === mine) user.value = loaded
   }
 
-  async function restore() {
+  // `wait` is who sits out the retries: not mount, which would hold the app behind a phone
+  // with no signal, but a resume, whose next event would otherwise ask all over again.
+  async function attempt(wait: boolean) {
+    const mine = epoch
     try {
       await loadSession()
-      unanswered = false
+      if (epoch === mine) unanswered = false
     } catch (err) {
+      // Someone signed in or out while this was in flight, so they own the session now and a
+      // failure about the one before it must not arm anything against theirs.
+      if (epoch !== mine) return
       if (sessionEnded(err)) return clear()
       unanswered = true
-      // Not awaited: the app mounts on the first attempt, and a session that arrives ten
-      // seconds later still beats a login form.
-      void retryRestore()
+      const chain = retryLater()
+      if (wait) await chain
     }
+  }
+
+  function restore(): Promise<void> {
+    return attempt(false)
   }
 
   // Asked again when the network may be back: the cookie outlives the access token by a day, so
   // a phone that failed to ask should not sit signed out holding a session that never ended.
   function resume(): Promise<void> {
     if (!unanswered || accessToken.value) return Promise.resolve()
-    resuming ??= restore().finally(() => {
+    resuming ??= attempt(true).finally(() => {
       resuming = null
     })
     return resuming
+  }
+
+  // One chain however many arm it. Each is three more rotations of a single-use cookie, and
+  // they are all asking the same question.
+  function retryLater(): Promise<void> {
+    retrying ??= retryRestore().finally(() => {
+      retrying = null
+    })
+    return retrying
   }
 
   async function retryRestore() {
     const mine = epoch
     for (const delay of RETRY_DELAYS) {
       await new Promise((resolve) => setTimeout(resolve, delay))
-      // Anyone who signed in or out while these were pending has the last word, and a retry
-      // from before that is answering a question nobody is asking any more.
-      if (epoch !== mine) return
+      // Anyone who signed in or out while these were pending has the last word, and a session
+      // that arrived by some other route leaves nothing left to ask.
+      if (epoch !== mine || !unanswered) return
       try {
         await loadSession()
-        unanswered = false
+        if (epoch === mine) unanswered = false
         return
       } catch (err) {
         if (sessionEnded(err)) return
