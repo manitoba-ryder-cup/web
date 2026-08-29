@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { QueryClient, VueQueryPlugin, useQuery, useQueryClient } from '@tanstack/vue-query'
@@ -6,8 +6,8 @@ import { useAfterWrite, useAfterHoleWrite } from '@/composables/useAfterWrite'
 import { q } from '@/api/queries'
 import type { MatchResult, ScoreSubmissionResult } from '@/api/types'
 
-// A client passed to the plugin here is not the one the component receives, so the cache has
-// to be reached through `useQueryClient` rather than held from outside.
+// `tests/setup.ts` installs the plugin with a client of its own in a beforeEach, and that
+// install wins — so the cache is reached through `useQueryClient` rather than held from outside.
 const mountWithSetup = <T>(setup: () => T) =>
   mount(defineComponent({ setup, template: '<div/>' }), { global: { plugins: [VueQueryPlugin] } })
 
@@ -110,6 +110,26 @@ describe('useAfterHoleWrite', () => {
     expect(rows[0]).toMatchObject({ finished: true, winner_team_id: 'blue', lead: 2, hole_results: ['blue', null, 'blue', 'blue'] })
     expect(rows[0].course_name).toBe('Clear Lake')
     expect('holes' in rows[0]).toBe(false)
+  })
+
+  // An API that has not shipped the new shape answers with the status alone, and writing the
+  // standing from that alone leaves a match reading further on than its own scorecard.
+  it('reads the match back when the answer carries no holes', async () => {
+    const { w, queryClient } = mountHook((c) => {
+      c.setQueryData(q.matchScores(matchId).key, [])
+      c.setQueryData(q.results(tournamentId).key, [row()])
+    })
+    const refetched = vi.spyOn(queryClient, 'refetchQueries')
+
+    const old = answer({ finished: true, lead: 5 }) as Partial<ScoreSubmissionResult>
+    delete old.holes
+    delete old.hole_results
+    await w.vm.afterHoleWrite(tournamentId, matchId, old as ScoreSubmissionResult)
+
+    expect(refetched).toHaveBeenCalled()
+    // Untouched, not half-moved: the standing must not carry a score the card does not.
+    const rows = queryClient.getQueryData<MatchResult[]>(q.results(tournamentId).key)!
+    expect(rows[0]).toMatchObject({ finished: false, lead: 0 })
   })
 
   // The page it returns to must not fetch what it was just handed, which means the write has

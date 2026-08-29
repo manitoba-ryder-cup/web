@@ -22,14 +22,15 @@ export function useAfterMatchWrite() {
   }
 }
 
-// A hole write answers with everything a score moves, so the two resources it lands in are
-// written from that answer rather than read back — the page it returns to needs no request.
+// A hole write answers with everything a score moves, so what it lands in is written from that
+// answer rather than read back — nothing stands between the tap and the card.
 export function useAfterHoleWrite() {
   const queryClient = useQueryClient()
-  return (tournamentId: string, matchId: string, written: ScoreSubmissionResult) => {
-    // Split where the response splits: the card's holes, and the rest, which is exactly the
-    // part of a match's result a score can move.
-    const { holes, ...row } = written
+  const afterMatchWrite = useAfterMatchWrite()
+  return async (tournamentId: string, matchId: string, { holes, ...row }: ScoreSubmissionResult) => {
+    // Both of them or neither. An answer without the holes would move the standing onto this
+    // score and leave the card behind it, which reads as the save that did not take.
+    if (!holes) return afterMatchWrite(tournamentId, matchId)
     queryClient.invalidateQueries({ refetchType: 'none' })
     queryClient.setQueryData(q.matchScores(matchId).key, holes)
     queryClient.setQueryData<MatchResult[]>(q.results(tournamentId).key, (rows) =>

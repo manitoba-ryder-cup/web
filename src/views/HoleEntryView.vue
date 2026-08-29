@@ -148,7 +148,7 @@ async function saveHole() {
       finishedByWrite.value = true
       toast.success(matchCompleteMessage(status, match.value?.sides ?? []))
     }
-    afterHoleWrite(props.tournamentId, props.matchId, status)
+    await afterHoleWrite(props.tournamentId, props.matchId, status)
     await goToScorecard(hole)
   } catch (err) {
     // The server answers 409 for a shut window and for a hole a decided match never reached, and
