@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createWebHistory, useRoute } from 'vue-router'
 import { defineComponent, h } from 'vue'
-import { ApiError, type HoleStatus, type MatchResult, type MatchStatus } from '@/api/types'
+import { ApiError, type HoleStatus, type MatchResult, type ScoreSubmissionResult } from '@/api/types'
 
 const teams = [
   { id: 'blue', color: 'Blue', captain: null, points: 0 },
@@ -60,8 +60,37 @@ const scoredFifteenth: HoleStatus = {
   holes_remaining: 3,
   decided: true,
 }
-const open: MatchStatus = { finished: false, winner_team_id: null, leader_team_id: 'blue', lead: 1, holes_remaining: 10 }
-const closedOut: MatchStatus = { finished: true, winner_team_id: 'blue', leader_team_id: 'blue', lead: 4, holes_remaining: 3 }
+// The write answers with the whole card, so a fixture for it carries the holes the API would
+// have recomputed — that is what the page keeps instead of reading them back.
+const written = (hole: number, strokes: [number, number]): HoleStatus => ({
+  hole_number: hole,
+  team_scores: [
+    { team_id: 'blue', strokes: strokes[0], player_scores: [{ player_id: 'p1', strokes: strokes[0] }] },
+    { team_id: 'red', strokes: strokes[1], player_scores: [{ player_id: 'p2', strokes: strokes[1] }] },
+  ],
+  leader_team_id: 'blue',
+  lead: 1,
+  holes_remaining: 10,
+  decided: false,
+})
+const open: ScoreSubmissionResult = {
+  finished: false,
+  winner_team_id: null,
+  leader_team_id: 'blue',
+  lead: 1,
+  holes_remaining: 10,
+  holes: [written(15, [3, 4])],
+  hole_results: ['blue'],
+}
+const closedOut: ScoreSubmissionResult = {
+  finished: true,
+  winner_team_id: 'blue',
+  leader_team_id: 'blue',
+  lead: 4,
+  holes_remaining: 3,
+  holes: [written(15, [3, 4])],
+  hole_results: ['blue'],
+}
 
 const toasts: string[] = []
 vi.mock('@/composables/useToast', () => ({
@@ -71,10 +100,11 @@ vi.mock('@/composables/useToast', () => ({
 const submitScore = vi.fn()
 let holeStates: HoleStatus[] = []
 const getMatchScores = vi.fn(() => Promise.resolve(holeStates))
+const getTournamentResults = vi.fn(() => Promise.resolve([match]))
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     getTournamentTeams: vi.fn(() => Promise.resolve(teams)),
-    getTournamentResults: vi.fn(() => Promise.resolve([match])),
+    getTournamentResults: () => getTournamentResults(),
     getMatchHoles: vi.fn(() => Promise.resolve(holes)),
     getMatchScores: () => getMatchScores(),
     submitHoleScores: (...args: unknown[]) => submitScore(...args),
@@ -126,6 +156,7 @@ describe('HoleEntryView saving', () => {
     Object.assign(match, withWindow(match, teeingOffNow))
     submitScore.mockReset()
     getMatchScores.mockClear()
+    getTournamentResults.mockClear()
     holeStates = []
     toasts.length = 0
     Object.assign(match, { finished: false, leader_team_id: null, lead: 0, ...singles })
@@ -329,9 +360,9 @@ describe('HoleEntryView saving', () => {
     expect(w.text()).not.toContain('Save failed')
   })
 
-  it('refetches the match after a save, so what was written is what gets read', async () => {
-    // The page loads once. Without a refetch the scores just written are invisible to it:
-    // revisiting the hole reads as unrecorded, and the card behind it says the same.
+  it('keeps the card the write answered with rather than reading it back', async () => {
+    // The write returns every hole of the match, so the page it lands on has what it needs
+    // already. Reading it back would put a round trip between the tap and the card.
     submitScore.mockResolvedValue(open)
     const w = await openHole('15')
     expect(getMatchScores).toHaveBeenCalledTimes(1)
@@ -340,7 +371,8 @@ describe('HoleEntryView saving', () => {
     await saveButton(w)!.trigger('click')
     await flushPromises()
 
-    expect(getMatchScores).toHaveBeenCalledTimes(2)
+    expect(getMatchScores).toHaveBeenCalledTimes(1)
+    expect(getTournamentResults).toHaveBeenCalledTimes(1)
   })
 
   it('goes to the scorecard when the hole closes the match out', async () => {
@@ -543,7 +575,7 @@ describe('HoleEntryView stepping between holes', () => {
     match.scoring_opens_at = new Date(new Date(teeingOffNow).getTime() - 2 * 3600000).toISOString()
   })
 
-  // Not `open`: that is the module-level MatchStatus fixture this block's saves resolve with.
+  // Not `open`: that is the module-level fixture this block's saves resolve with.
   async function openAt(hole: string) {
     router.push(`/t/t1/m/m1/h/${hole}`)
     await router.isReady()
@@ -602,8 +634,8 @@ describe('HoleEntryView stepping between holes', () => {
   // Stepping while a write is in flight left the save reporting one hole and the card
   // scrolling to another, and threw the reader off the hole they had just stepped to.
   it('holds the step while a save is in flight', async () => {
-    let land: (v: MatchStatus) => void = () => {}
-    submitScore.mockReturnValue(new Promise<MatchStatus>((r) => (land = r)))
+    let land: (v: ScoreSubmissionResult) => void = () => {}
+    submitScore.mockReturnValue(new Promise<ScoreSubmissionResult>((r) => (land = r)))
     const w = await openAt('15')
     await pick(w)
 
@@ -628,8 +660,8 @@ describe('HoleEntryView stepping between holes', () => {
   // The chevrons are held during a save, but the back button is not: the write still belongs
   // to the hole it was pressed on, and the card must be sent to that one.
   it('writes the hole it was pressed on when the route moves under it', async () => {
-    let land: (v: MatchStatus) => void = () => {}
-    submitScore.mockReturnValue(new Promise<MatchStatus>((r) => (land = r)))
+    let land: (v: ScoreSubmissionResult) => void = () => {}
+    submitScore.mockReturnValue(new Promise<ScoreSubmissionResult>((r) => (land = r)))
     const w = await openAt('15')
     await pick(w)
 
