@@ -14,6 +14,15 @@ function sessionEnded(err: unknown): boolean {
 // is often none. The cookie outlives the access token by a day, so there is time to wait.
 const RETRY_DELAYS = [1_000, 3_000, 10_000]
 
+// Everyone who asks while the work is in flight joins that run; the next asker starts a fresh one.
+function singleFlight(work: () => Promise<void>): () => Promise<void> {
+  let inFlight: Promise<void> | null = null
+  return () =>
+    (inFlight ??= work().finally(() => {
+      inFlight = null
+    }))
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
   const user = ref<User | null>(null)
@@ -22,10 +31,6 @@ export const useAuthStore = defineStore('auth', () => {
   // access narrows what they are offered on the next request rather than at next login.
   const scopes = computed(() => scopesFrom(accessToken.value))
   const hasScope = (scope: string) => scopes.value.includes(scope)
-  // Not refs: nothing renders these, and callers join or compare rather than read.
-  let rotating: Promise<void> | null = null
-  let resuming: Promise<void> | null = null
-  let retrying: Promise<void> | null = null
   // A lookup that never got an answer, as against one that was refused. Only the first is worth
   // asking again — and nothing else will, since anonymous reads never raise a 401 to ride on.
   let unanswered = false
@@ -64,14 +69,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Every caller joins one rotation: the cookie is single-use, and a spent value presented
-  // again reads as theft outside the brief grace heimdall allows the client it was issued to.
-  function refresh(): Promise<void> {
-    rotating ??= rotate().finally(() => {
-      rotating = null
-    })
-    return rotating
-  }
+  // The cookie is single-use, and a spent value presented again reads as theft outside the
+  // brief grace heimdall allows the client it was issued to.
+  const refresh = singleFlight(rotate)
 
   async function loadSession() {
     const mine = epoch
@@ -103,23 +103,14 @@ export const useAuthStore = defineStore('auth', () => {
     return attempt(false)
   }
 
+  // Held for the life of the retries, so the wakes behind this one ask nothing.
+  const resumeOnce = singleFlight(() => attempt(true))
+
   // Asked again when the network may be back: the cookie outlives the access token by a day, so
   // a phone that failed to ask should not sit signed out holding a session that never ended.
   function resume(): Promise<void> {
-    if (!unanswered || accessToken.value) return Promise.resolve()
-    resuming ??= attempt(true).finally(() => {
-      resuming = null
-    })
-    return resuming
-  }
-
-  // One chain however many arm it. Each is three more rotations of a single-use cookie, and
-  // they are all asking the same question.
-  function retryLater(): Promise<void> {
-    retrying ??= retryRestore().finally(() => {
-      retrying = null
-    })
-    return retrying
+    if (!unanswered) return Promise.resolve()
+    return resumeOnce()
   }
 
   async function retryRestore() {
@@ -137,6 +128,9 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
   }
+  // One chain however many arm it: each is three more rotations of a single-use cookie, and
+  // they are all asking the same question.
+  const retryLater = singleFlight(retryRestore)
 
   async function logout() {
     try {

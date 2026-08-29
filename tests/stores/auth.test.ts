@@ -134,6 +134,24 @@ describe('auth store', () => {
     expect(authApi.refresh).not.toHaveBeenCalled()
   })
 
+  // The token came back and the user did not, so there is a session but nothing to show for
+  // it. A token on its own is not an answer, which is why the flag is what the wake reads.
+  it('resumes a session whose user never loaded', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.me).mockRejectedValue(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(auth.accessToken).not.toBeNull()
+    expect(auth.user).toBeNull()
+
+    vi.mocked(authApi.me).mockResolvedValue(ME)
+    void auth.resume()
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(auth.user).not.toBeNull()
+  })
+
   it('does not resume a session it already has', async () => {
     const auth = useAuthStore()
     await auth.restore()
