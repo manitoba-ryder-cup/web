@@ -91,6 +91,168 @@ describe('auth store', () => {
     expect(authApi.refresh).toHaveBeenCalledTimes(2)
   })
 
+  // The retries cover the first fourteen seconds and then stop. Nothing else ever asks: reads
+  // are served anonymously, so no 401 is raised and the lazy refresh has nothing to fire on.
+  it('resumes a lookup that never got an answer', async () => {
+    vi.useFakeTimers()
+    const offline = new ApiError(408, 'The server took too long to answer.')
+    vi.mocked(authApi.refresh).mockRejectedValue(offline)
+    const auth = useAuthStore()
+    await auth.restore()
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(auth.isAuthenticated).toBe(false)
+
+    vi.mocked(authApi.refresh).mockResolvedValue(REFRESHED)
+    await auth.resume()
+
+    expect(auth.isAuthenticated).toBe(true)
+    expect(auth.user?.id).toBe('u1')
+  })
+
+  // A refusal is an answer. Asking again spends a request on a session that is over, once per
+  // tab focus for as long as the app is open.
+  it('does not resume a session the server refused', async () => {
+    vi.mocked(authApi.refresh).mockRejectedValue(new ApiError(401, 'Session expired'))
+    const auth = useAuthStore()
+    await auth.restore()
+    vi.mocked(authApi.refresh).mockClear()
+
+    await auth.resume()
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+    expect(auth.isAuthenticated).toBe(false)
+  })
+
+  it('does not resume after signing out', async () => {
+    const auth = useAuthStore()
+    await auth.login('dev@x.com', 'pw')
+    await auth.logout()
+    vi.mocked(authApi.refresh).mockClear()
+
+    await auth.resume()
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+  })
+
+  // The token came back and the user did not, so there is a session but nothing to show for
+  // it. A token on its own is not an answer, which is why the flag is what the wake reads.
+  it('resumes a session whose user never loaded', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.me).mockRejectedValue(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(auth.accessToken).not.toBeNull()
+    expect(auth.user).toBeNull()
+
+    vi.mocked(authApi.me).mockResolvedValue(ME)
+    void auth.resume()
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(auth.user).not.toBeNull()
+  })
+
+  it('does not resume a session it already has', async () => {
+    const auth = useAuthStore()
+    await auth.restore()
+    expect(auth.isAuthenticated).toBe(true)
+    vi.mocked(authApi.refresh).mockClear()
+
+    await auth.resume()
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+  })
+
+  // A phone going in and out of a pocket fires one of these per wake, seconds apart — so the
+  // guard has to hold for as long as the retries do, not just while the first lookup is out.
+  it('answers wakes spread over time with one lookup', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValue(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    await vi.advanceTimersByTimeAsync(20_000)
+    vi.mocked(authApi.refresh).mockClear()
+
+    // Fired, not awaited: a wake does not block on the retries it arms.
+    void auth.resume()
+    await vi.advanceTimersByTimeAsync(2_000)
+    void auth.resume()
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    // The lookup and the three retries behind it. A second lookup means the first wake's
+    // guard was released while its retries were still running.
+    expect(authApi.refresh).toHaveBeenCalledTimes(4)
+  })
+
+  // Mount arms a chain of its own, so a wake during it must join that one rather than start
+  // a second: each chain is three more rotations of a single-use cookie.
+  it('does not add a second chain to the one mounting already armed', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValue(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+
+    await vi.advanceTimersByTimeAsync(2_000)
+    void auth.resume()
+    await vi.advanceTimersByTimeAsync(30_000)
+
+    // Mount's lookup and the wake's, plus one chain of three between them.
+    expect(authApi.refresh).toHaveBeenCalledTimes(5)
+  })
+
+  // The lookup was already in flight when the session ended, so its failure is about a session
+  // that no longer exists — arming a retry off it signs the user back in.
+  it('does not sign a user back in who signed out mid-lookup', async () => {
+    vi.useFakeTimers()
+    const auth = useAuthStore()
+    let reject: (e: unknown) => void = () => {}
+    vi.mocked(authApi.refresh).mockReturnValueOnce(new Promise((_r, rj) => (reject = rj)))
+    const inFlight = auth.restore()
+
+    await auth.logout()
+    reject(new ApiError(408, 'timeout'))
+    await inFlight
+    vi.mocked(authApi.refresh).mockClear()
+    // The network comes back; nothing may act on it.
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(auth.isAuthenticated).toBe(false)
+    expect(authApi.refresh).not.toHaveBeenCalled()
+  })
+
+  it('stops retrying once the session has arrived another way', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValueOnce(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+
+    await auth.resume()
+    expect(auth.isAuthenticated).toBe(true)
+    vi.mocked(authApi.refresh).mockClear()
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(authApi.refresh).not.toHaveBeenCalled()
+  })
+
+  it('answers repeated resumes with one lookup', async () => {
+    vi.useFakeTimers()
+    vi.mocked(authApi.refresh).mockRejectedValue(new ApiError(408, 'timeout'))
+    const auth = useAuthStore()
+    await auth.restore()
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    // Cleared first: the failed lookup and its three retries are already on the counter.
+    vi.mocked(authApi.refresh).mockClear()
+    let release: (v: LoginResponse) => void = () => {}
+    vi.mocked(authApi.refresh).mockReturnValue(new Promise<LoginResponse>((r) => (release = r)))
+    const both = Promise.all([auth.resume(), auth.resume()])
+    release(REFRESHED)
+    await both
+
+    expect(authApi.refresh).toHaveBeenCalledTimes(1)
+    expect(authApi.me).toHaveBeenCalledTimes(1)
+  })
+
   it('logout clears state', async () => {
     const auth = useAuthStore()
     await auth.login('dev@x.com', 'pw')
