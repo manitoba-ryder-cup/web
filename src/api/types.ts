@@ -200,8 +200,8 @@ export interface MatchSide {
   team_id: string
   players: MatchPlayer[]
 }
-// One shape, returned by the status read and by submitScore too, so a client learns what a
-// score did without re-deriving the close-out rule.
+// One shape, returned by the status read and carried by a score write's answer, so a client
+// learns what a score did without re-deriving the close-out rule.
 export interface MatchStatus {
   finished: boolean
   winner_team_id: string | null // the leader once finished, null while live or halved
@@ -210,6 +210,12 @@ export interface MatchStatus {
   leader_team_id: string | null
   lead: number
   holes_remaining: number
+}
+// What a score write answers with: the status above, the scorecard's holes, and the per-hole
+// outcome a match result carries — every part of a match that a score can move.
+export interface ScoreSubmissionResult extends MatchStatus {
+  holes: HoleStatus[]
+  hole_results: (string | null)[]
 }
 export interface MatchResult extends MatchStatus {
   match_id: string
