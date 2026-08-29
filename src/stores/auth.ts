@@ -81,38 +81,6 @@ export const useAuthStore = defineStore('auth', () => {
     if (epoch === mine) user.value = loaded
   }
 
-  // `wait` is who sits out the retries: not mount, which would hold the app behind a phone
-  // with no signal, but a resume, whose next event would otherwise ask all over again.
-  async function attempt(wait: boolean) {
-    const mine = epoch
-    try {
-      await loadSession()
-      unanswered = false
-    } catch (err) {
-      // Someone signed in or out while this was in flight, so they own the session now and a
-      // failure about the one before it must not arm anything against theirs.
-      if (epoch !== mine) return
-      if (sessionEnded(err)) return clear()
-      unanswered = true
-      const chain = retryLater()
-      if (wait) await chain
-    }
-  }
-
-  function restore(): Promise<void> {
-    return attempt(false)
-  }
-
-  // Held for the life of the retries, so the wakes behind this one ask nothing.
-  const resumeOnce = singleFlight(() => attempt(true))
-
-  // Asked again when the network may be back: the cookie outlives the access token by a day, so
-  // a phone that failed to ask should not sit signed out holding a session that never ended.
-  function resume(): Promise<void> {
-    if (!unanswered) return Promise.resolve()
-    return resumeOnce()
-  }
-
   async function retryRestore() {
     for (const delay of RETRY_DELAYS) {
       await new Promise((resolve) => setTimeout(resolve, delay))
@@ -128,9 +96,35 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
   }
+
   // One chain however many arm it: each is three more rotations of a single-use cookie, and
   // they are all asking the same question.
   const retryLater = singleFlight(retryRestore)
+
+  async function restore() {
+    const mine = epoch
+    try {
+      await loadSession()
+      unanswered = false
+    } catch (err) {
+      // Someone signed in or out while this was in flight, so they own the session now and a
+      // failure about the one before it must not arm anything against theirs.
+      if (epoch !== mine) return
+      if (sessionEnded(err)) return clear()
+      unanswered = true
+      // Not awaited: the app mounts on the first answer rather than sitting out the retries.
+      void retryLater()
+    }
+  }
+
+  // Asked again when the network may be back: the cookie outlives the access token by a day, so
+  // a phone that failed to ask should not sit signed out holding a session that never ended.
+  const resume = singleFlight(async () => {
+    if (!unanswered) return
+    await restore()
+    // A wake is not done until the retries it caused are, or the next one starts them again.
+    if (unanswered) await retryLater()
+  })
 
   async function logout() {
     try {
