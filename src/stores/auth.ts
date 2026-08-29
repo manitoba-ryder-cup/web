@@ -87,7 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
     const mine = epoch
     try {
       await loadSession()
-      if (epoch === mine) unanswered = false
+      unanswered = false
     } catch (err) {
       // Someone signed in or out while this was in flight, so they own the session now and a
       // failure about the one before it must not arm anything against theirs.
@@ -123,15 +123,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function retryRestore() {
-    const mine = epoch
     for (const delay of RETRY_DELAYS) {
       await new Promise((resolve) => setTimeout(resolve, delay))
-      // Anyone who signed in or out while these were pending has the last word, and a session
-      // that arrived by some other route leaves nothing left to ask.
-      if (epoch !== mine || !unanswered) return
+      // Signing in, signing out and a session arriving by some other route all disarm this, and
+      // each one leaves nothing left to ask.
+      if (!unanswered) return
       try {
         await loadSession()
-        if (epoch === mine) unanswered = false
+        unanswered = false
         return
       } catch (err) {
         if (sessionEnded(err)) return
