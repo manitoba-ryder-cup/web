@@ -77,25 +77,20 @@ const panels = computed(() => {
   const spent = playersSpent(matches.value, props.matchId, m.format_name, lineup.value)
   return teams.value.map((team) => ({
     team,
-    assigned: lineup.value.filter((p) => p.team_id === team.id).map((p) => ({ player_id: p.player_id, ...nameOf(p.player_id) })),
+    assigned: lineup.value.filter((p) => p.team_id === team.id).map((p) => ({ player_id: p.player_id, ...onRoster(p.player_id) })),
     available: availableForTeam(roster.value, team.id, spent),
     colors: teamColor(team.color),
   }))
 })
 
-// The draft holds ids; the roster is where the names are.
-function nameOf(playerId: string): { first_name: string; last_name: string } {
+// The draft holds ids; the roster is where the name and the flight are. Both come off one
+// lookup, so a pill cannot show a name from one entry and a swatch from another.
+function onRoster(playerId: string): { first_name: string; last_name: string; tier: string } {
   const p = roster.value.find((r) => r.player_id === playerId)
-  return { first_name: p?.first_name ?? '', last_name: p?.last_name ?? '' }
+  return { first_name: p?.first_name ?? '', last_name: p?.last_name ?? '', tier: p?.tier ?? '' }
 }
 
 const { isBusy, run } = useBusy()
-
-// Assigned players come from the match sides (no tier); look their flight up on the roster
-// so the swatch shows on both assigned and available pills — handy for keeping a pairing even.
-function tierOf(playerId: string): string {
-  return roster.value.find((p) => p.player_id === playerId)?.tier ?? ''
-}
 
 // Teams read by their captain ("Team Bale"); fall back to the colour until one is named.
 function teamLabel(team: { color: string; captain: { last_name: string } | null }) {
@@ -133,7 +128,7 @@ watch(
   (m) => {
     if (!m || courseId.value === m.course_id) return
     courseId.value = m.course_id
-    void loadTees(m.course_id, m.tee_color_id)
+    loadTees(m.course_id, m.tee_color_id)
   },
   { immediate: true },
 )
@@ -263,7 +258,7 @@ const save = () =>
                 >
                   <div class="flex min-w-0 items-center gap-1.5">
                     <span class="truncate">{{ p.first_name }} {{ p.last_name }}</span>
-                    <TierDot :tier="tierOf(p.player_id)" />
+                    <TierDot :tier="p.tier" />
                   </div>
                   <!-- The × is 16px of glyph; the negative margins buy it a 44px target without
                      making the row taller than the tap it has to accept. -->

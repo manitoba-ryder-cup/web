@@ -141,6 +141,17 @@ describe('StrokePicker', () => {
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([3])
   })
 
+  // A strip that runs to twenty is a long way to arrow through when the score is a 9 or a 2.
+  it('jumps to either end of the strip', async () => {
+    const w = mount(StrokePicker, { props: base })
+
+    await w.get('[role="radiogroup"]').trigger('keydown', { key: 'End' })
+    expect(w.emitted('update:modelValue')?.at(-1)).toEqual([20])
+
+    await w.get('[role="radiogroup"]').trigger('keydown', { key: 'Home' })
+    expect(w.emitted('update:modelValue')?.at(-1)).toEqual([1])
+  })
+
   it('stops at the ends rather than wrapping', async () => {
     const w = mount(StrokePicker, { props: { ...base, modelValue: 1 } })
 

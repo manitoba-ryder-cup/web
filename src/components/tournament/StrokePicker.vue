@@ -26,7 +26,14 @@ const props = withDefaults(
 const emit = defineEmits<{ 'update:modelValue': [strokes: number] }>()
 
 const MAX = 20
-const KEYS = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End']
+const STEP: Record<string, (from: number) => number> = {
+  ArrowRight: (from) => Math.min(MAX, from + 1),
+  ArrowDown: (from) => Math.min(MAX, from + 1),
+  ArrowLeft: (from) => Math.max(1, from - 1),
+  ArrowUp: (from) => Math.max(1, from - 1),
+  Home: () => 1,
+  End: () => MAX,
+}
 const strokes = Array.from({ length: MAX }, (_, i) => i + 1)
 const track = ref<HTMLElement | null>(null)
 
@@ -81,19 +88,11 @@ function select(s: number) {
 // One tab stop per player, arrows to move. Reaching a tile is a tap, a deliberate key, or
 // scrolling to it — never Tab passing through on its way to Save.
 function onKeydown(e: KeyboardEvent) {
-  if (props.readonly || !KEYS.includes(e.key)) return
+  const step = STEP[e.key]
+  if (props.readonly || !step) return
   e.preventDefault()
   // With nothing chosen the first key takes par, so reaching it is not a step past and back.
-  const to =
-    props.modelValue === null
-      ? props.par
-      : e.key === 'ArrowRight' || e.key === 'ArrowDown'
-        ? Math.min(MAX, props.modelValue + 1)
-        : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
-          ? Math.max(1, props.modelValue - 1)
-          : e.key === 'Home'
-            ? 1
-            : MAX
+  const to = props.modelValue === null ? props.par : step(props.modelValue)
   select(to)
   // preventScroll so the browser's own nudge doesn't fight reveal's.
   nextTick(() => tileAt(to)?.focus({ preventScroll: true }))
