@@ -18,6 +18,7 @@ import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import TierDot from '@/components/base/TierDot.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
+import RetryNotice from '@/components/base/RetryNotice.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import SkeletonGrid from '@/components/skeleton/SkeletonGrid.vue'
@@ -114,7 +115,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
 // Which tees a match is played from decides the par and stroke index its scores are read
 // against, so it belongs to the match rather than the round.
 const courseId = ref('')
-const { tees: courseTees, failed: teesFailed, selected: teeColorId, load: loadTees, retry: retryTees } = useCourseTees()
+const { tees: courseTees, error: teesError, failed: teesFailed, selected: teeColorId, load: loadTees, retry: retryTees } = useCourseTees()
 
 watch(
   record,
@@ -221,16 +222,7 @@ const save = () =>
               <select id="tee" v-model="teeColorId" :class="fieldClass" :disabled="!courseTees.length">
                 <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
               </select>
-              <template v-if="teesFailed">
-                <p class="mt-1 text-sm text-mrc-charcoal">Couldn't load this course's tees.</p>
-                <button
-                  type="button"
-                  class="mt-2 w-full rounded-md bg-mrc-accent py-3 font-semibold text-white transition hover:bg-mrc-accent-dark"
-                  @click="retryTees"
-                >
-                  Try again
-                </button>
-              </template>
+              <RetryNotice v-if="teesFailed" class="mt-2" :message="teesError" :retry="retryTees" />
             </div>
             <div class="min-w-0 flex-1">
               <BaseLabel for="tee-time">Tee time</BaseLabel>

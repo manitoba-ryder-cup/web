@@ -247,12 +247,12 @@ describe('AdminTournamentView', () => {
       .trigger('click')
     await flushPromises()
 
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
     const course = w.findAll('select').find((sel) => sel.findAll('option').some((o) => o.text() === 'Banff Springs'))!
     await course.setValue('c2')
     await flushPromises()
 
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
     expect(w.text()).not.toContain('no tee sets set up')
     expect(w.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
   })

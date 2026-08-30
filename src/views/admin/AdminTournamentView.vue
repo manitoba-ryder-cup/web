@@ -15,6 +15,7 @@ import { playerSurnames } from '@/lib/matchResult'
 import { CUP_TIME_ZONE, formatTeeTime, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import FullBleed from '@/components/layout/FullBleed.vue'
+import RetryNotice from '@/components/base/RetryNotice.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import SkeletonTabs from '@/components/skeleton/SkeletonTabs.vue'
@@ -70,6 +71,7 @@ const creating = ref(false)
 const formError = ref('')
 const {
   tees: courseTees,
+  error: teesError,
   failed: teesFailed,
   loading: teesLoading,
   selected: teeColorId,
@@ -246,16 +248,7 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
                   <select v-model="teeColorId" :class="fieldClass" :disabled="!courseTees.length">
                     <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
                   </select>
-                  <template v-if="teesFailed">
-                    <p class="mt-1 text-sm text-mrc-charcoal">Couldn't load this course's tees.</p>
-                    <button
-                      type="button"
-                      class="mt-2 w-full rounded-md bg-mrc-accent py-2 font-semibold text-white transition hover:bg-mrc-accent-dark"
-                      @click="retryTees"
-                    >
-                      Try again
-                    </button>
-                  </template>
+                  <RetryNotice v-if="teesFailed" class="mt-2" :message="teesError" :retry="retryTees" />
                   <p v-else-if="form.courseId && !teesLoading && !courseTees.length" class="mt-1 text-sm text-mrc-muted">
                     This course has no tee sets set up.
                   </p>

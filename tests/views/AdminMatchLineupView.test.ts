@@ -464,10 +464,10 @@ describe('AdminMatchLineupView', () => {
   // The one place on this page with something to re-run and, until now, nothing offered: an
   // empty Tees select reads exactly like a course that has no tee sets.
   it('offers a retry when the tees cannot be loaded', async () => {
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
     const w = await mounted()
 
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
     expect(w.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
   })
 
@@ -497,11 +497,11 @@ describe('AdminMatchLineupView', () => {
     const w = await mounted()
     await w.find('#tee-time').setValue('2026-07-01T09:30')
 
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
     await w.find('#course').setValue('c2')
     await flushPromises()
 
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
     const save = w.findAll('button').find((b) => b.text() === 'Save')
     expect(save?.attributes('disabled')).toBeDefined()
     expect(scorecardApi.updateMatch).not.toHaveBeenCalled()
@@ -513,11 +513,11 @@ describe('AdminMatchLineupView', () => {
     const w = await mounted()
     expect((w.find('#tee').element as HTMLSelectElement).value).toBe('gold')
 
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
     await w.find('#course').setValue('c2')
     await flushPromises()
 
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
     // Nothing to save: a course with no tee is not a tee set the API would take.
     const save = w.findAll('button').find((b) => b.text() === 'Save')
     expect(save?.attributes('disabled')).toBeDefined()
@@ -553,9 +553,9 @@ describe('AdminMatchLineupView', () => {
   // A retry re-issues the request that failed. Bare, it falls through to the first tee in the
   // list — which after a failed initial load arms a tee set change on the match's own course.
   it('retries the tee load without arming a change nobody made', async () => {
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValueOnce(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValueOnce(new Error('The tee sheet is unavailable.'))
     const w = await mounted()
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
 
     await w
       .findAll('button')
