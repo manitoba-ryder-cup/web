@@ -11,7 +11,7 @@ import { useCourseTees } from '@/composables/useCourseTees'
 import { toast } from '@/composables/useToast'
 import { displayError } from '@/lib/displayError'
 import { isRefusal } from '@/lib/apiError'
-import { availableForTeam, playersSpent } from '@/lib/lineup'
+import { availableForTeam, lineupFull, lineupKey, playersSpent, storedLineup } from '@/lib/lineup'
 import { sideSize } from '@/lib/matchResult'
 import { CUP_TIME_ZONE, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
@@ -49,24 +49,17 @@ const slots = computed(() => sideSize(match.value?.players_per_side))
 
 // The lineup is edited here and written whole, so this holds it until Save. A watcher, not an
 // initial value: the match arrives after mount and this has to re-settle after each save.
-const storedLineup = computed<LineupPlayer[]>(() =>
-  (match.value?.sides ?? []).flatMap((side) => side.players.map((p) => ({ player_id: p.player_id, team_id: side.team_id }))),
-)
-const asKey = (entries: LineupPlayer[]) =>
-  entries
-    .map((p) => `${p.team_id}:${p.player_id}`)
-    .sort()
-    .join('|')
+const stored = computed(() => storedLineup(match.value))
 
 // Keyed, because storedLineup builds a new array every evaluation: watching it directly would
 // re-seed the draft on any refetch, including the one after a save this page refused.
 const lineup = ref<LineupPlayer[]>([])
 watch(
-  () => asKey(storedLineup.value),
-  () => (lineup.value = storedLineup.value.map((p) => ({ ...p }))),
+  () => lineupKey(stored.value),
+  () => (lineup.value = stored.value.map((p) => ({ ...p }))),
   { immediate: true },
 )
-const lineupChanged = computed(() => asKey(lineup.value) !== asKey(storedLineup.value))
+const lineupChanged = computed(() => lineupKey(lineup.value) !== lineupKey(stored.value))
 
 const addToLineup = (playerId: string, teamId: string) => lineup.value.push({ player_id: playerId, team_id: teamId })
 const removeFromLineup = (playerId: string) => (lineup.value = lineup.value.filter((p) => p.player_id !== playerId))
@@ -144,7 +137,13 @@ const teeSetChanged = computed(
 
 // Every side holding exactly what the format takes, which is what the API will accept. The
 // page can see this, so it says so rather than spending a request to be told.
-const lineupComplete = computed(() => panels.value.length > 0 && panels.value.every((p) => p.assigned.length === slots.value))
+const lineupComplete = computed(() =>
+  lineupFull(
+    lineup.value,
+    teams.value.map((t) => t.id),
+    slots.value,
+  ),
+)
 
 const changed = computed(() => teeSetChanged.value || teeTimeChanged.value || lineupChanged.value)
 // A course picked with no tee to go with it — still loading, or the load failed. Saving here

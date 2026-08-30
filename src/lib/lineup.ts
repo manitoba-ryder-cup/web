@@ -18,3 +18,23 @@ export function availableForTeam(roster: TournamentPlayer[], teamId: string, spe
     .filter((p) => p.team_id === teamId && !spent.has(p.player_id))
     .sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name))
 }
+
+// The lineup a match already holds, flattened out of its sides.
+export function storedLineup(match: MatchResult | null): LineupPlayer[] {
+  return (match?.sides ?? []).flatMap((side) => side.players.map((p) => ({ player_id: p.player_id, team_id: side.team_id })))
+}
+
+// A lineup's identity, independent of the order it was built in — two lineups naming the same
+// players on the same sides are the same lineup however they were assembled.
+export function lineupKey(entries: LineupPlayer[]): string {
+  return entries
+    .map((p) => `${p.team_id}:${p.player_id}`)
+    .sort()
+    .join('|')
+}
+
+// Both sides full. Measured on the lineup rather than on what is drawn, so a change to how the
+// page lays its panels out cannot move the gate on whether it can be saved.
+export function lineupFull(entries: LineupPlayer[], teamIds: string[], perSide: number): boolean {
+  return teamIds.length > 0 && teamIds.every((id) => entries.filter((p) => p.team_id === id).length === perSide)
+}

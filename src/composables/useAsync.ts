@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
-import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { Resource } from '@/api/queries'
 import { displayError } from '@/lib/displayError'
 
@@ -61,6 +61,24 @@ export function useResource<T>(resource: () => Resource<T>, options: UseAsyncOpt
     () => resource().fetch(),
     options,
   )
+}
+
+// N of one resource — a list of cups and each one's teams. Keyed as that resource is keyed, so
+// every answer is the entry the rest of the app already reads rather than a copy beside it.
+export function useResources<T>(resources: () => Resource<T>[]) {
+  const results = useQueries({
+    queries: computed(() => resources().map((r) => ({ queryKey: r.key, queryFn: () => r.fetch() }))),
+  })
+  return {
+    data: computed(() => results.value.map((r) => r.data)),
+    // Reported as one, like `combine`: a grid built from N of these is one thing to a reader.
+    error: computed(() => {
+      const failed = results.value.find((r) => r.isError && r.data === undefined)
+      return failed ? displayError(failed.error) : ''
+    }),
+    loading: computed(() => results.value.some((r) => r.isPending || (r.isFetching && r.data === undefined))),
+    retry: () => Promise.all(results.value.map((r) => r.refetch())).then(() => undefined),
+  }
 }
 
 interface Combinable {
