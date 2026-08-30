@@ -1,6 +1,6 @@
-import { nextTick, ref } from 'vue'
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useHashScroll } from '@/composables/useHashScroll'
 
 // `ids` is a getter, not an array, so a hash arriving before the data still opens the right
 // row once it lands — the common case on a deep link.
@@ -11,7 +11,7 @@ export function useHashAccordion(ids: () => string[]) {
 
   watch(
     [ids, () => route.hash],
-    async () => {
+    () => {
       const id = route.hash.replace('#', '')
       // Both directions: following a link off this page must not leave the last row open under a
       // URL that no longer names it.
@@ -21,13 +21,13 @@ export function useHashAccordion(ids: () => string[]) {
       }
       if (openId.value === id || !ids().includes(id)) return
       openId.value = id
-      // `nearest`, not `start`: the row is usually the current cup at the top of the list, and
-      // pinning it to the viewport top pushes the avatar and record off to reveal nothing new.
-      await nextTick()
-      document.getElementById(`accordion-${id}`)?.scrollIntoView({ block: 'nearest' })
     },
     { immediate: true },
   )
+
+  // `nearest`, not `start`: the row is usually the current cup at the top of the list, and
+  // pinning it to the viewport top pushes the avatar and record off to reveal nothing new.
+  useHashScroll(() => (openId.value ? `accordion-${openId.value}` : ''), 'nearest')
 
   function toggle(id: string) {
     const nowOpen = openId.value !== id

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Hole, HoleStatus, MatchPlayer, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
 import { playerInitials } from '@/lib/matchResult'
+import { useHashScroll } from '@/composables/useHashScroll'
 import type { HoleRow, ScorecardView } from './scorecard'
 import ScorecardRow from './ScorecardRow.vue'
 import ScorecardSummaryRow from './ScorecardSummaryRow.vue'
@@ -153,28 +154,9 @@ function open(hole: number) {
 }
 
 const route = useRoute()
-// Recorded once honoured, so a hash is answered once: `front` is a new array on every
-// evaluation, and without this each later change drags a reader who has scrolled away back.
-const scrolledTo = ref('')
 // Saving a hole comes back here, and on a phone the card runs past the fold at about the
 // tenth — so the hole just written has to be brought to where it can be read.
-watch(
-  [() => route.hash, front],
-  async () => {
-    const hole = route.hash.match(/^#hole-(\d+)$/)?.[1]
-    if (!hole) {
-      scrolledTo.value = ''
-      return
-    }
-    if (scrolledTo.value === hole) return
-    await nextTick()
-    const row = document.getElementById(`hole-${hole}`)
-    if (!row) return
-    scrolledTo.value = hole
-    row.scrollIntoView({ block: 'center' })
-  },
-  { immediate: true },
-)
+useHashScroll(() => (route.hash.match(/^#hole-\d+$/) ? route.hash.slice(1) : ''), 'center')
 </script>
 <template>
   <div>
