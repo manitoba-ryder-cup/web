@@ -589,9 +589,9 @@ describe('AdminMatchLineupView', () => {
     await detailsForm(w).trigger('submit')
     await flushPromises()
 
-    // Once on mount, then twice out: refetched so the page this returns to is warm, and again
-    // with everything else, which is the price of keeping no list of what a write reaches.
-    expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(3)
+    // Once on mount and once after the write. The match write marks the rest stale without
+    // fetching it, so nothing asks a second time for an answer that just arrived.
+    expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(2)
     expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 

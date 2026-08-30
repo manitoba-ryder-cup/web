@@ -200,7 +200,7 @@ const save = () =>
       // context it was made for.
       await router.push({ name: 'admin-tournament', params: { id: props.id } })
     },
-    { error: "Couldn't save those changes. Please try again." },
+    { error: "Couldn't save those changes. Please try again.", settled: true },
   )
 </script>
 <template>

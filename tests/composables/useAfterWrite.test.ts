@@ -151,4 +151,18 @@ describe('useAfterHoleWrite', () => {
     // could not derive is left stale for the next page showing it to ask about.
     expect(queryClient.getQueryState(q.teams(tournamentId).key)?.isInvalidated).toBe(true)
   })
+
+  // Par, yardage and stroke index are the course's, and a scored match's tee set is frozen, so
+  // marking it stale spends a request per hole on an answer that cannot have changed.
+  it('leaves the tee set alone, which a score cannot move', () => {
+    const { w, queryClient } = mountHook((c) => {
+      c.setQueryData(q.matchScores(matchId).key, [])
+      c.setQueryData(q.matchHoles(matchId).key, [])
+      c.setQueryData(q.results(tournamentId).key, [row()])
+    })
+
+    w.vm.afterHoleWrite(tournamentId, matchId, answer())
+
+    expect(queryClient.getQueryState(q.matchHoles(matchId).key)?.isInvalidated).toBe(false)
+  })
 })

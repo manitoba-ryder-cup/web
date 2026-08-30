@@ -65,7 +65,7 @@ const resetMatch = () =>
       await afterMatchWrite(props.tournamentId, props.matchId)
       toast.success('Match reset')
     },
-    { error: "Couldn't reset the match. Please try again." },
+    { error: "Couldn't reset the match. Please try again.", settled: true },
   )
 
 const openHoles = computed(() => {

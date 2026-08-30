@@ -18,19 +18,19 @@ interface UseAsyncOptions {
 // `key` identifies the cached entry, and everything the fetcher reads must appear in it or
 // two pages share one cache line and show each other's data.
 export function useAsync<T>(key: MaybeRefOrGetter<readonly unknown[]>, fetcher: () => Promise<T>, options: UseAsyncOptions = {}) {
+  // A disabled query reports nothing of its own: it is waiting on something whose state the
+  // page already shows, and a stale error or skeleton from it would be that thing said twice.
+  const enabled = computed(() => toValue(options.enabled) ?? true)
+
   const q = useQuery({
     queryKey: computed(() => toValue(key)),
     queryFn: fetcher,
     refetchInterval: computed(() => toValue(options.intervalMs) ?? false),
     refetchOnWindowFocus: options.refetchOnFocus ?? true,
-    enabled: computed(() => toValue(options.enabled) ?? true),
+    enabled,
     // A hidden tab is not being read; it catches up when it comes back.
     refetchIntervalInBackground: false,
   })
-
-  // A disabled query reports nothing of its own: it is waiting on something whose state the
-  // page already shows, and a stale error or skeleton from it would be that thing said twice.
-  const enabled = computed(() => toValue(options.enabled) ?? true)
 
   // Only a load with nothing to show is the view's failure to report. A poll that blips
   // keeps the last good data on screen rather than blanking a page someone is reading.

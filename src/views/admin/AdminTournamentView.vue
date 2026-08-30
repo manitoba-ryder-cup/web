@@ -36,7 +36,6 @@ const matchesRes = useResource(() => q.results(props.id))
 const formatsRes = useResource(() => q.matchFormats())
 const coursesRes = useResource(() => q.courses())
 const { error, loading, retry } = combine([tournamentRes, matchesRes, formatsRes, coursesRes])
-const refresh = retry
 const tournament = computed(() => tournamentRes.data.value ?? null)
 const matches = computed(() => matchesRes.data.value ?? [])
 const matchFormats = computed(() => formatsRes.data.value ?? [])
@@ -143,7 +142,7 @@ async function submit(format: string) {
       handicapped: form.handicapped,
     })
     adding.value = null
-    await refresh()
+    await matchesRes.retry()
     toast.success('Match created')
   } catch {
     formError.value = 'Could not create the match. Check the tee time and try again.'
