@@ -48,7 +48,7 @@ describe('useAfterWrite', () => {
   // No exception any more: it skipped the match because each view held a copy under a key of
   // its own. One copy now, and the entry page asks for nothing on its own once it has loaded.
   it('reaches a match as readily as anything else', async () => {
-    const scores = ['match', 'm1', 'scores']
+    const scores = q.matchScores('m1').key
     const { w, count } = mountWith([scores])
     await flushPromises()
     expect(count(scores)).toBe(1)

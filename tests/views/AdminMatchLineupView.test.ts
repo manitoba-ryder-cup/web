@@ -22,12 +22,11 @@ vi.mock('@/api/scorecard', () => ({
   },
 }))
 
-import { config } from '@vue/test-utils'
-import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
-import { CardStub } from '../support/cardStub'
-import { HoleEntryStub } from '../support/holeEntryStub'
+import { q } from '@/api/queries'
+import { withQueryClient } from '../support/queryClient'
+import { CardStub, HoleEntryStub } from '../support/matchStubs'
 import { ApiError } from '@/api/types'
 import AdminMatchLineupView from '@/views/admin/AdminMatchLineupView.vue'
 import { utcToEventInput } from '@/lib/teeTime'
@@ -36,7 +35,7 @@ import { utcToEventInput } from '@/lib/teeTime'
 let sideSize = 1
 
 // The match's scores, keyed by what they are rather than by the page asking for them.
-const scoresKey = ['match', 'm1', 'scores']
+const scoresKey = q.matchScores('m1').key
 
 const router = createRouter({
   history: createWebHistory(),
@@ -614,8 +613,7 @@ describe('AdminMatchLineupView', () => {
   it("refetches the match's scores after a save", async () => {
     // A client of its own: the shared one has gcTime 0 and collects an unmounted query at once,
     // so nothing would survive to be stale and this would pass however the refetch was scoped.
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
-    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const queryClient = withQueryClient()
     const held = { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([held])
 
@@ -637,8 +635,7 @@ describe('AdminMatchLineupView', () => {
   // One entry, not one per view: the card and the entry page read the same scores, so a write
   // from here cannot reach one of them and miss the other.
   it('serves the card and the entry page from one entry', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000, gcTime: 60_000 } } })
-    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    withQueryClient({ staleTime: 30_000 })
 
     for (const stub of [CardStub, HoleEntryStub]) {
       const visited = mount(stub)
@@ -652,8 +649,7 @@ describe('AdminMatchLineupView', () => {
   // The order the save is written in exists so a scored match takes the tee time and refuses
   // only the lineup — so the refusal path is one that has written.
   it("refetches the match's scores even when the lineup half is refused", async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
-    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const queryClient = withQueryClient()
     const held = { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([held])
 

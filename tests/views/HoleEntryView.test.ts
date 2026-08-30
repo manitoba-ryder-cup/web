@@ -116,7 +116,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { SCOPE_SCORES_WRITE } from '@/api/scopes'
 import { tokenWithScopes } from '../support/token'
-import { CardStub } from '../support/cardStub'
+import { CardStub } from '../support/matchStubs'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -323,29 +323,18 @@ describe('HoleEntryView saving', () => {
     })
   })
 
-  it('offers a save the moment an unplayed hole opens', async () => {
-    const w = await openHole('15')
-
-    expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
-  })
-
-  // A recorded hole opens on its scores, so correcting one costs no taps it did not before.
-  it('offers a save straight away on a hole already recorded', async () => {
-    holeStates = [scoredFifteenth]
-
-    const w = await openHole('15')
-
-    expect(saveButton(w)!.attributes('disabled')).toBeUndefined()
-  })
-
+  // Both open ready to save: an unplayed hole parks on par, and a recorded one opens on its
+  // scores, so correcting one costs no taps it did not before.
   it('offers Save on a hole with no score and Update on one already recorded', async () => {
     const fresh = await openHole('15')
     expect(saveButton(fresh)!.text()).toBe('Save')
+    expect(saveButton(fresh)!.attributes('disabled')).toBeUndefined()
 
     holeStates = [scoredFifteenth]
     const played = await openHole('15')
 
     expect(saveButton(played)!.text()).toBe('Update')
+    expect(saveButton(played)!.attributes('disabled')).toBeUndefined()
   })
 
   it('reports a failed update in the word the button offered', async () => {

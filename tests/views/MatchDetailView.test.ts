@@ -63,11 +63,11 @@ vi.mock('@/api/scorecard', () => ({
 }))
 
 import { scorecardApi } from '@/api/scorecard'
+import { q } from '@/api/queries'
 import MatchDetailView from '@/views/MatchDetailView.vue'
 import { tokenWithScopes } from '../support/token'
-import { HoleEntryStub } from '../support/holeEntryStub'
-import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
-import { config } from '@vue/test-utils'
+import { withQueryClient } from '../support/queryClient'
+import { HoleEntryStub } from '../support/matchStubs'
 import { SCOPE_TOURNAMENTS_WRITE, SCOPE_SCORES_WRITE } from '@/api/scopes'
 
 const router = createRouter({
@@ -408,12 +408,9 @@ describe('resetting a match', () => {
   it('clears the scores the hole page will read next', async () => {
     // A client of its own: the shared one collects an unmounted query at once, so nothing would
     // survive to go stale and this would pass however the refetch was scoped.
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
-    // Replaced, not added: mount options merge with config.global, and the shared client would
-    // still be the one installed first and answer useQueryClient.
-    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const queryClient = withQueryClient()
     const plugins = [router] as never[]
-    const holeKey = ['match', 'm1', 'scores']
+    const holeKey = q.matchScores('m1').key
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([
       { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false },
     ])
