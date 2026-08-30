@@ -2,8 +2,8 @@ import { useQueryClient, type QueryClient } from '@tanstack/vue-query'
 import { matchKey, q } from '@/api/queries'
 import type { MatchResult, ScoreSubmissionResult } from '@/api/types'
 
-// Everything a score moves is marked stale without a fetch — except the tee set, which a score
-// cannot move: par, yardage and stroke index are the course's, and a scored match's are frozen.
+// A score cannot move a tee set, so a hole write leaves it alone. Only a score: a match write
+// moves the course and the tee colour, which is where par and yardage come from.
 function staleExceptTeeSet(queryClient: QueryClient, matchId: string) {
   const teeSet = q.matchHoles(matchId).key
   const isTeeSet = (key: readonly unknown[]) => key.length === teeSet.length && key.every((part, i) => part === teeSet[i])
@@ -22,7 +22,7 @@ export function useAfterWrite() {
 export function useAfterMatchWrite() {
   const queryClient = useQueryClient()
   return async (tournamentId: string, matchId: string) => {
-    staleExceptTeeSet(queryClient, matchId)
+    queryClient.invalidateQueries({ refetchType: 'none' })
     await Promise.all([
       queryClient.refetchQueries({ type: 'all', queryKey: q.matchScores(matchId).key }),
       queryClient.refetchQueries({ type: 'all', queryKey: q.results(tournamentId).key }),

@@ -68,10 +68,12 @@ go through `patch`** — `data` is a readonly view of the cache, so assigning in
 rather than refused: the write lands and the row never moves. `useAfterWrite` invalidates
 everything, with no exception to keep in step; `useAfterMatchWrite` additionally refetches the
 two resources a match write changes, awaited, so the page it returns to shows what was written,
-and `useAfterHoleWrite` writes those two from the answer instead. Both match writes hold back
-one thing: **a score cannot move a tee set**, so marking `q.matchHoles` stale spends a request
-per hole on par and yardage that are the course's. An action that has settled the cache this
-way passes `settled` to `useBusy.run`, or run's own pass asks again for what just arrived.
+and `useAfterHoleWrite` writes those two from the answer instead. That one holds back the tee
+set — **a score cannot move a tee set**, so marking `q.matchHoles` stale spends a request per
+hole on par and yardage that are the course's. `useAfterMatchWrite` must not: it settles the
+lineup page's save, which sends `course_id` and `tee_color_id`, and the wheel would open on the
+old par. An action that has settled the cache passes `settled` to `useBusy.run`, or run's own
+pass asks again for what just arrived.
 A resource whose id is not known yet takes `enabled` and reads as loading, not as empty.
 
 Pass a skeleton through `AsyncState`'s `#loading` slot rather than letting a view collapse

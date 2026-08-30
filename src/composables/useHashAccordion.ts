@@ -9,6 +9,10 @@ export function useHashAccordion(ids: () => string[]) {
   const route = useRoute()
   const router = useRouter()
 
+  // Only when the hash opens a row that was shut, so a tap scrolls nothing: an expanded row is
+  // taller than a phone, which sends `nearest` to the top edge — what it was chosen to avoid.
+  const scrollTo = ref('')
+
   watch(
     [ids, () => route.hash],
     () => {
@@ -17,17 +21,19 @@ export function useHashAccordion(ids: () => string[]) {
       // URL that no longer names it.
       if (!id) {
         openId.value = ''
+        scrollTo.value = ''
         return
       }
       if (openId.value === id || !ids().includes(id)) return
       openId.value = id
+      scrollTo.value = `accordion-${id}`
     },
     { immediate: true },
   )
 
   // `nearest`, not `start`: the row is usually the current cup at the top of the list, and
   // pinning it to the viewport top pushes the avatar and record off to reveal nothing new.
-  useHashScroll(() => (openId.value ? `accordion-${openId.value}` : ''), 'nearest')
+  useHashScroll(() => scrollTo.value, 'nearest')
 
   function toggle(id: string) {
     const nowOpen = openId.value !== id
