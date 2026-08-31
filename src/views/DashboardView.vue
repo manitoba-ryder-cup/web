@@ -9,7 +9,7 @@ import { useCurrentCup } from '@/composables/useCurrentCup'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
-import { groupIntoSessions, nextSession } from '@/lib/sessions'
+import { groupIntoSessions, headlineSession } from '@/lib/sessions'
 import { hasStarted } from '@/lib/scoringWindow'
 import { tournamentEyebrow } from '@/lib/tournament'
 import AsyncState from '@/components/base/AsyncState.vue'
@@ -82,16 +82,19 @@ const teeOffAt = computed<number | null>(() => {
 
 const { segments } = useCountdown(teeOffAt)
 
-// The next session out, not the whole order: before the event that is mostly rows carrying a
-// time and nothing else. `?session=N` steps to a later one for a demo.
+// One session, not the whole order. `?session=N` steps to a later one for a demo.
 const session = computed(() => {
   const skip = Number(preview('session'))
   if (Number.isFinite(skip)) return groupIntoSessions(results.value)[skip] ?? null
-  return nextSession(results.value)
+  return headlineSession(results.value)
 })
-// The label follows the session on the card rather than the cup: between sessions the cup is
-// live while the session shown has not teed off.
-const sessionTitle = computed(() => (session.value?.matches.some((m) => hasStarted(m)) ? 'On the course' : 'Next out'))
+// The label follows the session on the card rather than the cup, which is live across a whole
+// day while the session shown may be finished or hours away.
+const sessionTitle = computed(() => {
+  const ms = session.value?.matches ?? []
+  if (ms.length && ms.every((m) => m.finished)) return 'Just played'
+  return ms.some((m) => hasStarted(m)) ? 'On the course' : 'Next out'
+})
 </script>
 <template>
   <div>

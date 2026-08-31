@@ -26,13 +26,18 @@ const router = createRouter({
   ],
 })
 
-function match(teeTime: string, format: string, finished = false) {
+const PAIRING = [
+  { team_id: 'blue-1', players: [{ player_id: 'p1', first_name: 'Bo', last_name: 'Jones' }] },
+  { team_id: 'red-1', players: [{ player_id: 'p2', first_name: 'Amy', last_name: 'Smith' }] },
+]
+
+function match(teeTime: string, format: string, finished = false, drawn = false) {
   return {
     match_id: teeTime + format,
     format_name: format,
     players_per_side: format === 'Singles' ? 1 : 2,
     scores_per_player: true,
-    sides: [],
+    sides: drawn ? PAIRING : [],
     hole_results: [],
     finished,
     winner_team_id: null,
@@ -174,11 +179,32 @@ describe('DashboardView', () => {
     expect(w.text()).not.toContain('Singles')
   })
 
-  it('moves on to the next session once one has finished', async () => {
-    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles')])
+  // A session with no pairings drawn renders a time and a dash per row, so there is nothing in
+  // it worth trading the finished results for.
+  it('moves on once the next session has been drawn', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles', false, true)])
     const w = mountDashboard()
     await flushPromises()
     expect(w.text()).toContain('Singles')
+  })
+
+  it('holds the finished session while the next is undrawn', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles')])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.text()).toContain('Fourball')
+    expect(w.text()).not.toContain('Singles')
+  })
+
+  // Nothing has been played yet, so an undrawn schedule is still the best thing on offer.
+  it('shows the opening session before the cup even undrawn', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball'), match(SAT, 'Singles')])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.text()).toContain('Fourball')
+    expect(w.text()).toContain('Next out')
   })
 
   // Relative to now for the same reason the countdown case is: the label turns on whether the
@@ -198,7 +224,7 @@ describe('DashboardView', () => {
     expect(w.text()).not.toContain('Next out')
   })
 
-  it('heads the card "Next out" between sessions, with the cup still live', async () => {
+  it('heads the card "Just played" between sessions, with the cup still live', async () => {
     const teedOff = new Date(Date.now() - HOUR).toISOString()
     const dueOut = new Date(Date.now() + HOUR).toISOString()
     vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
@@ -206,9 +232,25 @@ describe('DashboardView', () => {
     const w = mountDashboard()
     await flushPromises()
 
+    expect(w.text()).toContain('Fourball')
+    expect(w.text()).toContain('Just played')
+    expect(w.text()).not.toContain('On the course')
+  })
+
+  it('heads the card "Next out" once the next session is drawn', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    const dueOut = new Date(Date.now() + HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([
+      match(teedOff, 'Fourball', true),
+      match(dueOut, 'Alt Shot', false, true),
+    ])
+    const w = mountDashboard()
+    await flushPromises()
+
     expect(w.text()).toContain('Alt Shot')
     expect(w.text()).toContain('Next out')
-    expect(w.text()).not.toContain('On the course')
+    expect(w.text()).not.toContain('Just played')
   })
 
   // Nothing is next once the cup is over, and a card headed "Next out" with an empty body

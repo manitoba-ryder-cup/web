@@ -45,3 +45,14 @@ export function sessionInPlay(matches: MatchResult[], now: Date = new Date()): S
   if (next < 0) return null
   return sessions[next].matches.some((m) => hasStarted(m, now)) ? sessions[next] : (sessions[next - 1] ?? null)
 }
+
+/**
+ * The session to lead with: the next one once it has pairings or has teed off, and until then
+ * the one just played. Before the cup nothing has been played, so the schedule is still it.
+ */
+export function headlineSession(matches: MatchResult[], now: Date = new Date()): Session | null {
+  const next = nextSession(matches)
+  if (!next) return sessionInPlay(matches, now)
+  const ready = next.matches.some((m) => hasStarted(m, now) || m.sides.some((side) => side.players.length > 0))
+  return ready ? next : (sessionInPlay(matches, now) ?? next)
+}

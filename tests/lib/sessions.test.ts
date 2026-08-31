@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { groupIntoSessions, nextSession, sessionInPlay } from '@/lib/sessions'
+import { groupIntoSessions, headlineSession, nextSession, sessionInPlay } from '@/lib/sessions'
 import type { MatchResult } from '@/api/types'
 
 function match(over: Partial<MatchResult> & { tee_time: string; format_name: string }): MatchResult {
@@ -138,5 +138,69 @@ describe('sessionInPlay', () => {
 
   it('is nothing when there is no schedule', () => {
     expect(sessionInPlay([])).toBeNull()
+  })
+})
+
+describe('headlineSession', () => {
+  const BEFORE_CUP = new Date('2026-09-18T10:00:00Z')
+  const DURING_FRI_AM = new Date('2026-09-18T16:00:00Z')
+  const DURING_FRI_PM = new Date('2026-09-18T21:00:00Z')
+  const drawn = [{ team_id: 't-blue', players: [{ player_id: 'p1', first_name: 'Bo', last_name: 'Jones' }] }]
+
+  it('leads with the session out on the course', () => {
+    const s = headlineSession(
+      [match({ tee_time: FRI_AM, format_name: 'Fourball' }), match({ tee_time: FRI_PM, format_name: 'Alt Shot' })],
+      DURING_FRI_AM,
+    )
+    expect(s?.format).toBe('Fourball')
+  })
+
+  // An undrawn session is a column of tee times and nothing else, which is worth less than the
+  // results it would replace.
+  it('holds the session just played while the next is undrawn', () => {
+    const s = headlineSession(
+      [match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }), match({ tee_time: FRI_PM, format_name: 'Alt Shot' })],
+      DURING_FRI_AM,
+    )
+    expect(s?.format).toBe('Fourball')
+  })
+
+  it('moves on as soon as the next session is drawn', () => {
+    const s = headlineSession(
+      [
+        match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }),
+        match({ tee_time: FRI_PM, format_name: 'Alt Shot', sides: drawn }),
+      ],
+      DURING_FRI_AM,
+    )
+    expect(s?.format).toBe('Alt Shot')
+  })
+
+  it('moves on when the next session tees off undrawn', () => {
+    const s = headlineSession(
+      [match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }), match({ tee_time: FRI_PM, format_name: 'Alt Shot' })],
+      DURING_FRI_PM,
+    )
+    expect(s?.format).toBe('Alt Shot')
+  })
+
+  // Nothing has been played to fall back to, so the schedule is still the best thing on offer.
+  it('leads with the opening session before the cup, drawn or not', () => {
+    const s = headlineSession(
+      [match({ tee_time: FRI_AM, format_name: 'Fourball' }), match({ tee_time: SAT_AM, format_name: 'Singles' })],
+      BEFORE_CUP,
+    )
+    expect(s?.format).toBe('Fourball')
+  })
+
+  it('is nothing once every match has finished', () => {
+    const s = headlineSession(
+      [
+        match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }),
+        match({ tee_time: SAT_AM, format_name: 'Singles', finished: true }),
+      ],
+      DURING_FRI_PM,
+    )
+    expect(s).toBeNull()
   })
 })
