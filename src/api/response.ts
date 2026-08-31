@@ -1,17 +1,19 @@
 import { ApiError } from './types'
 import { FALLBACK } from '@/lib/displayError'
 
+function envelopeSentence(body: string): string | null {
+  try {
+    const parsed = JSON.parse(body)
+    return typeof parsed?.error === 'string' && parsed.error ? parsed.error : null
+  } catch {
+    return null
+  }
+}
+
 // Only the API's error envelope is copy for a reader. A status line and an unparseable body are
 // both written by whoever answered, and neither is a sentence meant for one.
 async function errorMessage(res: Response): Promise<string> {
-  const body = await res.text().catch(() => '')
-  try {
-    const parsed = JSON.parse(body)
-    if (typeof parsed?.error === 'string' && parsed.error) return parsed.error
-  } catch {
-    // Intentionally empty.
-  }
-  return FALLBACK
+  return envelopeSentence(await res.text().catch(() => '')) ?? FALLBACK
 }
 
 // Every response the app reads arrives through here, so a failure is the same ApiError
