@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { Tournament, TournamentTeam } from '@/api/types'
 import { teamColor } from '@/lib/teamColor'
 import { formatDayRange } from '@/lib/date'
+import PointsTotal from '@/components/base/PointsTotal.vue'
 import LinkCard from '@/components/base/LinkCard.vue'
 import TrophyIcon from '@/components/icons/TrophyIcon.vue'
 
@@ -32,10 +33,7 @@ const winnerId = computed(() => {
           :class="[teamColor(t.color).text, i === 0 ? 'flex-row-reverse' : '']"
         >
           <TrophyIcon v-if="winnerId === t.id" class="text-mrc-gold" />
-          <div class="flex items-center gap-2">
-            <span class="text-6xl tracking-tighter tabular-nums">{{ Math.trunc(t.points) }}</span>
-            <span v-if="t.points % 1 !== 0" class="text-4xl">½</span>
-          </div>
+          <PointsTotal :points="t.points" />
         </div>
         <p class="mt-1 truncate text-center text-mrc-ink">Team {{ t.captain?.last_name }}</p>
       </div>

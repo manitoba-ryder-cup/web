@@ -169,6 +169,22 @@ describe('PlayerView stats tab', () => {
     expect(w.text()).toContain('Points per cup')
   })
 
+  // A career total is points like any other, so a half is a half and never a decimal.
+  it('renders a career half point as a half', async () => {
+    const stats = await vi.mocked(scorecardApi.getPlayerStats).getMockImplementation()!('p1')
+    vi.mocked(scorecardApi.getPlayerStats).mockResolvedValueOnce({ ...stats, points: 6.5 })
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+    await flushPromises()
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Stats')!
+      .trigger('click')
+    await flushPromises()
+
+    expect(w.text()).toContain('6½')
+    expect(w.text()).not.toContain('6.5')
+  })
+
   it('leaves out pairings played only once — one match is a coin toss, not a record', async () => {
     const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
     await flushPromises()

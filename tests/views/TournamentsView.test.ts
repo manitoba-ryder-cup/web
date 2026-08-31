@@ -71,6 +71,19 @@ describe('TournamentsView', () => {
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([])
   })
 
+  // An archive card carries a cup's final score, and a score comes in halves like any other.
+  it('renders a halved total on an archive card as a half', async () => {
+    vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([
+      { id: 'blue', color: 'Blue', captain: null, points: 14.5 },
+      { id: 'red', color: 'Red', captain: null, points: 13.5 },
+    ])
+    const w = await loaded()
+
+    expect(w.text()).toContain('14½')
+    expect(w.text()).toContain('13½')
+    expect(w.text()).not.toContain('14.5')
+  })
+
   it('shows a skeleton while loading, not the empty-state copy', async () => {
     const w = mount(TournamentsView, { global: { plugins: [router] } })
 

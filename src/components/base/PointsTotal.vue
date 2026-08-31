@@ -2,11 +2,10 @@
 import { computed } from 'vue'
 import { splitPoints } from '@/lib/points'
 
-// Numerals are data, so they take the body face rather than the display one. A half point is a
-// fraction of a point rather than the digit after it, which is why it carries its own mark.
-const props = withDefaults(defineProps<{ points: number | undefined; size?: 'md' | 'lg' }>(), { size: 'md' })
+const props = withDefaults(defineProps<{ points: number | undefined; size?: 'sm' | 'md' | 'lg' }>(), { size: 'md' })
 
 const SIZES = {
+  sm: { whole: 'text-3xl', half: 'text-base' },
   md: { whole: 'text-6xl', half: 'text-3xl md:text-4xl' },
   lg: { whole: 'text-7xl', half: 'text-4xl' },
 }

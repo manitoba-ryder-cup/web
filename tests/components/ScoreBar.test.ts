@@ -74,7 +74,6 @@ describe('ScoreBar', () => {
     expect(bars(results, teams(1, 0))).toEqual(['blue', 'blue', 'blue-soft', 'grey', 'grey', 'red-soft', 'red-soft', 'red-soft'])
   })
 
-  // The same mark the hero uses, so a change to one reaches both.
   it('draws each total the shared way', () => {
     const w = mount(ScoreBar, { props: { results: [match()], teams: teams(1.5, 0.5) } })
 
