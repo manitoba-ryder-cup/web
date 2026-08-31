@@ -31,7 +31,7 @@ const links = computed((): { to: string; label: string; section: NavSection }[] 
       <div class="flex h-16 items-center justify-between">
         <!-- A detail page's back link replaces the logo/wordmark only; what sits on the
              right stays put. -->
-        <RouterLink v-if="back" :to="back.to" class="flex items-center gap-1 pl-2 text-xl font-semibold text-white">
+        <RouterLink v-if="back" :to="back.to" class="flex items-center gap-1 self-stretch pl-2 text-xl font-semibold text-white">
           <ArrowLeftIcon /><span class="ml-3">{{ back.label }}</span>
         </RouterLink>
         <RouterLink v-else to="/" class="flex items-center gap-2 text-xl font-semibold text-white">
