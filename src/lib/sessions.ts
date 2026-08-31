@@ -35,19 +35,19 @@ export function nextSession(matches: MatchResult[]): Session | null {
 }
 
 /**
- * The session being played, or between sessions the one just played: a session that has not
- * teed off holds no lineups and no scores, so it does not take the page until its window opens.
+ * The session being played, or the one just played — the closing session once the cup is over.
+ * One that has not teed off holds no lineups and no scores, so it waits until it does.
  */
 export function sessionInPlay(matches: MatchResult[], now: Date = new Date()): Session | null {
   const sessions = groupIntoSessions(matches)
   const next = sessions.findIndex((s) => s.matches.some((m) => !m.finished))
-  if (next < 0) return null
+  if (next < 0) return sessions.at(-1) ?? null
   return sessionUnderWay(sessions[next], now) ? sessions[next] : (sessions[next - 1] ?? null)
 }
 
 /**
  * Whether a session is being played: it has reached its first tee time, or a score has landed.
- * Not the scoring window, which the API opens two hours early to govern writes, not play.
+ * Not the scoring window, which opens ahead of the tee to govern writes rather than play.
  */
 export function sessionUnderWay(session: Session | null | undefined, now: Date = new Date()): boolean {
   if (!session) return false
@@ -60,7 +60,7 @@ export function sessionUnderWay(session: Session | null | undefined, now: Date =
  */
 export function headlineSession(matches: MatchResult[], now: Date = new Date()): Session | null {
   const next = nextSession(matches)
-  if (!next) return null
+  if (!next) return sessionInPlay(matches, now)
   const drawn = next.matches.some((m) => m.sides.some((side) => side.players.length > 0))
   return drawn || sessionUnderWay(next, now) ? next : (sessionInPlay(matches, now) ?? next)
 }

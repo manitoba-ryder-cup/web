@@ -93,30 +93,31 @@ describe('MatchResultsSection', () => {
     expect(w.text()).not.toContain('In progress')
   })
 
-  // The gap between sessions: with the fourballs in and the alternate shot yet to tee off,
-  // the finished session is the one worth reading — the next holds no lineups and no scores.
+  // Three sessions, so the one to open on is not also the tab a missing `initial` falls back to
+  // — otherwise this passes whether the just-played fallback works or not.
   it('stays on the session just played until the next tees off', () => {
     const w = mountIt([
-      match({ match_id: 'm1', format_name: 'Fourball', finished: true }),
+      match({ match_id: 'm1', format_name: 'Fourball', finished: true, tee_time: '2026-09-18T11:00:00Z' }),
+      match({ match_id: 'm2', format_name: 'Alt Shot', finished: true, tee_time: '2026-09-18T13:00:00Z' }),
       match({
-        match_id: 'm2',
-        format_name: 'Alt Shot',
+        match_id: 'm3',
+        format_name: 'Singles',
         finished: false,
         winner_team_id: null,
         sides: [],
         hole_results: [],
         tee_time: '2026-09-18T19:00:00Z',
-        scoring_opens_at: '2026-09-18T17:00:00Z',
       }),
     ])
 
-    expect(activeTab(w)).toBe('Fourball')
+    expect(activeTab(w)).toBe('Alt Shot')
   })
 
-  it('opens on the first tab once every match is done', () => {
+  // The match that decided the cup is the one people are looking at when it does.
+  it('opens on the closing session once every match is done', () => {
     const w = mountIt(matches.map((m) => ({ ...m, finished: true, winner_team_id: m.winner_team_id ?? 't-red' })))
 
-    expect(activeTab(w)).toBe('Fourball')
+    expect(activeTab(w)).toBe('Singles')
   })
 
   it('shows a finished result on the tab it belongs to', async () => {

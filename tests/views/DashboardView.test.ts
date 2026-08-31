@@ -288,15 +288,30 @@ describe('DashboardView', () => {
     expect(w.text()).toContain('On the course')
   })
 
-  // Nothing is next once the cup is over, and a card headed "Next out" with an empty body
-  // is worse than no card.
-  it('drops the session card when every match has finished', async () => {
+  // The card that used to be dropped here was a "Next out" heading over an empty body. What
+  // stands in its place is the session that decided the cup, with its results in it.
+  it('holds the closing session once every match has finished', async () => {
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles', true)])
     const w = mountDashboard()
     await flushPromises()
+
+    expect(w.text()).toContain('Singles')
+    expect(w.text()).toContain('Just played')
     expect(w.text()).not.toContain('Next out')
     expect(w.text()).not.toContain('On the course')
-    expect(w.text()).not.toContain('Just played')
+  })
+
+  // A card nobody entered leaves a match unfinished for good, and its tee time is long past, so
+  // the session reads as under way for ever. The record is what says otherwise.
+  it('does not leave a cup the record calls finished on the course', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'finished' })
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(teedOff, 'Fourball', true), match(teedOff, 'Singles', false)])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.text()).toContain('Just played')
+    expect(w.text()).not.toContain('On the course')
   })
 
   it('leads with the standing once the cup is under way', async () => {

@@ -125,7 +125,9 @@ describe('sessionInPlay', () => {
     expect(s).toBeNull()
   })
 
-  it('is nothing once every match has finished', () => {
+  // The last thing played is still the thing worth reading, and never more so than the
+  // match that decided the cup.
+  it('holds the closing session once the cup is over', () => {
     const s = sessionInPlay(
       [
         match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }),
@@ -133,7 +135,7 @@ describe('sessionInPlay', () => {
       ],
       DURING_FRI_PM,
     )
-    expect(s).toBeNull()
+    expect(s?.format).toBe('Singles')
   })
 
   it('is nothing when there is no schedule', () => {
@@ -193,7 +195,7 @@ describe('headlineSession', () => {
     expect(s?.format).toBe('Fourball')
   })
 
-  it('is nothing once every match has finished', () => {
+  it('holds the closing session once the cup is over', () => {
     const s = headlineSession(
       [
         match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }),
@@ -201,7 +203,11 @@ describe('headlineSession', () => {
       ],
       DURING_FRI_PM,
     )
-    expect(s).toBeNull()
+    expect(s?.format).toBe('Singles')
+  })
+
+  it('is nothing when there is no schedule', () => {
+    expect(headlineSession([])).toBeNull()
   })
 })
 
