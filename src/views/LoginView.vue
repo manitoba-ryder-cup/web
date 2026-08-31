@@ -40,7 +40,7 @@ async function onSubmit() {
   <!-- The form floats on the photo with no card. The gradient is the site's hero treatment (see
        ImageHeader): it keeps white type legible. min-height fills the viewport under the header. -->
   <div
-    class="flex min-h-[calc(100vh-4rem)] justify-center bg-cover bg-center px-4"
+    class="flex min-h-[calc(100dvh-4rem)] justify-center bg-cover bg-center px-4"
     :style="{ backgroundImage: `url('/img/empty-course.webp')` }"
   >
     <div class="mt-16 w-full max-w-sm">
