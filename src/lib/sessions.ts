@@ -55,12 +55,12 @@ export function sessionUnderWay(session: Session | null | undefined, now: Date =
 }
 
 /**
- * The session to lead with: the next one once it has pairings or has teed off, and until then
- * the one just played. Before the cup nothing has been played, so the schedule is still it.
+ * The session to lead with: the next one once every match in it is drawn or it has teed off,
+ * and until then the one just played. Before the cup there is nothing played to fall back to.
  */
 export function headlineSession(matches: MatchResult[], now: Date = new Date()): Session | null {
   const next = nextSession(matches)
   if (!next) return sessionInPlay(matches, now)
-  const drawn = next.matches.some((m) => m.sides.some((side) => side.players.length > 0))
+  const drawn = next.matches.every((m) => m.sides.some((side) => side.players.length > 0))
   return drawn || sessionUnderWay(next, now) ? next : (sessionInPlay(matches, now) ?? next)
 }

@@ -91,11 +91,12 @@ const session = computed(() => {
   if (Number.isFinite(skip)) return groupIntoSessions(results.value)[skip] ?? null
   return headlineSession(results.value, now.value)
 })
-// Follows the session rather than the cup, which is live across a whole day. The record is
-// consulted only at the end, where a match nobody closed out would read as on the course for good.
+// Follows the session rather than the cup, which is live across a whole day. The record settles
+// the end alone: a match nobody closed out, and a standing that is not "just played" in March.
 const sessionTitle = computed(() => {
   const s = session.value
-  if (phase.value === 'finished' || s?.matches.every((m) => m.finished)) return 'Just played'
+  if (phase.value === 'finished') return 'Final results'
+  if (s?.matches.every((m) => m.finished)) return 'Just played'
   return sessionUnderWay(s, now.value) ? 'On the course' : 'Next out'
 })
 </script>

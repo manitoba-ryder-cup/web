@@ -113,9 +113,13 @@ describe('MatchResultsSection', () => {
     expect(activeTab(w)).toBe('Alt Shot')
   })
 
-  // The match that decided the cup is the one people are looking at when it does.
+  // The match that decided the cup is the one people are looking at when it does. Tee times set
+  // apart, so "closing" is settled by the clock rather than by where the sort happens to leave a tie.
   it('opens on the closing session once every match is done', () => {
-    const w = mountIt(matches.map((m) => ({ ...m, finished: true, winner_team_id: m.winner_team_id ?? 't-red' })))
+    const w = mountIt([
+      match({ match_id: 'm1', format_name: 'Fourball', finished: true, tee_time: '2026-09-18T11:00:00Z' }),
+      match({ match_id: 'm2', format_name: 'Singles', finished: true, tee_time: '2026-09-18T13:00:00Z' }),
+    ])
 
     expect(activeTab(w)).toBe('Singles')
   })

@@ -178,6 +178,20 @@ describe('headlineSession', () => {
     expect(s?.format).toBe('Alt Shot')
   })
 
+  // Lineups save a match at a time, so a session is part drawn for as long as the captain takes
+  // over the rest — and one pairing above five dashes is the card this exists to prevent.
+  it('does not move on for a part-drawn session', () => {
+    const s = headlineSession(
+      [
+        match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }),
+        match({ match_id: 'a1', tee_time: FRI_PM, format_name: 'Alt Shot', sides: drawn }),
+        match({ match_id: 'a2', tee_time: FRI_PM, format_name: 'Alt Shot' }),
+      ],
+      DURING_FRI_AM,
+    )
+    expect(s?.format).toBe('Fourball')
+  })
+
   it('moves on when the next session tees off undrawn', () => {
     const s = headlineSession(
       [match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }), match({ tee_time: FRI_PM, format_name: 'Alt Shot' })],

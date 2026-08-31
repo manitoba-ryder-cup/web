@@ -291,27 +291,27 @@ describe('DashboardView', () => {
   // The card that used to be dropped here was a "Next out" heading over an empty body. What
   // stands in its place is the session that decided the cup, with its results in it.
   it('holds the closing session once every match has finished', async () => {
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'finished' })
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles', true)])
     const w = mountDashboard()
     await flushPromises()
 
     expect(w.text()).toContain('Singles')
-    expect(w.text()).toContain('Just played')
-    expect(w.text()).not.toContain('Next out')
-    expect(w.text()).not.toContain('On the course')
+    expect(w.text()).toContain('Final results')
   })
 
-  // A card nobody entered leaves a match unfinished for good, and its tee time is long past, so
-  // the session reads as under way for ever. The record is what says otherwise.
-  it('does not leave a cup the record calls finished on the course', async () => {
+  // Two ways a finished cup goes wrong on this card. A match nobody entered stays unfinished with
+  // its tee time long past, and the front page holds last year's cup until the next one exists.
+  it('heads a finished cup with its result, on the day and eleven months later', async () => {
     const teedOff = new Date(Date.now() - HOUR).toISOString()
     vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'finished' })
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(teedOff, 'Fourball', true), match(teedOff, 'Singles', false)])
     const w = mountDashboard()
     await flushPromises()
 
-    expect(w.text()).toContain('Just played')
+    expect(w.text()).toContain('Final results')
     expect(w.text()).not.toContain('On the course')
+    expect(w.text()).not.toContain('Just played')
   })
 
   it('leads with the standing once the cup is under way', async () => {
