@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ApiClient } from '@/api/client'
 import { ApiError } from '@/api/types'
+import { FALLBACK } from '@/lib/displayError'
+
+const FILTER_REASON = 'Access Denied by Barracuda Web Filter - contact your administrator'
 
 const BLOCK_PAGE =
   '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><html><head><style>.pg{background:url("data:image/png;base64,iVBORw0KGgo")}</style></head><body>Blocked: Newly Registered Domains</body></html>'
@@ -53,36 +56,46 @@ describe('ApiClient', () => {
     vi.stubGlobal('fetch', fetchMock)
     const client = new ApiClient('/api/scorecard', () => 't', vi.fn())
 
-    await expect(client.get('/v1/tournaments')).rejects.toMatchObject({ status: 502 })
-    // Some message, naming the status, rather than the empty body verbatim.
-    await expect(client.get('/v1/tournaments')).rejects.toThrow(/502/)
+    const err = await client.get<never>('/v1/tournaments').catch((e: unknown) => e as ApiError)
+
+    expect(err.message).toBe(FALLBACK)
   })
 
   // A filter, a captive portal or a gateway answers with its own page, and this app rendered
   // the whole of it: a DOCTYPE, base64 images and CSS, in the box meant for one sentence.
   it('does not put a page it did not write in front of a reader', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(BLOCK_PAGE, { status: 403 }))
+    const fetchMock = vi.fn().mockResolvedValue(new Response(BLOCK_PAGE, { status: 403, statusText: FILTER_REASON }))
     vi.stubGlobal('fetch', fetchMock)
     const client = new ApiClient('/api/scorecard', () => 't', vi.fn())
 
     const err = await client.get<never>('/v1/players').catch((e: unknown) => e as ApiError)
 
-    expect(err.message).not.toContain('DOCTYPE')
-    expect(err.message).not.toContain('base64')
-    expect(err.message.length).toBeLessThan(60)
+    expect(err.message).toBe(FALLBACK)
   })
 
-  // Plain text is no more the API's sentence than markup is; the API answers in JSON, and
-  // anything else came from something in front of it.
-  it('describes a plain-text failure by its status', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response('upstream exploded', { status: 500 }))
+  // The reason phrase is written by whoever answered, exactly like the body, so a filter puts
+  // its own wording there too. Set explicitly because undici leaves it empty otherwise.
+  it('does not take the reason phrase as copy either', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('', { status: 403, statusText: FILTER_REASON }))
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new ApiClient('/api/scorecard', () => 't', vi.fn())
+
+    const err = await client.get<never>('/v1/players').catch((e: unknown) => e as ApiError)
+
+    expect(err.message).not.toContain('Barracuda')
+    expect(err.message).toBe(FALLBACK)
+  })
+
+  // Plain text is no more a sentence for a reader than markup is — and it need not come from a
+  // filter: the proxy-secret middleware refuses with a bare "forbidden" from the API's own process.
+  it('does not pass a plain-text failure through as copy', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('forbidden', { status: 403 }))
     vi.stubGlobal('fetch', fetchMock)
     const client = new ApiClient('/api/scorecard', () => 't', vi.fn())
 
     const err = await client.get<never>('/v1/tournaments').catch((e: unknown) => e as ApiError)
 
-    expect(err.message).not.toContain('upstream exploded')
-    expect(err.message).toMatch(/500|Internal/)
+    expect(err.message).toBe(FALLBACK)
   })
 
   // The same interception with a 200 on it: JSON.parse used to throw its own SyntaxError,
@@ -95,8 +108,7 @@ describe('ApiClient', () => {
     const err = await client.get<never>('/v1/players').catch((e: unknown) => e as ApiError)
 
     expect(err).toBeInstanceOf(ApiError)
-    expect(err.message).not.toContain('Unexpected token')
-    expect(err.message).not.toContain('DOCTYPE')
+    expect(err.message).toBe(FALLBACK)
   })
 
   it('throws ApiError when a refreshed retry still fails', async () => {

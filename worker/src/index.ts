@@ -17,8 +17,7 @@ export interface Env {
   PROXY_SECRET?: string
 }
 
-// The client reads an error sentence out of `error`, and treats a body that will not parse as
-// somebody else's page rather than ours — so this proxy answers in the shape the API answers in.
+// In the API's envelope, so a caller cannot tell this proxy's failures from the API's.
 function apiError(status: number, error: string): Response {
   return new Response(JSON.stringify({ error }), { status, headers: { 'Content-Type': 'application/json' } })
 }
