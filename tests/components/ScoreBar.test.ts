@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ScoreBar from '@/components/tournament/ScoreBar.vue'
+import PointsTotal from '@/components/base/PointsTotal.vue'
 import type { MatchResult, TournamentTeam } from '@/api/types'
 
 const teams = (bluePoints = 0, redPoints = 0): TournamentTeam[] => [
@@ -71,5 +72,11 @@ describe('ScoreBar', () => {
       match({ match_id: 'm4' }),
     ]
     expect(bars(results, teams(1, 0))).toEqual(['blue', 'blue', 'blue-soft', 'grey', 'grey', 'red-soft', 'red-soft', 'red-soft'])
+  })
+
+  it('draws each total the shared way', () => {
+    const w = mount(ScoreBar, { props: { results: [match()], teams: teams(1.5, 0.5) } })
+
+    expect(w.findAllComponents(PointsTotal).map((c) => c.text())).toEqual(['1½', '0½'])
   })
 })

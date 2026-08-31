@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import type { NotableMatch, PairRecord, PlayerStats } from '@/api/types'
 import { resultText } from '@/lib/matchResult'
+import PointsTotal from '@/components/base/PointsTotal.vue'
 import BaseAccordion from '@/components/base/BaseAccordion.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 
@@ -54,7 +55,7 @@ const toggle = (id: string) => (openSection.value = openSection.value === id ? '
           <CapsLabel class="text-mrc-muted">Points per cup</CapsLabel>
         </div>
         <div class="px-5 py-2">
-          <p class="text-3xl font-bold tabular-nums">{{ stats.points }}</p>
+          <p class="font-bold"><PointsTotal :points="stats.points" size="sm" /></p>
           <CapsLabel class="text-mrc-muted">Career points</CapsLabel>
         </div>
       </div>

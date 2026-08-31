@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import PointsTotal from '@/components/base/PointsTotal.vue'
 
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
@@ -328,6 +329,8 @@ describe('DashboardView', () => {
     expect(hero.text()).toContain('Jones')
     expect(hero.text()).toContain('6½')
     expect(hero.text()).toContain('3½')
+    // Drawn the way the standings bar draws it, not as one run of display-face text.
+    expect(hero.findAllComponents(PointsTotal)).toHaveLength(2)
   })
 
   // Relative to now, not a fixture date: a fixed one in the future stops being one, and this
