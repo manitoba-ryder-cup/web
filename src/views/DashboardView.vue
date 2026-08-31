@@ -9,10 +9,10 @@ import { usePollWhileInPlay } from '@/composables/usePollWhileInPlay'
 import { useCurrentCup } from '@/composables/useCurrentCup'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
-import { pointsText } from '@/lib/points'
 import { groupIntoSessions, headlineSession, sessionUnderWay } from '@/lib/sessions'
 import { tournamentEyebrow } from '@/lib/tournament'
 import AsyncState from '@/components/base/AsyncState.vue'
+import PointsTotal from '@/components/base/PointsTotal.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import SkeletonSectionCard from '@/components/skeleton/SkeletonSectionCard.vue'
 import ContentContainer from '@/components/layout/ContentContainer.vue'
@@ -148,13 +148,9 @@ const sessionTitle = computed(() => {
               <p class="truncate font-display text-xl font-bold uppercase tracking-wide">
                 {{ right.captain?.last_name }}
               </p>
-              <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="leftColors.softText">
-                {{ pointsText(left.points) }}
-              </p>
+              <p class="font-bold" :class="leftColors.softText"><PointsTotal :points="left.points" size="lg" /></p>
               <span class="pb-2 text-4xl font-bold text-white/50">–</span>
-              <p class="font-display text-7xl font-bold leading-none tabular-nums" :class="rightColors.softText">
-                {{ pointsText(right.points) }}
-              </p>
+              <p class="font-bold" :class="rightColors.softText"><PointsTotal :points="right.points" size="lg" /></p>
             </div>
           </template>
 
