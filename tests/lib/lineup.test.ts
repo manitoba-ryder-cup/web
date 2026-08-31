@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { availableForTeam, playersSpent } from '@/lib/lineup'
+import { availableForTeam, lineupFull, lineupKey, playersSpent } from '@/lib/lineup'
 import type { MatchResult, TournamentPlayer } from '@/api/types'
 
 const player = (player_id: string, last_name: string, first_name = 'A', team_id: string | null = 'blue') =>
@@ -74,5 +74,36 @@ describe('availableForTeam', () => {
     const brothers = [player('p5', 'Bale', 'Travis'), player('p6', 'Bale', 'Adam')]
 
     expect(availableForTeam(brothers, 'blue', new Set()).map((p) => p.first_name)).toEqual(['Adam', 'Travis'])
+  })
+})
+
+describe('lineupKey', () => {
+  const a = { player_id: 'p1', team_id: 'blue' }
+  const b = { player_id: 'p2', team_id: 'red' }
+
+  // The order players were assigned in is not part of what a lineup is, and a dirty check
+  // that thought otherwise would offer Save on a lineup nobody had changed.
+  it('reads two orderings of one lineup as the same', () => {
+    expect(lineupKey([a, b])).toBe(lineupKey([b, a]))
+  })
+
+  it('reads a different side as a different lineup', () => {
+    expect(lineupKey([a])).not.toBe(lineupKey([{ ...a, team_id: 'red' }]))
+  })
+})
+
+describe('lineupFull', () => {
+  const teams = ['blue', 'red']
+  const on = (team: string, n: number) => Array.from({ length: n }, (_, i) => ({ player_id: `${team}${i}`, team_id: team }))
+
+  it('is full only when every side holds what the format takes', () => {
+    expect(lineupFull([...on('blue', 2), ...on('red', 2)], teams, 2)).toBe(true)
+    expect(lineupFull([...on('blue', 2), ...on('red', 1)], teams, 2)).toBe(false)
+    // A side of four is not two sides of two, however many names it holds.
+    expect(lineupFull(on('blue', 4), teams, 2)).toBe(false)
+  })
+
+  it('is not full before the teams are known', () => {
+    expect(lineupFull([], [], 2)).toBe(false)
   })
 })

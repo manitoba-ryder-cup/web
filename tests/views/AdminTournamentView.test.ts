@@ -20,11 +20,11 @@ vi.mock('@/api/scorecard', () => ({
   },
 }))
 
-import { config } from '@vue/test-utils'
-import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
-import { CardStub } from '../support/cardStub'
+import { withQueryClient } from '../support/queryClient'
+import { CardStub } from '../support/matchStubs'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
+import { q } from '@/api/queries'
 import { ApiError } from '@/api/types'
 import AdminTournamentView from '@/views/admin/AdminTournamentView.vue'
 
@@ -142,8 +142,7 @@ describe('AdminTournamentView', () => {
   // useAsync reports an error only with nothing to show, so a 404 behind a cached copy is
   // swallowed and the card renders a match that is gone. Dropped, because there is no fetch.
   it('drops the deleted match from the cache', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 300_000 } } })
-    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const queryClient = withQueryClient({ gcTime: 300_000 })
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([])
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
     vi.mocked(scorecardApi.getMatchHoles).mockResolvedValue([])
@@ -152,7 +151,7 @@ describe('AdminTournamentView', () => {
     const visited = mount(CardStub)
     await flushPromises()
     visited.unmount()
-    const cardKey = ['match', 'm1', 'scores']
+    const cardKey = q.matchScores('m1').key
     expect(queryClient.getQueryData(cardKey)).toBeDefined()
 
     const wrapper = await mounted()
@@ -175,8 +174,7 @@ describe('AdminTournamentView', () => {
   // The other half of the drop above: a match the server would not delete is still there, and
   // throwing its copies away would send a reader to the server for a card it could already show.
   it('keeps the copies when the delete is refused', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 300_000 } } })
-    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const queryClient = withQueryClient({ gcTime: 300_000 })
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue([])
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([])
     vi.mocked(scorecardApi.getMatchHoles).mockResolvedValue([])
@@ -185,7 +183,7 @@ describe('AdminTournamentView', () => {
     const visited = mount(CardStub)
     await flushPromises()
     visited.unmount()
-    const cardKey = ['match', 'm1', 'scores']
+    const cardKey = q.matchScores('m1').key
 
     const wrapper = await mounted()
     await deleteButton(wrapper)!.trigger('click')
@@ -247,12 +245,12 @@ describe('AdminTournamentView', () => {
       .trigger('click')
     await flushPromises()
 
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
     const course = w.findAll('select').find((sel) => sel.findAll('option').some((o) => o.text() === 'Banff Springs'))!
     await course.setValue('c2')
     await flushPromises()
 
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
     expect(w.text()).not.toContain('no tee sets set up')
     expect(w.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
   })

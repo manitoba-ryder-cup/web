@@ -11,13 +11,14 @@ import { useCourseTees } from '@/composables/useCourseTees'
 import { toast } from '@/composables/useToast'
 import { displayError } from '@/lib/displayError'
 import { isRefusal } from '@/lib/apiError'
-import { availableForTeam, playersSpent } from '@/lib/lineup'
+import { availableForTeam, lineupFull, lineupKey, playersSpent, storedLineup } from '@/lib/lineup'
 import { sideSize } from '@/lib/matchResult'
 import { CUP_TIME_ZONE, utcToEventInput, eventInputToUtc } from '@/lib/teeTime'
 import { teamColor } from '@/lib/teamColor'
 import PageLayout from '@/components/layout/PageLayout.vue'
 import TierDot from '@/components/base/TierDot.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
+import RetryNotice from '@/components/base/RetryNotice.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import SkeletonGrid from '@/components/skeleton/SkeletonGrid.vue'
@@ -49,24 +50,17 @@ const slots = computed(() => sideSize(match.value?.players_per_side))
 
 // The lineup is edited here and written whole, so this holds it until Save. A watcher, not an
 // initial value: the match arrives after mount and this has to re-settle after each save.
-const storedLineup = computed<LineupPlayer[]>(() =>
-  (match.value?.sides ?? []).flatMap((side) => side.players.map((p) => ({ player_id: p.player_id, team_id: side.team_id }))),
-)
-const asKey = (entries: LineupPlayer[]) =>
-  entries
-    .map((p) => `${p.team_id}:${p.player_id}`)
-    .sort()
-    .join('|')
+const stored = computed(() => storedLineup(match.value))
 
 // Keyed, because storedLineup builds a new array every evaluation: watching it directly would
 // re-seed the draft on any refetch, including the one after a save this page refused.
 const lineup = ref<LineupPlayer[]>([])
 watch(
-  () => asKey(storedLineup.value),
-  () => (lineup.value = storedLineup.value.map((p) => ({ ...p }))),
+  () => lineupKey(stored.value),
+  () => (lineup.value = stored.value.map((p) => ({ ...p }))),
   { immediate: true },
 )
-const lineupChanged = computed(() => asKey(lineup.value) !== asKey(storedLineup.value))
+const lineupChanged = computed(() => lineupKey(lineup.value) !== lineupKey(stored.value))
 
 const addToLineup = (playerId: string, teamId: string) => lineup.value.push({ player_id: playerId, team_id: teamId })
 const removeFromLineup = (playerId: string) => (lineup.value = lineup.value.filter((p) => p.player_id !== playerId))
@@ -77,25 +71,20 @@ const panels = computed(() => {
   const spent = playersSpent(matches.value, props.matchId, m.format_name, lineup.value)
   return teams.value.map((team) => ({
     team,
-    assigned: lineup.value.filter((p) => p.team_id === team.id).map((p) => ({ player_id: p.player_id, ...nameOf(p.player_id) })),
+    assigned: lineup.value.filter((p) => p.team_id === team.id).map((p) => ({ player_id: p.player_id, ...onRoster(p.player_id) })),
     available: availableForTeam(roster.value, team.id, spent),
     colors: teamColor(team.color),
   }))
 })
 
-// The draft holds ids; the roster is where the names are.
-function nameOf(playerId: string): { first_name: string; last_name: string } {
+// The draft holds ids; the roster is where the name and the flight are. Both come off one
+// lookup, so a pill cannot show a name from one entry and a swatch from another.
+function onRoster(playerId: string): { first_name: string; last_name: string; tier: string } {
   const p = roster.value.find((r) => r.player_id === playerId)
-  return { first_name: p?.first_name ?? '', last_name: p?.last_name ?? '' }
+  return { first_name: p?.first_name ?? '', last_name: p?.last_name ?? '', tier: p?.tier ?? '' }
 }
 
 const { isBusy, run } = useBusy()
-
-// Assigned players come from the match sides (no tier); look their flight up on the roster
-// so the swatch shows on both assigned and available pills — handy for keeping a pairing even.
-function tierOf(playerId: string): string {
-  return roster.value.find((p) => p.player_id === playerId)?.tier ?? ''
-}
 
 // Teams read by their captain ("Team Bale"); fall back to the colour until one is named.
 function teamLabel(team: { color: string; captain: { last_name: string } | null }) {
@@ -126,14 +115,14 @@ const fieldClass = 'block w-full rounded border border-mrc-line-strong bg-white 
 // Which tees a match is played from decides the par and stroke index its scores are read
 // against, so it belongs to the match rather than the round.
 const courseId = ref('')
-const { tees: courseTees, failed: teesFailed, selected: teeColorId, load: loadTees, retry: retryTees } = useCourseTees()
+const { tees: courseTees, error: teesError, failed: teesFailed, selected: teeColorId, load: loadTees, retry: retryTees } = useCourseTees()
 
 watch(
   record,
   (m) => {
     if (!m || courseId.value === m.course_id) return
     courseId.value = m.course_id
-    void loadTees(m.course_id, m.tee_color_id)
+    loadTees(m.course_id, m.tee_color_id)
   },
   { immediate: true },
 )
@@ -149,7 +138,13 @@ const teeSetChanged = computed(
 
 // Every side holding exactly what the format takes, which is what the API will accept. The
 // page can see this, so it says so rather than spending a request to be told.
-const lineupComplete = computed(() => panels.value.length > 0 && panels.value.every((p) => p.assigned.length === slots.value))
+const lineupComplete = computed(() =>
+  lineupFull(
+    lineup.value,
+    teams.value.map((t) => t.id),
+    slots.value,
+  ),
+)
 
 const changed = computed(() => teeSetChanged.value || teeTimeChanged.value || lineupChanged.value)
 // A course picked with no tee to go with it — still loading, or the load failed. Saving here
@@ -200,7 +195,7 @@ const save = () =>
       // context it was made for.
       await router.push({ name: 'admin-tournament', params: { id: props.id } })
     },
-    { error: "Couldn't save those changes. Please try again." },
+    { error: "Couldn't save those changes. Please try again.", settled: true },
   )
 </script>
 <template>
@@ -227,16 +222,7 @@ const save = () =>
               <select id="tee" v-model="teeColorId" :class="fieldClass" :disabled="!courseTees.length">
                 <option v-for="t in courseTees" :key="t.tee_color_id" :value="t.tee_color_id">{{ t.color }}</option>
               </select>
-              <template v-if="teesFailed">
-                <p class="mt-1 text-sm text-mrc-charcoal">Couldn't load this course's tees.</p>
-                <button
-                  type="button"
-                  class="mt-2 w-full rounded-md bg-mrc-accent py-3 font-semibold text-white transition hover:bg-mrc-accent-dark"
-                  @click="retryTees"
-                >
-                  Try again
-                </button>
-              </template>
+              <RetryNotice v-if="teesFailed" class="mt-2" :message="teesError" :retry="retryTees" />
             </div>
             <div class="min-w-0 flex-1">
               <BaseLabel for="tee-time">Tee time</BaseLabel>
@@ -263,7 +249,7 @@ const save = () =>
                 >
                   <div class="flex min-w-0 items-center gap-1.5">
                     <span class="truncate">{{ p.first_name }} {{ p.last_name }}</span>
-                    <TierDot :tier="tierOf(p.player_id)" />
+                    <TierDot :tier="p.tier" />
                   </div>
                   <!-- The × is 16px of glyph; the negative margins buy it a 44px target without
                      making the row taller than the tap it has to accept. -->

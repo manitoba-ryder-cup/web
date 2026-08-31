@@ -1,6 +1,14 @@
-import { useQueryClient } from '@tanstack/vue-query'
+import { useQueryClient, type QueryClient } from '@tanstack/vue-query'
 import { matchKey, q } from '@/api/queries'
 import type { MatchResult, ScoreSubmissionResult } from '@/api/types'
+
+// A score cannot move a tee set, so a hole write leaves it alone. Only a score: a match write
+// moves the course and the tee colour, which is where par and yardage come from.
+function staleExceptTeeSet(queryClient: QueryClient, matchId: string) {
+  const teeSet = q.matchHoles(matchId).key
+  const isTeeSet = (key: readonly unknown[]) => key.length === teeSet.length && key.every((part, i) => part === teeSet[i])
+  queryClient.invalidateQueries({ refetchType: 'none', predicate: (query) => !isTeeSet(query.queryKey) })
+}
 
 // Everything a write could have touched. Resources are keyed by what they are, so this needs
 // no list of the pages showing them and cannot miss one that was added later.
@@ -31,7 +39,7 @@ export function useAfterHoleWrite() {
     // Both of them or neither. An answer without the holes would move the standing onto this
     // score and leave the card behind it, which reads as the save that did not take.
     if (!holes) return afterMatchWrite(tournamentId, matchId)
-    queryClient.invalidateQueries({ refetchType: 'none' })
+    staleExceptTeeSet(queryClient, matchId)
     queryClient.setQueryData(q.matchScores(matchId).key, holes)
     queryClient.setQueryData<MatchResult[]>(q.results(tournamentId).key, (rows) =>
       rows?.map((m) => (m.match_id === matchId ? { ...m, ...row } : m)),

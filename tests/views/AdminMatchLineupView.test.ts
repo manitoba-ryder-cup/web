@@ -22,12 +22,11 @@ vi.mock('@/api/scorecard', () => ({
   },
 }))
 
-import { config } from '@vue/test-utils'
-import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
-import { CardStub } from '../support/cardStub'
-import { HoleEntryStub } from '../support/holeEntryStub'
+import { q } from '@/api/queries'
+import { withQueryClient } from '../support/queryClient'
+import { CardStub, HoleEntryStub } from '../support/matchStubs'
 import { ApiError } from '@/api/types'
 import AdminMatchLineupView from '@/views/admin/AdminMatchLineupView.vue'
 import { utcToEventInput } from '@/lib/teeTime'
@@ -36,7 +35,7 @@ import { utcToEventInput } from '@/lib/teeTime'
 let sideSize = 1
 
 // The match's scores, keyed by what they are rather than by the page asking for them.
-const scoresKey = ['match', 'm1', 'scores']
+const scoresKey = q.matchScores('m1').key
 
 const router = createRouter({
   history: createWebHistory(),
@@ -464,10 +463,10 @@ describe('AdminMatchLineupView', () => {
   // The one place on this page with something to re-run and, until now, nothing offered: an
   // empty Tees select reads exactly like a course that has no tee sets.
   it('offers a retry when the tees cannot be loaded', async () => {
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
     const w = await mounted()
 
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
     expect(w.findAll('button').some((b) => b.text() === 'Try again')).toBe(true)
   })
 
@@ -497,11 +496,11 @@ describe('AdminMatchLineupView', () => {
     const w = await mounted()
     await w.find('#tee-time').setValue('2026-07-01T09:30')
 
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
     await w.find('#course').setValue('c2')
     await flushPromises()
 
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
     const save = w.findAll('button').find((b) => b.text() === 'Save')
     expect(save?.attributes('disabled')).toBeDefined()
     expect(scorecardApi.updateMatch).not.toHaveBeenCalled()
@@ -513,11 +512,11 @@ describe('AdminMatchLineupView', () => {
     const w = await mounted()
     expect((w.find('#tee').element as HTMLSelectElement).value).toBe('gold')
 
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
     await w.find('#course').setValue('c2')
     await flushPromises()
 
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
     // Nothing to save: a course with no tee is not a tee set the API would take.
     const save = w.findAll('button').find((b) => b.text() === 'Save')
     expect(save?.attributes('disabled')).toBeDefined()
@@ -553,9 +552,9 @@ describe('AdminMatchLineupView', () => {
   // A retry re-issues the request that failed. Bare, it falls through to the first tee in the
   // list — which after a failed initial load arms a tee set change on the match's own course.
   it('retries the tee load without arming a change nobody made', async () => {
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValueOnce(new Error('offline'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValueOnce(new Error('The tee sheet is unavailable.'))
     const w = await mounted()
-    expect(w.text()).toContain("Couldn't load this course's tees")
+    expect(w.text()).toContain('The tee sheet is unavailable.')
 
     await w
       .findAll('button')
@@ -589,9 +588,9 @@ describe('AdminMatchLineupView', () => {
     await detailsForm(w).trigger('submit')
     await flushPromises()
 
-    // Once on mount, then twice out: refetched so the page this returns to is warm, and again
-    // with everything else, which is the price of keeping no list of what a write reaches.
-    expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(3)
+    // Once on mount and once after the write. The match write marks the rest stale without
+    // fetching it, so nothing asks a second time for an answer that just arrived.
+    expect(scorecardApi.getTournamentResults).toHaveBeenCalledTimes(2)
     expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 
@@ -614,8 +613,7 @@ describe('AdminMatchLineupView', () => {
   it("refetches the match's scores after a save", async () => {
     // A client of its own: the shared one has gcTime 0 and collects an unmounted query at once,
     // so nothing would survive to be stale and this would pass however the refetch was scoped.
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
-    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const queryClient = withQueryClient()
     const held = { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([held])
 
@@ -637,8 +635,7 @@ describe('AdminMatchLineupView', () => {
   // One entry, not one per view: the card and the entry page read the same scores, so a write
   // from here cannot reach one of them and miss the other.
   it('serves the card and the entry page from one entry', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000, gcTime: 60_000 } } })
-    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    withQueryClient({ staleTime: 30_000 })
 
     for (const stub of [CardStub, HoleEntryStub]) {
       const visited = mount(stub)
@@ -652,8 +649,7 @@ describe('AdminMatchLineupView', () => {
   // The order the save is written in exists so a scored match takes the tee time and refuses
   // only the lineup — so the refusal path is one that has written.
   it("refetches the match's scores even when the lineup half is refused", async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 60_000 } } })
-    config.global.plugins = [[VueQueryPlugin, { queryClient }]]
+    const queryClient = withQueryClient()
     const held = { hole_number: 1, team_scores: [], leader_team_id: null, lead: 0, holes_remaining: 17, decided: false }
     vi.mocked(scorecardApi.getMatchScores).mockResolvedValue([held])
 

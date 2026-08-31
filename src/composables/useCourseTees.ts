@@ -29,5 +29,5 @@ export function useCourseTees() {
     picked.value = ''
   }
 
-  return { tees, failed, loading, selected, load, retry }
+  return { tees, error, failed, loading, selected, load, retry }
 }

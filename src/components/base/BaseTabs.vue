@@ -16,10 +16,15 @@ const slugify = (t: string) =>
     .replace(/^-|-$/g, '')
 const slugs = computed(() => props.tabs.map(slugify))
 
+// -1 when the hash names no tab, so a caller can tell "go here" from "nothing said".
+function indexFromHash(): number {
+  return slugs.value.indexOf(route.hash.replace(/^#/, ''))
+}
+
 // The hash first, so a shared link opens what it points at. `initial` is where a page with no
 // hash would rather start than the first tab; an unknown one falls through to it as before.
 function initialIndex(): number {
-  const fromHash = slugs.value.indexOf(route.hash.replace(/^#/, ''))
+  const fromHash = indexFromHash()
   if (fromHash >= 0) return fromHash
   const fromInitial = props.initial ? props.tabs.indexOf(props.initial) : -1
   return Math.max(fromInitial, 0)
@@ -37,8 +42,8 @@ if (props.syncHash) {
   // Follow the hash the other way too (back/forward, or a pasted link once tabs are known).
   // Not `initial`: it moves as the cup is played, and the tab must not change under a reader.
   watch([() => route.hash, slugs], () => {
-    const i = initialIndex()
-    if (i !== active.value) active.value = i
+    const i = indexFromHash()
+    if (i >= 0 && i !== active.value) active.value = i
   })
 }
 

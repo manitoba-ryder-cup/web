@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { scorecardApi } from '@/api/scorecard'
 import { q } from '@/api/queries'
-import { combine, useAsync, useResource } from '@/composables/useAsync'
+import { combine, useResource, useResources } from '@/composables/useAsync'
 import CardGrid from '@/components/layout/CardGrid.vue'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonGrid from '@/components/skeleton/SkeletonGrid.vue'
@@ -13,16 +12,12 @@ import TournamentCard from '@/components/tournament/TournamentCard.vue'
 const listRes = useResource(() => q.tournaments())
 const sorted = computed(() => [...(listRes.data.value ?? [])].sort((a, b) => b.start_date.localeCompare(a.start_date)))
 
-// A join across every cup rather than one resource, so it keeps a key of its own — keyed by
-// the cups it joined, or adding one would leave the archive showing the set before it.
-const teamsRes = useAsync(
-  () => ['cup-archive', sorted.value.map((t) => t.id).join(',')],
-  () => Promise.all(sorted.value.map((t) => scorecardApi.getTournamentTeams(t.id))),
-  { enabled: () => sorted.value.length > 0 },
-)
+// Each cup's teams under that cup's own key, so the current cup costs nothing here and a cup
+// opened from this grid is already answered.
+const teamsRes = useResources(() => sorted.value.map((t) => q.teams(t.id)))
 const { error, loading, retry } = combine([listRes, teamsRes])
 
-const cups = computed(() => sorted.value.map((t, i) => ({ tournament: t, teams: teamsRes.data.value?.[i] ?? [] })))
+const cups = computed(() => sorted.value.map((t, i) => ({ tournament: t, teams: teamsRes.data.value[i] ?? [] })))
 </script>
 <template>
   <AsyncState :loading="loading" :error="error" :retry="retry">

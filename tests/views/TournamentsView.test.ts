@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { defineComponent } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: { listTournaments: vi.fn(), listPlayers: vi.fn(), getTournamentTeams: vi.fn() },
@@ -7,6 +9,7 @@ vi.mock('@/api/scorecard', () => ({
 
 import { createRouter, createWebHistory } from 'vue-router'
 import { scorecardApi } from '@/api/scorecard'
+import { q } from '@/api/queries'
 import TournamentsView from '@/views/TournamentsView.vue'
 
 const router = createRouter({
@@ -98,6 +101,25 @@ describe('TournamentsView', () => {
     expect(w.text()).not.toContain('Bygone')
     // Newest first, so the most recent cup leads rather than the first one ever played.
     expect(w.text().indexOf('Gimli')).toBeLessThan(w.text().indexOf('Winnipeg'))
+  })
+
+  // The archive holds one entry per cup rather than a joined blob of its own, so a cup opened
+  // from it is already answered and the current cup costs nothing here.
+  it("leaves each cup's teams where the rest of the app reads them", async () => {
+    await loaded()
+
+    let client!: ReturnType<typeof useQueryClient>
+    mount(
+      defineComponent({
+        setup: () => {
+          client = useQueryClient()
+          return {}
+        },
+        template: '<div/>',
+      }),
+    )
+
+    expect(client.getQueryData(q.teams('t1').key)).toBeDefined()
   })
 
   it('lists everyone who has played on the other tab', async () => {

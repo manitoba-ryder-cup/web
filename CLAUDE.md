@@ -56,7 +56,9 @@ yet to be published reads as not in play, and only a request turns that empty li
 **Cache keys name resources, not pages.** `src/api/queries.ts` is the only place a key is
 written: `q.teams(id)`, `q.results(id)`, `q.matchScores(matchId)`. A view names the ones it
 needs with `useResource` and merges their states with `combine`, so two views asking for the
-same thing share one answer and one write invalidates it for both. Keying by page is what this
+same thing share one answer and one write invalidates it for both. `useResources` is the same
+for N of one resource — every cup's teams — and keys each answer as that resource is keyed
+rather than joining them under a key of its own. Keying by page is what this
 replaced, and it cost two full copies of every match — the card and the entry page differed
 only on whether a missing tee set was fatal, and carrying that in the key meant every write had
 to reach both and kept not doing so.
@@ -65,7 +67,13 @@ to reach both and kept not doing so.
 go through `patch`** — `data` is a readonly view of the cache, so assigning into it is dropped
 rather than refused: the write lands and the row never moves. `useAfterWrite` invalidates
 everything, with no exception to keep in step; `useAfterMatchWrite` additionally refetches the
-two resources a match write changes, awaited, so the page it returns to shows what was written.
+two resources a match write changes, awaited, so the page it returns to shows what was written,
+and `useAfterHoleWrite` writes those two from the answer instead. That one holds back the tee
+set — **a score cannot move a tee set**, so marking `q.matchHoles` stale spends a request per
+hole on par and yardage that are the course's. `useAfterMatchWrite` must not: it settles the
+lineup page's save, which sends `course_id` and `tee_color_id`, and the wheel would open on the
+old par. An action that has settled the cache passes `settled` to `useBusy.run`, or run's own
+pass asks again for what just arrived.
 A resource whose id is not known yet takes `enabled` and reads as loading, not as empty.
 
 Pass a skeleton through `AsyncState`'s `#loading` slot rather than letting a view collapse

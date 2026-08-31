@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { defineComponent, ref, nextTick } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -25,6 +25,11 @@ const Host = defineComponent({
 })
 
 describe('useHashAccordion', () => {
+  // Unmounted between cases: these attach to the document and share a router, so one left
+  // mounted still answers the next case's navigation and scrolls on its behalf.
+  const mounted: { unmount: () => void }[] = []
+  afterEach(() => mounted.splice(0).forEach((w) => w.unmount()))
+
   beforeEach(() => {
     scrollIntoView.mockClear()
     Element.prototype.scrollIntoView = scrollIntoView
@@ -37,6 +42,7 @@ describe('useHashAccordion', () => {
     // Attached, because the composable finds its row with document.getElementById and a
     // detached mount is not in the document.
     const w = mount(Host, { props: { ids }, attachTo: document.body, global: { plugins: [router] } })
+    mounted.push(w)
     await flushPromises()
     await nextTick()
     return w
@@ -52,6 +58,19 @@ describe('useHashAccordion', () => {
   it('scrolls by the least amount needed, never to the top', async () => {
     await mountAt('#t1', ['t1', 't2'])
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
+  })
+
+  // A tap is its own scroll. The row expands under a finger already on it, and an open row is
+  // taller than a phone — which sends `nearest` to the top edge, the one thing it avoids.
+  it('does not scroll a row the reader opened by tapping it', async () => {
+    const w = await mountAt('', ['t1', 't2'])
+    expect(scrollIntoView).not.toHaveBeenCalled()
+
+    ;(w.vm as unknown as { toggle: (id: string) => void }).toggle('t1')
+    await flushPromises()
+    await nextTick()
+
+    expect(scrollIntoView).not.toHaveBeenCalled()
   })
 
   it('leaves everything shut when there is no hash', async () => {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { QueryClient, VueQueryPlugin, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { useAfterWrite, useAfterHoleWrite } from '@/composables/useAfterWrite'
+import { useAfterWrite, useAfterHoleWrite, useAfterMatchWrite } from '@/composables/useAfterWrite'
 import { q } from '@/api/queries'
 import type { MatchResult, ScoreSubmissionResult } from '@/api/types'
 
@@ -48,7 +48,7 @@ describe('useAfterWrite', () => {
   // No exception any more: it skipped the match because each view held a copy under a key of
   // its own. One copy now, and the entry page asks for nothing on its own once it has loaded.
   it('reaches a match as readily as anything else', async () => {
-    const scores = ['match', 'm1', 'scores']
+    const scores = q.matchScores('m1').key
     const { w, count } = mountWith([scores])
     await flushPromises()
     expect(count(scores)).toBe(1)
@@ -81,7 +81,7 @@ describe('useAfterHoleWrite', () => {
     let queryClient!: QueryClient
     const w = mountWithSetup(() => {
       queryClient = useQueryClient()
-      return { afterHoleWrite: useAfterHoleWrite() }
+      return { afterHoleWrite: useAfterHoleWrite(), afterMatchWrite: useAfterMatchWrite() }
     })
     seed(queryClient)
     return { w, queryClient }
@@ -150,5 +150,33 @@ describe('useAfterHoleWrite', () => {
     // The team points move when a match ends and the write cannot say by how much, so what it
     // could not derive is left stale for the next page showing it to ask about.
     expect(queryClient.getQueryState(q.teams(tournamentId).key)?.isInvalidated).toBe(true)
+  })
+
+  // A match write can move the course and the tee colour, which is where par, yardage and
+  // stroke index come from — so this one must re-read them or the wheel opens on the old par.
+  it('marks the tee set stale after a match write, which can move it', async () => {
+    const { w, queryClient } = mountHook((c) => {
+      c.setQueryData(q.matchScores(matchId).key, [])
+      c.setQueryData(q.matchHoles(matchId).key, [])
+      c.setQueryData(q.results(tournamentId).key, [row()])
+    })
+
+    await w.vm.afterMatchWrite(tournamentId, matchId)
+
+    expect(queryClient.getQueryState(q.matchHoles(matchId).key)?.isInvalidated).toBe(true)
+  })
+
+  // Par, yardage and stroke index are the course's, and a scored match's tee set is frozen, so
+  // marking it stale spends a request per hole on an answer that cannot have changed.
+  it('leaves the tee set alone, which a score cannot move', () => {
+    const { w, queryClient } = mountHook((c) => {
+      c.setQueryData(q.matchScores(matchId).key, [])
+      c.setQueryData(q.matchHoles(matchId).key, [])
+      c.setQueryData(q.results(tournamentId).key, [row()])
+    })
+
+    w.vm.afterHoleWrite(tournamentId, matchId, answer())
+
+    expect(queryClient.getQueryState(q.matchHoles(matchId).key)?.isInvalidated).toBe(false)
   })
 })

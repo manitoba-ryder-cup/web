@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
-import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { Resource } from '@/api/queries'
 import { displayError } from '@/lib/displayError'
 
@@ -18,19 +18,19 @@ interface UseAsyncOptions {
 // `key` identifies the cached entry, and everything the fetcher reads must appear in it or
 // two pages share one cache line and show each other's data.
 export function useAsync<T>(key: MaybeRefOrGetter<readonly unknown[]>, fetcher: () => Promise<T>, options: UseAsyncOptions = {}) {
+  // A disabled query reports nothing of its own: it is waiting on something whose state the
+  // page already shows, and a stale error or skeleton from it would be that thing said twice.
+  const enabled = computed(() => toValue(options.enabled) ?? true)
+
   const q = useQuery({
     queryKey: computed(() => toValue(key)),
     queryFn: fetcher,
     refetchInterval: computed(() => toValue(options.intervalMs) ?? false),
     refetchOnWindowFocus: options.refetchOnFocus ?? true,
-    enabled: computed(() => toValue(options.enabled) ?? true),
+    enabled,
     // A hidden tab is not being read; it catches up when it comes back.
     refetchIntervalInBackground: false,
   })
-
-  // A disabled query reports nothing of its own: it is waiting on something whose state the
-  // page already shows, and a stale error or skeleton from it would be that thing said twice.
-  const enabled = computed(() => toValue(options.enabled) ?? true)
 
   // Only a load with nothing to show is the view's failure to report. A poll that blips
   // keeps the last good data on screen rather than blanking a page someone is reading.
@@ -61,6 +61,24 @@ export function useResource<T>(resource: () => Resource<T>, options: UseAsyncOpt
     () => resource().fetch(),
     options,
   )
+}
+
+// N of one resource — a list of cups and each one's teams. Keyed as that resource is keyed, so
+// every answer is the entry the rest of the app already reads rather than a copy beside it.
+export function useResources<T>(resources: () => Resource<T>[]) {
+  const results = useQueries({
+    queries: computed(() => resources().map((r) => ({ queryKey: r.key, queryFn: () => r.fetch() }))),
+  })
+  return {
+    data: computed(() => results.value.map((r) => r.data)),
+    // Reported as one, like `combine`: a grid built from N of these is one thing to a reader.
+    error: computed(() => {
+      const failed = results.value.find((r) => r.isError && r.data === undefined)
+      return failed ? displayError(failed.error) : ''
+    }),
+    loading: computed(() => results.value.some((r) => r.isPending || (r.isFetching && r.data === undefined))),
+    retry: () => Promise.all(results.value.map((r) => r.refetch())).then(() => undefined),
+  }
 }
 
 interface Combinable {

@@ -124,4 +124,17 @@ describe('BaseTabs', () => {
     await flushPromises()
     expect(w.text()).toContain('0:Alt Shot')
   })
+
+  // `initial` is where to start, not where to return to. The follower reads the hash and
+  // nothing else, or a cup moving to its next session would move the tab under a reader.
+  it('stays put when the hash names no tab', async () => {
+    const w = await mountTabs({ tabs: ['Morning', 'Afternoon'], syncHash: true, initial: 'Afternoon' })
+    expect(w.text()).toContain('1:Afternoon')
+
+    await click(w, 'Morning')
+    await router.replace({ path: '/tournaments', hash: '#nothing-by-that-name' })
+    await flushPromises()
+
+    expect(w.text()).toContain('0:Morning')
+  })
 })

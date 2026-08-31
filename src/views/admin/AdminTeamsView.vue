@@ -17,7 +17,6 @@ const props = defineProps<{ id: string }>()
 const rosterRes = useResource(() => q.roster(props.id))
 const teamsRes = useResource(() => q.teams(props.id))
 const { error, loading, retry } = combine([rosterRes, teamsRes])
-const refresh = retry
 
 const teams = computed(() => teamsRes.data.value ?? [])
 const blueId = computed(() => teams.value.find((t) => t.color === 'Blue')?.id ?? null)
@@ -64,7 +63,7 @@ function assign(p: TournamentPlayer, target: string | null) {
       // Leaving a team drops any captaincy there (the server clears it on undraft too).
       teamsRes.patch((t) => t.map((x) => (x.id === prev && x.captain?.id === p.player_id ? { ...x, captain: null } : x)))
     },
-    { error: `Couldn't update ${p.first_name} ${p.last_name}. Please try again.`, onError: refresh },
+    { error: `Couldn't update ${p.first_name} ${p.last_name}. Please try again.`, onError: retry },
   )
 }
 
