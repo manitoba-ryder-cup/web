@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
 vi.mock('@/api/scorecard', () => ({
@@ -26,13 +26,18 @@ const router = createRouter({
   ],
 })
 
-function match(teeTime: string, format: string, finished = false) {
+const PAIRING = [
+  { team_id: 'blue-1', players: [{ player_id: 'p1', first_name: 'Bo', last_name: 'Jones' }] },
+  { team_id: 'red-1', players: [{ player_id: 'p2', first_name: 'Amy', last_name: 'Smith' }] },
+]
+
+function match(teeTime: string, format: string, finished = false, drawn = false) {
   return {
     match_id: teeTime + format,
     format_name: format,
     players_per_side: format === 'Singles' ? 1 : 2,
     scores_per_player: true,
-    sides: [],
+    sides: drawn ? PAIRING : [],
     hole_results: [],
     finished,
     winner_team_id: null,
@@ -45,6 +50,9 @@ function match(teeTime: string, format: string, finished = false) {
     scoring_closes_at: teeTime,
   }
 }
+// The clock every case is read against, and the two tee times sit after it — a schedule the
+// cup has not reached. Moving one without the other is what these cases turn on.
+const CLOCK = new Date('2026-09-01T12:00:00Z')
 const FRI = '2026-09-18T14:00:00Z'
 const SAT = '2026-09-19T14:00:00Z'
 
@@ -66,13 +74,21 @@ function mountDashboard() {
 }
 
 describe('DashboardView', () => {
+  // Pinned: what the card shows turns on the tee time, so on a real clock these fixtures stop
+  // being ahead of it the week the cup is played.
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(CLOCK)
     setActivePinia(createPinia())
     vi.clearAllMocks()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([TOURNAMENT])
     vi.mocked(scorecardApi.getTournament).mockResolvedValue(TOURNAMENT)
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue(TEAMS)
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   // refetch() does not consult `enabled`, so the parts still waiting on an id would each spend
@@ -174,21 +190,128 @@ describe('DashboardView', () => {
     expect(w.text()).not.toContain('Singles')
   })
 
-  it('moves on to the next session once one has finished', async () => {
-    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles')])
+  // A session with no pairings drawn renders a time and a dash per row, so there is nothing in
+  // it worth trading the finished results for.
+  it('moves on once the next session has been drawn', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles', false, true)])
     const w = mountDashboard()
     await flushPromises()
     expect(w.text()).toContain('Singles')
   })
 
-  // Nothing is next once the cup is over, and a card headed "Next out" with an empty body
-  // is worse than no card.
-  it('drops the session card when every match has finished', async () => {
+  it('holds the finished session while the next is undrawn', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles')])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.text()).toContain('Fourball')
+    expect(w.text()).not.toContain('Singles')
+  })
+
+  // Nothing has been played yet, so an undrawn schedule is still the best thing on offer.
+  it('shows the opening session before the cup even undrawn', async () => {
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball'), match(SAT, 'Singles')])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.text()).toContain('Fourball')
+    expect(w.text()).toContain('Next out')
+  })
+
+  // Relative to now for the same reason the countdown case is: the label turns on whether the
+  // session has teed off, which a fixed date stops describing.
+  const HOUR = 3_600_000
+
+  // Both of these fix the label to the session rather than to the cup, and each would read the
+  // other way round if it followed the record's phase instead.
+  it('heads the card "On the course" for a session that has teed off', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(teedOff, 'Fourball')])
+    const w = mountDashboard()
+    await flushPromises()
+
+    // The record still says upcoming; the session is out all the same.
+    expect(w.text()).toContain('On the course')
+    expect(w.text()).not.toContain('Next out')
+  })
+
+  it('heads the card "Just played" between sessions, with the cup still live', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    const dueOut = new Date(Date.now() + HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(teedOff, 'Fourball', true), match(dueOut, 'Alt Shot')])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.text()).toContain('Fourball')
+    expect(w.text()).toContain('Just played')
+    expect(w.text()).not.toContain('On the course')
+  })
+
+  it('heads the card "Next out" once the next session is drawn', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    const dueOut = new Date(Date.now() + HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([
+      match(teedOff, 'Fourball', true),
+      match(dueOut, 'Alt Shot', false, true),
+    ])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.text()).toContain('Alt Shot')
+    expect(w.text()).toContain('Next out')
+    expect(w.text()).not.toContain('Just played')
+  })
+
+  // The clock is the only thing that moves here: the schedule is static, and the scoring window
+  // is parked past the run so the poll stays on its five-minute heartbeat rather than refetching.
+  it('crosses into the next session as it tees off, with no change in the data', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    const teesOffSoon = new Date(Date.now() + 2 * 60_000).toISOString()
+    const parked = new Date(Date.now() + HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([
+      match(teedOff, 'Fourball', true),
+      { ...match(teesOffSoon, 'Alt Shot'), scoring_opens_at: parked, scoring_closes_at: parked },
+    ])
+    const w = mountDashboard()
+    await flushPromises()
+    expect(w.text()).toContain('Just played')
+    expect(w.text()).not.toContain('Alt Shot')
+    const fetched = vi.mocked(scorecardApi.getTournamentResults).mock.calls.length
+
+    await vi.advanceTimersByTimeAsync(3 * 60_000)
+
+    expect(vi.mocked(scorecardApi.getTournamentResults).mock.calls.length).toBe(fetched)
+    expect(w.text()).toContain('Alt Shot')
+    expect(w.text()).toContain('On the course')
+  })
+
+  // The card that used to be dropped here was a "Next out" heading over an empty body. What
+  // stands in its place is the session that decided the cup, with its results in it.
+  it('holds the closing session once every match has finished', async () => {
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'finished' })
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(FRI, 'Fourball', true), match(SAT, 'Singles', true)])
     const w = mountDashboard()
     await flushPromises()
-    expect(w.text()).not.toContain('Next out')
+
+    expect(w.text()).toContain('Singles')
+    expect(w.text()).toContain('Final results')
+  })
+
+  // Two ways a finished cup goes wrong on this card. A match nobody entered stays unfinished with
+  // its tee time long past, and the front page holds last year's cup until the next one exists.
+  it('heads a finished cup with its result, on the day and eleven months later', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'finished' })
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(teedOff, 'Fourball', true), match(teedOff, 'Singles', false)])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.text()).toContain('Final results')
     expect(w.text()).not.toContain('On the course')
+    expect(w.text()).not.toContain('Just played')
   })
 
   it('leads with the standing once the cup is under way', async () => {

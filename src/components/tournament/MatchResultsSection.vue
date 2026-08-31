@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { MatchResult, TournamentTeam } from '@/api/types'
-import { currentSession } from '@/lib/sessions'
+import { sessionInPlay } from '@/lib/sessions'
 import BaseTabs from '@/components/base/BaseTabs.vue'
 import MatchOverview from './MatchOverview.vue'
 
@@ -22,9 +22,7 @@ const grouped = computed(() => {
   return { order, byFormat }
 })
 
-// Where the play is: the earliest session with anything unfinished, which before the cup is the
-// first and after it is nothing at all — so both ends of the week open on the opening format.
-const openOn = computed(() => currentSession(props.matches)?.format)
+const openOn = computed(() => sessionInPlay(props.matches)?.format)
 </script>
 <template>
   <BaseTabs :tabs="grouped.order" :initial="openOn" v-slot="{ tab }">

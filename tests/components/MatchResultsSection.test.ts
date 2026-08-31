@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue'
@@ -56,7 +56,15 @@ describe('MatchResultsSection', () => {
   // The router is shared, and switching tabs writes the hash — which the next mount would read
   // as a choice somebody made, hiding what it opens on by default.
   beforeEach(async () => {
+    // Mid-morning of the fixture's Friday: the 11:00 window is open, so these matches are
+    // being played rather than merely scheduled.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-09-18T15:00:00Z'))
     await router.replace({ path: '/', hash: '' })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('makes a tab per format in first-appearance order', () => {
@@ -73,8 +81,8 @@ describe('MatchResultsSection', () => {
     expect(t).toContain('Jones')
   })
 
-  // What someone tapping Scores mid-round came for: the session with something left to play,
-  // not whichever format happened to tee off first.
+  // What someone tapping Scores mid-round came for: the session out on the course, not
+  // whichever format happened to tee off first.
   it('opens on the session still being played', () => {
     const w = mountIt()
 
@@ -85,10 +93,35 @@ describe('MatchResultsSection', () => {
     expect(w.text()).not.toContain('In progress')
   })
 
-  it('opens on the first tab once every match is done', () => {
-    const w = mountIt(matches.map((m) => ({ ...m, finished: true, winner_team_id: m.winner_team_id ?? 't-red' })))
+  // Three sessions, so the one to open on is not also the tab a missing `initial` falls back to
+  // — otherwise this passes whether the just-played fallback works or not.
+  it('stays on the session just played until the next tees off', () => {
+    const w = mountIt([
+      match({ match_id: 'm1', format_name: 'Fourball', finished: true, tee_time: '2026-09-18T11:00:00Z' }),
+      match({ match_id: 'm2', format_name: 'Alt Shot', finished: true, tee_time: '2026-09-18T13:00:00Z' }),
+      match({
+        match_id: 'm3',
+        format_name: 'Singles',
+        finished: false,
+        winner_team_id: null,
+        sides: [],
+        hole_results: [],
+        tee_time: '2026-09-18T19:00:00Z',
+      }),
+    ])
 
-    expect(activeTab(w)).toBe('Fourball')
+    expect(activeTab(w)).toBe('Alt Shot')
+  })
+
+  // The match that decided the cup is the one people are looking at when it does. Tee times set
+  // apart, so "closing" is settled by the clock rather than by where the sort happens to leave a tie.
+  it('opens on the closing session once every match is done', () => {
+    const w = mountIt([
+      match({ match_id: 'm1', format_name: 'Fourball', finished: true, tee_time: '2026-09-18T11:00:00Z' }),
+      match({ match_id: 'm2', format_name: 'Singles', finished: true, tee_time: '2026-09-18T13:00:00Z' }),
+    ])
+
+    expect(activeTab(w)).toBe('Singles')
   })
 
   it('shows a finished result on the tab it belongs to', async () => {

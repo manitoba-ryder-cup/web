@@ -27,9 +27,40 @@ export function groupIntoSessions(matches: MatchResult[]): Session[] {
 }
 
 /**
- * The earliest session with anything left to play, which is the one being played once it has
- * teed off. Nothing left means the final standing is the answer.
+ * The earliest session with anything left to play: the one on the course, or the one due out
+ * next. Nothing left means the cup is over.
  */
-export function currentSession(matches: MatchResult[]): Session | null {
+export function nextSession(matches: MatchResult[]): Session | null {
   return groupIntoSessions(matches).find((s) => s.matches.some((m) => !m.finished)) ?? null
+}
+
+/**
+ * The session being played, or the one just played — the closing session once the cup is over.
+ * One that has not teed off holds no lineups and no scores, so it waits until it does.
+ */
+export function sessionInPlay(matches: MatchResult[], now: Date = new Date()): Session | null {
+  const sessions = groupIntoSessions(matches)
+  const next = sessions.findIndex((s) => s.matches.some((m) => !m.finished))
+  if (next < 0) return sessions.at(-1) ?? null
+  return sessionUnderWay(sessions[next], now) ? sessions[next] : (sessions[next - 1] ?? null)
+}
+
+/**
+ * Whether a session is being played: it has reached its first tee time, or a score has landed.
+ * Not the scoring window, which opens ahead of the tee to govern writes rather than play.
+ */
+export function sessionUnderWay(session: Session | null | undefined, now: Date = new Date()): boolean {
+  if (!session) return false
+  return session.teeOffAt <= now.getTime() || session.matches.some((m) => m.hole_results.length > 0)
+}
+
+/**
+ * The session to lead with: the next one once every match in it is drawn or it has teed off,
+ * and until then the one just played. Before the cup there is nothing played to fall back to.
+ */
+export function headlineSession(matches: MatchResult[], now: Date = new Date()): Session | null {
+  const next = nextSession(matches)
+  if (!next) return sessionInPlay(matches, now)
+  const drawn = next.matches.every((m) => m.sides.some((side) => side.players.length > 0))
+  return drawn || sessionUnderWay(next, now) ? next : (sessionInPlay(matches, now) ?? next)
 }

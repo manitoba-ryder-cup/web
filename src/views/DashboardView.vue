@@ -4,12 +4,13 @@ import { useRoute } from 'vue-router'
 import type { TournamentPhase } from '@/api/types'
 import { q } from '@/api/queries'
 import { combine, useResource } from '@/composables/useAsync'
+import { useCoarseClock } from '@/composables/useCoarseClock'
 import { usePollWhileInPlay } from '@/composables/usePollWhileInPlay'
 import { useCurrentCup } from '@/composables/useCurrentCup'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
-import { currentSession, groupIntoSessions } from '@/lib/sessions'
+import { groupIntoSessions, headlineSession, sessionUnderWay } from '@/lib/sessions'
 import { tournamentEyebrow } from '@/lib/tournament'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -23,9 +24,12 @@ import CaptainMatchup from '@/components/tournament/CaptainMatchup.vue'
 const route = useRoute()
 const cup = useCurrentCup()
 
+// The card and its heading turn on the tee time alone, so a page left open across it has
+// nothing else to recompute from.
+const now = useCoarseClock()
 // Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
 // request turns that empty list full — a page open on the morning of would never see it.
-const poll = usePollWhileInPlay()
+const poll = usePollWhileInPlay(now)
 const enabled = () => cup.known()
 // All three move while a cup is on: the record carries the phase, the teams carry the points
 // the hero renders as the score, and the results carry the matches under way.
@@ -81,14 +85,20 @@ const teeOffAt = computed<number | null>(() => {
 
 const { segments } = useCountdown(teeOffAt)
 
-// The session in play, not the whole order: before the event that is mostly rows carrying a
-// time and nothing else. `?session=N` steps to a later one for a demo.
+// One session, not the whole order. `?session=N` steps to a later one for a demo.
 const session = computed(() => {
   const skip = Number(preview('session'))
   if (Number.isFinite(skip)) return groupIntoSessions(results.value)[skip] ?? null
-  return currentSession(results.value)
+  return headlineSession(results.value, now.value)
 })
-const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 'Next out'))
+// Follows the session rather than the cup, which is live across a whole day. The record settles
+// the end alone: a match nobody closed out, and a standing that is not "just played" in March.
+const sessionTitle = computed(() => {
+  const s = session.value
+  if (phase.value === 'finished') return 'Final results'
+  if (s?.matches.every((m) => m.finished)) return 'Just played'
+  return sessionUnderWay(s, now.value) ? 'On the course' : 'Next out'
+})
 </script>
 <template>
   <div>
