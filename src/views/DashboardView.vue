@@ -9,7 +9,7 @@ import { useCurrentCup } from '@/composables/useCurrentCup'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
-import { currentSession, groupIntoSessions } from '@/lib/sessions'
+import { groupIntoSessions, nextSession } from '@/lib/sessions'
 import { tournamentEyebrow } from '@/lib/tournament'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -81,12 +81,12 @@ const teeOffAt = computed<number | null>(() => {
 
 const { segments } = useCountdown(teeOffAt)
 
-// The session in play, not the whole order: before the event that is mostly rows carrying a
+// The next session out, not the whole order: before the event that is mostly rows carrying a
 // time and nothing else. `?session=N` steps to a later one for a demo.
 const session = computed(() => {
   const skip = Number(preview('session'))
   if (Number.isFinite(skip)) return groupIntoSessions(results.value)[skip] ?? null
-  return currentSession(results.value)
+  return nextSession(results.value)
 })
 const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 'Next out'))
 </script>

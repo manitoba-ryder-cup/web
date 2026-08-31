@@ -1,4 +1,5 @@
 import type { MatchResult } from '@/api/types'
+import { hasStarted } from './scoringWindow'
 import { teeDayKey } from './teeTime'
 
 /** A day and a format played together — how an order of play is actually organised. */
@@ -27,9 +28,20 @@ export function groupIntoSessions(matches: MatchResult[]): Session[] {
 }
 
 /**
- * The earliest session with anything left to play, which is the one being played once it has
- * teed off. Nothing left means the final standing is the answer.
+ * The earliest session with anything left to play: the one on the course, or the one due out
+ * next. Nothing left means the cup is over.
  */
-export function currentSession(matches: MatchResult[]): Session | null {
+export function nextSession(matches: MatchResult[]): Session | null {
   return groupIntoSessions(matches).find((s) => s.matches.some((m) => !m.finished)) ?? null
+}
+
+/**
+ * The session being played, or between sessions the one just played: a session that has not
+ * teed off holds no lineups and no scores, so it does not take the page until its window opens.
+ */
+export function sessionInPlay(matches: MatchResult[], now: Date = new Date()): Session | null {
+  const sessions = groupIntoSessions(matches)
+  const next = sessions.findIndex((s) => s.matches.some((m) => !m.finished))
+  if (next < 0) return null
+  return sessions[next].matches.some((m) => hasStarted(m, now)) ? sessions[next] : (sessions[next - 1] ?? null)
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import MatchResultsSection from '@/components/tournament/MatchResultsSection.vue'
@@ -56,7 +56,15 @@ describe('MatchResultsSection', () => {
   // The router is shared, and switching tabs writes the hash — which the next mount would read
   // as a choice somebody made, hiding what it opens on by default.
   beforeEach(async () => {
+    // Mid-morning of the fixture's Friday: the 11:00 window is open, so these matches are
+    // being played rather than merely scheduled.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-09-18T15:00:00Z'))
     await router.replace({ path: '/', hash: '' })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('makes a tab per format in first-appearance order', () => {
@@ -73,8 +81,8 @@ describe('MatchResultsSection', () => {
     expect(t).toContain('Jones')
   })
 
-  // What someone tapping Scores mid-round came for: the session with something left to play,
-  // not whichever format happened to tee off first.
+  // What someone tapping Scores mid-round came for: the session out on the course, not
+  // whichever format happened to tee off first.
   it('opens on the session still being played', () => {
     const w = mountIt()
 
@@ -83,6 +91,26 @@ describe('MatchResultsSection', () => {
     expect(w.text()).toContain('3')
     expect(w.text()).toContain('UP')
     expect(w.text()).not.toContain('In progress')
+  })
+
+  // The gap between sessions: with the fourballs in and the alternate shot yet to tee off,
+  // the finished session is the one worth reading — the next holds no lineups and no scores.
+  it('stays on the session just played until the next tees off', () => {
+    const w = mountIt([
+      match({ match_id: 'm1', format_name: 'Fourball', finished: true }),
+      match({
+        match_id: 'm2',
+        format_name: 'Alt Shot',
+        finished: false,
+        winner_team_id: null,
+        sides: [],
+        hole_results: [],
+        tee_time: '2026-09-18T19:00:00Z',
+        scoring_opens_at: '2026-09-18T17:00:00Z',
+      }),
+    ])
+
+    expect(activeTab(w)).toBe('Fourball')
   })
 
   it('opens on the first tab once every match is done', () => {
