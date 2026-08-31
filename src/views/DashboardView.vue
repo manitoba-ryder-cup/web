@@ -10,6 +10,7 @@ import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
 import { groupIntoSessions, nextSession } from '@/lib/sessions'
+import { hasStarted } from '@/lib/scoringWindow'
 import { tournamentEyebrow } from '@/lib/tournament'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -88,7 +89,9 @@ const session = computed(() => {
   if (Number.isFinite(skip)) return groupIntoSessions(results.value)[skip] ?? null
   return nextSession(results.value)
 })
-const sessionTitle = computed(() => (phase.value === 'live' ? 'On the course' : 'Next out'))
+// The label follows the session on the card rather than the cup: between sessions the cup is
+// live while the session shown has not teed off.
+const sessionTitle = computed(() => (session.value?.matches.some((m) => hasStarted(m)) ? 'On the course' : 'Next out'))
 </script>
 <template>
   <div>

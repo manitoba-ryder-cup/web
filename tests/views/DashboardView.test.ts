@@ -181,6 +181,36 @@ describe('DashboardView', () => {
     expect(w.text()).toContain('Singles')
   })
 
+  // Relative to now for the same reason the countdown case is: the label turns on whether the
+  // session has teed off, which a fixed date stops describing.
+  const HOUR = 3_600_000
+
+  // Both of these fix the label to the session rather than to the cup, and each would read the
+  // other way round if it followed the record's phase instead.
+  it('heads the card "On the course" for a session that has teed off', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(teedOff, 'Fourball')])
+    const w = mountDashboard()
+    await flushPromises()
+
+    // The record still says upcoming; the session is out all the same.
+    expect(w.text()).toContain('On the course')
+    expect(w.text()).not.toContain('Next out')
+  })
+
+  it('heads the card "Next out" between sessions, with the cup still live', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    const dueOut = new Date(Date.now() + HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([match(teedOff, 'Fourball', true), match(dueOut, 'Alt Shot')])
+    const w = mountDashboard()
+    await flushPromises()
+
+    expect(w.text()).toContain('Alt Shot')
+    expect(w.text()).toContain('Next out')
+    expect(w.text()).not.toContain('On the course')
+  })
+
   // Nothing is next once the cup is over, and a card headed "Next out" with an empty body
   // is worse than no card.
   it('drops the session card when every match has finished', async () => {
