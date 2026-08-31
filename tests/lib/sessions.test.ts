@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { groupIntoSessions, headlineSession, nextSession, sessionInPlay } from '@/lib/sessions'
+import { groupIntoSessions, headlineSession, nextSession, sessionInPlay, sessionUnderWay } from '@/lib/sessions'
 import type { MatchResult } from '@/api/types'
 
 function match(over: Partial<MatchResult> & { tee_time: string; format_name: string }): MatchResult {
@@ -202,5 +202,45 @@ describe('headlineSession', () => {
       DURING_FRI_PM,
     )
     expect(s).toBeNull()
+  })
+})
+
+describe('sessionUnderWay', () => {
+  const session = (over: Partial<MatchResult> = {}) => groupIntoSessions([match({ tee_time: FRI_PM, format_name: 'Alt Shot', ...over })])[0]
+
+  it('is under way from its first tee time', () => {
+    expect(sessionUnderWay(session(), new Date('2026-09-18T20:00:00Z'))).toBe(true)
+  })
+
+  // The API opens the scoring window two hours ahead of the tee, which is a rule about when a
+  // score may be written. Nobody is on the course yet.
+  it('is not under way while only the scoring window has opened', () => {
+    const s = session({ scoring_opens_at: '2026-09-18T18:00:00Z' })
+    expect(sessionUnderWay(s, new Date('2026-09-18T19:00:00Z'))).toBe(false)
+  })
+
+  // A group away early is on the course whatever the sheet says.
+  it('is under way once a score has landed, tee time or not', () => {
+    expect(sessionUnderWay(session({ hole_results: ['t1'] }), new Date('2026-09-18T19:00:00Z'))).toBe(true)
+  })
+
+  it('is not under way for no session at all', () => {
+    expect(sessionUnderWay(null, new Date('2026-09-18T20:00:00Z'))).toBe(false)
+  })
+})
+
+describe('the scoring window does not stand in for play', () => {
+  const beforeTheTee = new Date('2026-09-18T19:00:00Z')
+  const inTheWindow = [
+    match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }),
+    match({ tee_time: FRI_PM, format_name: 'Alt Shot', scoring_opens_at: '2026-09-18T18:00:00Z' }),
+  ]
+
+  it('keeps the scores page on the session just played', () => {
+    expect(sessionInPlay(inTheWindow, beforeTheTee)?.format).toBe('Fourball')
+  })
+
+  it('keeps the front page on the session just played', () => {
+    expect(headlineSession(inTheWindow, beforeTheTee)?.format).toBe('Fourball')
   })
 })

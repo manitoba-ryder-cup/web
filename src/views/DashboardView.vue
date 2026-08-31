@@ -4,13 +4,13 @@ import { useRoute } from 'vue-router'
 import type { TournamentPhase } from '@/api/types'
 import { q } from '@/api/queries'
 import { combine, useResource } from '@/composables/useAsync'
+import { useCoarseClock } from '@/composables/useCoarseClock'
 import { usePollWhileInPlay } from '@/composables/usePollWhileInPlay'
 import { useCurrentCup } from '@/composables/useCurrentCup'
 import { useCountdown } from '@/composables/useCountdown'
 import { useTeamPair } from '@/composables/useTeamPair'
 import { pointsText } from '@/lib/points'
-import { groupIntoSessions, headlineSession } from '@/lib/sessions'
-import { hasStarted } from '@/lib/scoringWindow'
+import { groupIntoSessions, headlineSession, sessionUnderWay } from '@/lib/sessions'
 import { tournamentEyebrow } from '@/lib/tournament'
 import AsyncState from '@/components/base/AsyncState.vue'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
@@ -24,9 +24,12 @@ import CaptainMatchup from '@/components/tournament/CaptainMatchup.vue'
 const route = useRoute()
 const cup = useCurrentCup()
 
+// The card and its heading turn on the tee time alone, so a page left open across it has
+// nothing else to recompute from.
+const now = useCoarseClock()
 // Not zero when the cup is idle: an unpublished schedule reads as not in play, and only a
 // request turns that empty list full — a page open on the morning of would never see it.
-const poll = usePollWhileInPlay()
+const poll = usePollWhileInPlay(now)
 const enabled = () => cup.known()
 // All three move while a cup is on: the record carries the phase, the teams carry the points
 // the hero renders as the score, and the results carry the matches under way.
@@ -86,14 +89,14 @@ const { segments } = useCountdown(teeOffAt)
 const session = computed(() => {
   const skip = Number(preview('session'))
   if (Number.isFinite(skip)) return groupIntoSessions(results.value)[skip] ?? null
-  return headlineSession(results.value)
+  return headlineSession(results.value, now.value)
 })
 // The label follows the session on the card rather than the cup, which is live across a whole
 // day while the session shown may be finished or hours away.
 const sessionTitle = computed(() => {
-  const ms = session.value?.matches ?? []
-  if (ms.length && ms.every((m) => m.finished)) return 'Just played'
-  return ms.some((m) => hasStarted(m)) ? 'On the course' : 'Next out'
+  const s = session.value
+  if (s?.matches.every((m) => m.finished)) return 'Just played'
+  return sessionUnderWay(s, now.value) ? 'On the course' : 'Next out'
 })
 </script>
 <template>

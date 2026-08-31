@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
 vi.mock('@/api/scorecard', () => ({
@@ -50,6 +50,9 @@ function match(teeTime: string, format: string, finished = false, drawn = false)
     scoring_closes_at: teeTime,
   }
 }
+// The clock every case is read against, and the two tee times sit after it — a schedule the
+// cup has not reached. Moving one without the other is what these cases turn on.
+const CLOCK = new Date('2026-09-01T12:00:00Z')
 const FRI = '2026-09-18T14:00:00Z'
 const SAT = '2026-09-19T14:00:00Z'
 
@@ -71,13 +74,21 @@ function mountDashboard() {
 }
 
 describe('DashboardView', () => {
+  // Pinned: what the card shows turns on the tee time, so on a real clock these fixtures stop
+  // being ahead of it the week the cup is played.
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(CLOCK)
     setActivePinia(createPinia())
     vi.clearAllMocks()
     vi.mocked(scorecardApi.listTournaments).mockResolvedValue([TOURNAMENT])
     vi.mocked(scorecardApi.getTournament).mockResolvedValue(TOURNAMENT)
     vi.mocked(scorecardApi.getTournamentTeams).mockResolvedValue(TEAMS)
     vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   // refetch() does not consult `enabled`, so the parts still waiting on an id would each spend
@@ -253,6 +264,30 @@ describe('DashboardView', () => {
     expect(w.text()).not.toContain('Just played')
   })
 
+  // The clock is the only thing that moves here: the schedule is static, and the scoring window
+  // is parked past the run so the poll stays on its five-minute heartbeat rather than refetching.
+  it('crosses into the next session as it tees off, with no change in the data', async () => {
+    const teedOff = new Date(Date.now() - HOUR).toISOString()
+    const teesOffSoon = new Date(Date.now() + 2 * 60_000).toISOString()
+    const parked = new Date(Date.now() + HOUR).toISOString()
+    vi.mocked(scorecardApi.getTournament).mockResolvedValue({ ...TOURNAMENT, phase: 'live' })
+    vi.mocked(scorecardApi.getTournamentResults).mockResolvedValue([
+      match(teedOff, 'Fourball', true),
+      { ...match(teesOffSoon, 'Alt Shot'), scoring_opens_at: parked, scoring_closes_at: parked },
+    ])
+    const w = mountDashboard()
+    await flushPromises()
+    expect(w.text()).toContain('Just played')
+    expect(w.text()).not.toContain('Alt Shot')
+    const fetched = vi.mocked(scorecardApi.getTournamentResults).mock.calls.length
+
+    await vi.advanceTimersByTimeAsync(3 * 60_000)
+
+    expect(vi.mocked(scorecardApi.getTournamentResults).mock.calls.length).toBe(fetched)
+    expect(w.text()).toContain('Alt Shot')
+    expect(w.text()).toContain('On the course')
+  })
+
   // Nothing is next once the cup is over, and a card headed "Next out" with an empty body
   // is worse than no card.
   it('drops the session card when every match has finished', async () => {
@@ -261,6 +296,7 @@ describe('DashboardView', () => {
     await flushPromises()
     expect(w.text()).not.toContain('Next out')
     expect(w.text()).not.toContain('On the course')
+    expect(w.text()).not.toContain('Just played')
   })
 
   it('leads with the standing once the cup is under way', async () => {
