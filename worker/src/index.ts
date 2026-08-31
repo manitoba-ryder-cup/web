@@ -17,14 +17,20 @@ export interface Env {
   PROXY_SECRET?: string
 }
 
+// The client reads an error sentence out of `error`, and treats a body that will not parse as
+// somebody else's page rather than ours — so this proxy answers in the shape the API answers in.
+function apiError(status: number, error: string): Response {
+  return new Response(JSON.stringify({ error }), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
     const route = resolveRoute(url.pathname)
-    if (!route) return new Response('Not found', { status: 404 })
+    if (!route) return apiError(404, 'Not found')
 
     const origin = env[route.target]
-    if (!origin) return new Response('Proxy target not configured', { status: 502 })
+    if (!origin) return apiError(502, 'Proxy target not configured')
 
     const cache = caches.default
     const cacheable = isCacheable(request)
