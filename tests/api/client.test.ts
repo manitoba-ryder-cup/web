@@ -86,8 +86,7 @@ describe('ApiClient', () => {
     expect(err.message).toBe(FALLBACK)
   })
 
-  // Plain text is no more a sentence for a reader than markup is — and it need not come from a
-  // filter: the proxy-secret middleware refuses with a bare "forbidden" from the API's own process.
+  // Plain text is no more a sentence written for a reader than markup is.
   it('does not pass a plain-text failure through as copy', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('forbidden', { status: 403 }))
     vi.stubGlobal('fetch', fetchMock)

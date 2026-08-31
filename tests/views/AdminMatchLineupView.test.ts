@@ -463,7 +463,7 @@ describe('AdminMatchLineupView', () => {
   // The one place on this page with something to re-run and, until now, nothing offered: an
   // empty Tees select reads exactly like a course that has no tee sets.
   it('offers a retry when the tees cannot be loaded', async () => {
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new ApiError(503, 'The tee sheet is unavailable.'))
     const w = await mounted()
 
     expect(w.text()).toContain('The tee sheet is unavailable.')
@@ -496,7 +496,7 @@ describe('AdminMatchLineupView', () => {
     const w = await mounted()
     await w.find('#tee-time').setValue('2026-07-01T09:30')
 
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new ApiError(503, 'The tee sheet is unavailable.'))
     await w.find('#course').setValue('c2')
     await flushPromises()
 
@@ -512,7 +512,7 @@ describe('AdminMatchLineupView', () => {
     const w = await mounted()
     expect((w.find('#tee').element as HTMLSelectElement).value).toBe('gold')
 
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new ApiError(503, 'The tee sheet is unavailable.'))
     await w.find('#course').setValue('c2')
     await flushPromises()
 
@@ -552,7 +552,7 @@ describe('AdminMatchLineupView', () => {
   // A retry re-issues the request that failed. Bare, it falls through to the first tee in the
   // list — which after a failed initial load arms a tee set change on the match's own course.
   it('retries the tee load without arming a change nobody made', async () => {
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValueOnce(new Error('The tee sheet is unavailable.'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValueOnce(new ApiError(503, 'The tee sheet is unavailable.'))
     const w = await mounted()
     expect(w.text()).toContain('The tee sheet is unavailable.')
 

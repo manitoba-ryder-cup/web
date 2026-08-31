@@ -22,8 +22,16 @@ describe('displayError', () => {
   it('falls back when nothing usable arrived', () => {
     expect(displayError(new ApiError(502, ''))).toBe(FALLBACK)
     expect(displayError(new ApiError(401, '   '))).toBe(FALLBACK)
-    expect(displayError(new TypeError('' /* fetch rejects with no message */))).toBe(FALLBACK)
     expect(displayError(undefined)).toBe(FALLBACK)
     expect(displayError('a thrown string')).toBe(FALLBACK)
   })
+
+  // A request that never reached a response rejects with the browser's own wording, and each
+  // browser writes its own. Real strings: an empty one would pass whatever this returned.
+  it.each(['Failed to fetch', 'NetworkError when attempting to fetch resource.', 'Load failed'])(
+    'does not show the browser its own words: %s',
+    (message) => {
+      expect(displayError(new TypeError(message))).toBe(FALLBACK)
+    },
+  )
 })

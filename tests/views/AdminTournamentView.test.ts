@@ -245,7 +245,7 @@ describe('AdminTournamentView', () => {
       .trigger('click')
     await flushPromises()
 
-    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new Error('The tee sheet is unavailable.'))
+    vi.mocked(scorecardApi.getCourseTees).mockRejectedValue(new ApiError(503, 'The tee sheet is unavailable.'))
     const course = w.findAll('select').find((sel) => sel.findAll('option').some((o) => o.text() === 'Banff Springs'))!
     await course.setValue('c2')
     await flushPromises()

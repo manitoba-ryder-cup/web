@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ApiError } from '@/api/types'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import type { MatchResult } from '@/api/types'
@@ -85,7 +86,7 @@ describe('useMatchContext', () => {
 
   it('surfaces a missing tee set as an error by default', async () => {
     // The entry page cannot lay out a strip without par, so it must not load half-blind.
-    getMatchHoles.mockRejectedValue(new Error('no tee set'))
+    getMatchHoles.mockRejectedValue(new ApiError(503, 'no tee set'))
 
     const w = mount(harness())
     await flushPromises()
@@ -94,7 +95,7 @@ describe('useMatchContext', () => {
   })
 
   it('treats a missing tee set as empty when par is optional', async () => {
-    getMatchHoles.mockRejectedValue(new Error('no tee set'))
+    getMatchHoles.mockRejectedValue(new ApiError(503, 'no tee set'))
 
     const w = mount(harness('m1', { parOptional: true }))
     await flushPromises()

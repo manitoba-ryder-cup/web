@@ -9,7 +9,7 @@ async function errorMessage(res: Response): Promise<string> {
     const parsed = JSON.parse(body)
     if (typeof parsed?.error === 'string' && parsed.error) return parsed.error
   } catch {
-    // Not the envelope.
+    // Intentionally empty.
   }
   return FALLBACK
 }

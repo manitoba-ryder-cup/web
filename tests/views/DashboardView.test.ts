@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { ApiError } from '@/api/types'
 import { mount, flushPromises } from '@vue/test-utils'
 import PointsTotal from '@/components/base/PointsTotal.vue'
 
@@ -95,11 +96,11 @@ describe('DashboardView', () => {
   // refetch() does not consult `enabled`, so the parts still waiting on an id would each spend
   // a request asking about a tournament called '' — on the tap that most needs to work.
   it('asks only for what it can ask for when the cup lookup is retried', async () => {
-    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new ApiError(503, 'offline'))
     const wrapper = mountDashboard()
     await flushPromises()
     vi.clearAllMocks()
-    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new ApiError(503, 'offline'))
 
     await wrapper
       .findAll('button')
@@ -163,7 +164,7 @@ describe('DashboardView', () => {
   })
 
   it('offers a retry instead of a phase notice when the load fails', async () => {
-    vi.mocked(scorecardApi.listTournaments).mockRejectedValueOnce(new Error('offline'))
+    vi.mocked(scorecardApi.listTournaments).mockRejectedValueOnce(new ApiError(503, 'offline'))
     const wrapper = mountDashboard()
     await flushPromises()
 

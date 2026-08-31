@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ApiError } from '@/api/types'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 
@@ -320,9 +321,9 @@ describe('PlayerView stats tab', () => {
     await flushPromises()
     expect(w.text()).toContain('Jane Doe')
 
-    vi.mocked(scorecardApi.getPlayer).mockRejectedValueOnce(new Error('offline'))
-    vi.mocked(scorecardApi.getPlayerTournaments).mockRejectedValueOnce(new Error('offline'))
-    vi.mocked(scorecardApi.getPlayerStats).mockRejectedValueOnce(new Error('offline'))
+    vi.mocked(scorecardApi.getPlayer).mockRejectedValueOnce(new ApiError(503, 'offline'))
+    vi.mocked(scorecardApi.getPlayerTournaments).mockRejectedValueOnce(new ApiError(503, 'offline'))
+    vi.mocked(scorecardApi.getPlayerStats).mockRejectedValueOnce(new ApiError(503, 'offline'))
     await router.replace('/players/p2')
     await w.setProps({ id: 'p2' })
     await flushPromises()
