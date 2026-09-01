@@ -92,6 +92,18 @@ describe('PlayerView', () => {
     expect(w.text()).toContain('Jane Doe')
   })
 
+  // The strip is three cells in a 1:1.5:1 grid. A placeholder narrower than its track leaves the
+  // strip's own background showing, which reads as a fourth cell rather than as a wider middle.
+  it('fills every cell of the stat strip while loading', async () => {
+    const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
+
+    const strip = w.find('[data-testid="hero-skeleton"] .inline-grid')
+    const cells = strip.findAll('[aria-hidden="true"]')
+
+    expect(cells).toHaveLength(3)
+    expect(cells.every((c) => c.classes().includes('w-full'))).toBe(true)
+  })
+
   it('renders the player name and W-L-T record', async () => {
     const w = mount(PlayerView, { props: { id: 'p1' }, global: { plugins: [router] } })
     await flushPromises()
