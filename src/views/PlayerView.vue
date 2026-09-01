@@ -47,8 +47,7 @@ const heroBg = computed(() => `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)
         <div class="relative mx-auto flex max-w-3xl flex-col items-center px-4 py-8 text-center md:max-w-4xl md:py-12 lg:max-w-5xl">
           <SkeletonBlock tone="inverse" radius="full" class="h-28 w-28 md:h-36 md:w-36" />
           <SkeletonBlock tone="inverse" radius="md" class="mt-4 h-9 w-56 md:h-10" />
-          <!-- Width on the grid, not the cells: fr tracks need something to divide, and a cell
-               narrower than its track leaves the strip's own background showing as a fourth. -->
+          <!-- Width on the grid, not the cells: fr tracks need something to divide. -->
           <div class="mt-5 inline-grid w-72 grid-cols-[1fr_1.5fr_1fr] gap-px overflow-hidden rounded-sm bg-black/25 ring-1 ring-white/15">
             <SkeletonBlock v-for="n in 3" :key="n" tone="inverse" radius="none" class="h-14 w-full" />
           </div>
