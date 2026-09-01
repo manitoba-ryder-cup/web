@@ -44,6 +44,7 @@ sql() { docker exec -i "$PG" psql -v ON_ERROR_STOP=1 -U superuser -d heimdall "$
 # scorecard's tenant is required — so phase 1 supplies a throwaway value. Nothing reads
 # it: scorecard is not started until phase 4, by which point .env holds the real one.
 echo "==> Starting postgres and heimdall..."
+SCORECARD_PUBLIC_TENANT_ID=bootstrapping docker compose run --rm heimdall migrate up
 SCORECARD_PUBLIC_TENANT_ID=bootstrapping docker compose up -d postgres heimdall
 
 echo "==> Waiting for heimdall..."
@@ -161,6 +162,7 @@ fi
 
 # --- phase 4: scorecard, now that there is a tenant for it to serve --------------------
 echo "==> Starting scorecard..."
+docker compose run --rm scorecard migrate up
 docker compose up -d scorecard
 until curl -sf http://localhost:5000/health >/dev/null 2>&1; do sleep 1; done
 

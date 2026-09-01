@@ -63,7 +63,7 @@ services:
       dockerfile: Dockerfile
     container_name: mrc-dev-scorecard
     environment:
-      # Non-superuser role so RLS is enforced; migrations run on startup.
+      # Non-superuser role so RLS is enforced.
       DATABASE_URL: postgres://scorecard:scorecard_password@postgres:5432/scorecard?sslmode=disable
       HTTP_ADDRESS: :5000
       # Validates heimdall-signed tokens with the shared keypair's public half.
