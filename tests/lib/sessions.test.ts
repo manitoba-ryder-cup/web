@@ -125,9 +125,7 @@ describe('sessionInPlay', () => {
     expect(s).toBeNull()
   })
 
-  // The last thing played is still the thing worth reading, and never more so than the
-  // match that decided the cup.
-  it('holds the closing session once the cup is over', () => {
+  it('is nothing once every match has finished', () => {
     const s = sessionInPlay(
       [
         match({ tee_time: FRI_AM, format_name: 'Fourball', finished: true }),
@@ -135,7 +133,7 @@ describe('sessionInPlay', () => {
       ],
       DURING_FRI_PM,
     )
-    expect(s?.format).toBe('Singles')
+    expect(s).toBeNull()
   })
 
   it('is nothing when there is no schedule', () => {

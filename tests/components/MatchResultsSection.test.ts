@@ -113,15 +113,15 @@ describe('MatchResultsSection', () => {
     expect(activeTab(w)).toBe('Alt Shot')
   })
 
-  // The match that decided the cup is the one people are looking at when it does. Tee times set
-  // apart, so "closing" is settled by the clock rather than by where the sort happens to leave a tie.
-  it('opens on the closing session once every match is done', () => {
+  // A cup being read back years later starts where it was played from. Tee times set apart, so a
+  // rule that took the closing session would land on Singles rather than falling through to tab 0.
+  it('opens on the opening format once the cup is over', () => {
     const w = mountIt([
       match({ match_id: 'm1', format_name: 'Fourball', finished: true, tee_time: '2026-09-18T11:00:00Z' }),
       match({ match_id: 'm2', format_name: 'Singles', finished: true, tee_time: '2026-09-18T13:00:00Z' }),
     ])
 
-    expect(activeTab(w)).toBe('Singles')
+    expect(activeTab(w)).toBe('Fourball')
   })
 
   it('shows a finished result on the tab it belongs to', async () => {
