@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { ApiError } from '@/api/types'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, ref, type Ref } from 'vue'
 import { useAsync } from '@/composables/useAsync'
@@ -29,13 +30,13 @@ describe('useAsync', () => {
   it('never leaves the error empty, whatever was thrown', async () => {
     // An empty message reads as "no error" to anything checking truthiness, which renders
     // a failed load as a loaded-but-empty page.
-    const w = harness(() => Promise.reject(new Error(''))).mountIt()
+    const w = harness(() => Promise.reject(new ApiError(503, ''))).mountIt()
     await flushPromises()
     expect(w.vm.error).toBeTruthy()
   })
 
   it('captures a friendly message from an Error', async () => {
-    const w = harness(() => Promise.reject(new Error('boom'))).mountIt()
+    const w = harness(() => Promise.reject(new ApiError(503, 'boom'))).mountIt()
     await flushPromises()
     expect(w.vm.error).toBe('boom')
     expect(w.vm.data).toBeUndefined()
@@ -53,7 +54,7 @@ describe('useAsync', () => {
     // A phone on a golf course drops requests; without this the view is stuck on the
     // error until the user thinks to reload the page.
     let attempt = 0
-    const w = harness(() => (++attempt === 1 ? Promise.reject(new Error('boom')) : Promise.resolve(7))).mountIt()
+    const w = harness(() => (++attempt === 1 ? Promise.reject(new ApiError(503, 'boom')) : Promise.resolve(7))).mountIt()
     await flushPromises()
     expect(w.vm.error).toBe('boom')
 
@@ -69,7 +70,7 @@ describe('useAsync', () => {
 
   it('reports a retry that fails as well, rather than leaving the first message', async () => {
     let attempt = 0
-    const w = harness(() => Promise.reject(new Error(`fail ${++attempt}`))).mountIt()
+    const w = harness(() => Promise.reject(new ApiError(503, `fail ${++attempt}`))).mountIt()
     await flushPromises()
     expect(w.vm.error).toBe('fail 1')
 
@@ -109,7 +110,7 @@ describe('useAsync', () => {
 
   it('reports a failure under a new key rather than the answer from the old one', async () => {
     let fail = false
-    const { comp, id } = harness(() => (fail ? Promise.reject(new Error('offline')) : Promise.resolve('first')))
+    const { comp, id } = harness(() => (fail ? Promise.reject(new ApiError(503, 'offline')) : Promise.resolve('first')))
     const w = mount(comp)
     await flushPromises()
 
@@ -156,7 +157,7 @@ describe('useAsync', () => {
   // A poll that blips must not blank a page someone is reading.
   it('keeps the last good data when a refetch fails', async () => {
     let fail = false
-    const w = harness(() => (fail ? Promise.reject(new Error('offline')) : Promise.resolve('good'))).mountIt()
+    const w = harness(() => (fail ? Promise.reject(new ApiError(503, 'offline')) : Promise.resolve('good'))).mountIt()
     await flushPromises()
 
     fail = true

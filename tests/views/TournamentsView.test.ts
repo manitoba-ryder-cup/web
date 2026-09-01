@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ApiError } from '@/api/types'
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
@@ -159,7 +160,7 @@ describe('TournamentsView', () => {
   // Two fetches, so the tab that opens does not wait on — or go down with — the list on the
   // other one. The cups are the page's primary content and have no dependency on the roll.
   it('keeps the cups readable when the participants list fails', async () => {
-    vi.mocked(scorecardApi.listPlayers).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.listPlayers).mockRejectedValue(new ApiError(503, 'offline'))
     const w = await loaded()
 
     expect(w.text()).toContain('Gimli')
@@ -173,7 +174,7 @@ describe('TournamentsView', () => {
   // And the other way: a failure on the cups leaves a working page rather than an empty
   // one, with the retry the field needs on it.
   it('offers a retry on the half that failed', async () => {
-    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new Error('offline'))
+    vi.mocked(scorecardApi.listTournaments).mockRejectedValue(new ApiError(503, 'offline'))
     const w = await loaded()
 
     expect(w.text()).not.toContain('No tournaments yet.')
