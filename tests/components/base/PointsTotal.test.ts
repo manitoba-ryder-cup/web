@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import PointsTotal from '@/components/base/PointsTotal.vue'
 
 describe('PointsTotal', () => {
-  const mountIt = (points: number | undefined, size?: 'md' | 'lg') => mount(PointsTotal, { props: { points, size } })
+  const mountIt = (points: number | undefined, size?: 'sm' | 'md' | 'lg') => mount(PointsTotal, { props: { points, size } })
 
   // Assertions elsewhere read a standing straight out of the rendered text, and a gap between
   // the whole and its half would break every one of them.
@@ -38,6 +38,20 @@ describe('PointsTotal', () => {
     expect(whole.classes()).toContain('text-7xl')
     expect(half.classes()).not.toContain('text-7xl')
     expect(half.classes()).toContain('text-4xl')
+    // Where the fraction is smaller it is nudged down onto the numeral's centre.
+    expect(half.classes()).toContain('mt-1')
+  })
+
+  // The exception to the two above, and the reason the sizes are a table rather than a ratio:
+  // half of the small numeral is the size of the label beneath it, so the fraction is not shrunk.
+  it('draws the small half at the size of the numeral', () => {
+    const [root, whole, half] = mountIt(3.5, 'sm').findAll('span')
+
+    expect(whole.classes()).toContain('text-3xl')
+    expect(half.classes()).toContain('text-3xl')
+    // No nudge, which only seats a smaller mark; the gap stays, to keep ½ off the digit.
+    expect(root.classes()).toContain('gap-0.5')
+    expect(half.classes()).not.toContain('mt-1')
   })
 
   // Numerals are data and take the body face; the display face is for names and labels.
