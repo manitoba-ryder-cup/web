@@ -35,13 +35,13 @@ export function nextSession(matches: MatchResult[]): Session | null {
 }
 
 /**
- * The session being played, or the one just played — the closing session once the cup is over.
- * One that has not teed off holds no lineups and no scores, so it waits until it does.
+ * The session being played, or the one just played. Nothing once the cup is over: a finished cup
+ * is read from its first round, not held open on the one that ended it.
  */
 export function sessionInPlay(matches: MatchResult[], now: Date = new Date()): Session | null {
   const sessions = groupIntoSessions(matches)
   const next = sessions.findIndex((s) => s.matches.some((m) => !m.finished))
-  if (next < 0) return sessions.at(-1) ?? null
+  if (next < 0) return null
   return sessionUnderWay(sessions[next], now) ? sessions[next] : (sessions[next - 1] ?? null)
 }
 
@@ -55,12 +55,12 @@ export function sessionUnderWay(session: Session | null | undefined, now: Date =
 }
 
 /**
- * The session to lead with: the next one once every match in it is drawn or it has teed off,
- * and until then the one just played. Before the cup there is nothing played to fall back to.
+ * The session to lead with: the next once drawn or teed off, else the one just played. The
+ * closing one after the cup, because this card is the page's whole body and would leave it empty.
  */
 export function headlineSession(matches: MatchResult[], now: Date = new Date()): Session | null {
   const next = nextSession(matches)
-  if (!next) return sessionInPlay(matches, now)
+  if (!next) return groupIntoSessions(matches).at(-1) ?? null
   const drawn = next.matches.every((m) => m.sides.some((side) => side.players.length > 0))
   return drawn || sessionUnderWay(next, now) ? next : (sessionInPlay(matches, now) ?? next)
 }
