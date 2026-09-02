@@ -84,6 +84,9 @@ export default defineConfig({
       '/api/scorecard': { target: 'http://localhost:5000', changeOrigin: true, rewrite: (p) => p.replace(/^\/api\/scorecard/, '') },
     },
   },
+  // The tag is the only version this project has; package.json stays at 0.0.0 rather than be a
+  // second number nothing keeps in step. Only a tag build deploys, so only a tag is ever shipped.
+  define: { __APP_VERSION__: JSON.stringify(process.env.GITHUB_REF_NAME ?? 'dev') },
   test: {
     environment: 'jsdom',
     globals: true,

@@ -79,6 +79,18 @@ describe('AccountMenu', () => {
     expect(w.text()).toContain('Admin')
   })
 
+  it('says which version is running', async () => {
+    const shown = (await signedIn()).get('p').text()
+    expect(shown).toBe(__APP_VERSION__)
+    // An empty define would make the assertion above pass against an empty line.
+    expect(shown).not.toBe('')
+  })
+
+  // Signed out there is no menu to hold it, so a viewer who is not scoring cannot read it.
+  it('does not offer the version when signed out', async () => {
+    expect((await mountMenu()).find('p').exists()).toBe(false)
+  })
+
   // The menu's three close paths are the trickiest part of it, so each gets its own test.
   it('closes when the backdrop is clicked', async () => {
     const w = await signedIn()
