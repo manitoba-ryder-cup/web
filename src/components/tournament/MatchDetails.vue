@@ -12,12 +12,12 @@ const outcome = computed(() => matchOutcome(props.match))
   <div class="font-bold" :class="textClass">
     <div v-if="outcome.kind === 'up'" class="flex items-center justify-center">
       <span class="text-6xl">{{ outcome.lead }}</span>
-      <span class="pt-2 text-2xl tracking-tighter">UP</span>
+      <span class="pt-2 text-3xl tracking-tighter">UP</span>
     </div>
     <div v-else-if="outcome.kind === 'margin'" class="flex items-center justify-center">
       <span class="text-6xl">{{ outcome.lead }}</span>
-      <span class="mx-1 pt-1 text-3xl">&amp;</span>
-      <span class="text-6xl">{{ outcome.holesRemaining }}</span>
+      <span class="ml-1 mr-0.5 text-3xl">&amp;</span>
+      <span class="text-4xl">{{ outcome.holesRemaining }}</span>
     </div>
     <div v-else-if="outcome.kind === 'tied'" class="text-4xl">TIED</div>
     <div v-else class="text-4xl">AS</div>
