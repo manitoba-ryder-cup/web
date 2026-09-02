@@ -35,6 +35,6 @@ async function onLogout() {
     <button type="button" class="flex w-full items-center px-4 py-2 text-left text-white hover:bg-mrc-accent/25" @click="onLogout">
       <LoginIcon class="mr-3" />Logout
     </button>
-    <p class="border-t border-white/15 px-4 pt-2 text-xs text-white/50">{{ version }}</p>
+    <p class="border-t border-white/15 px-4 pt-2 pb-1 text-xs text-white/50">{{ version }}</p>
   </BaseMenu>
 </template>
