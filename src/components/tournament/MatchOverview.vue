@@ -23,6 +23,14 @@ const rightPlayers = computed(() => (right.value?.players.length ? right.value.p
 const leftBorder = computed(() => `border-l-[5px] ${colorFor(left.value?.team_id ?? props.teams[0]?.id).border}`)
 const rightBorder = computed(() => `border-r-[5px] ${colorFor(right.value?.team_id ?? props.teams[1]?.id).border}`)
 
+// A halved match fills both sides grey, not neither — no fill is what a match still in play looks like.
+// The ink travels with the panel: the grey is too light to carry the white the team colours need.
+const fillFor = (teamId: string | null | undefined) => {
+  if (!props.match.finished) return null
+  if (!props.match.winner_team_id) return { panel: 'bg-mrc-line', ink: 'text-mrc-ink' }
+  return teamId === props.match.winner_team_id ? { panel: colorFor(teamId).solid, ink: 'text-white' } : null
+}
+
 // All square has neither side ahead, and reads softer than a coloured lead.
 const strongTextClass = computed(() => {
   const id = props.match.finished ? props.match.winner_team_id : props.match.leader_team_id
@@ -42,12 +50,13 @@ function holeClass(hole: number): string {
 </script>
 <template>
   <div class="mb-6 overflow-hidden rounded-md border border-mrc-line bg-mrc-surface shadow">
-    <div class="flex border-b border-mrc-line">
-      <TeamNames :players="leftPlayers" align="left" :border-class="leftBorder" />
-      <div class="flex w-1/5 items-center justify-center text-center">
+    <!-- Pins every card to one height; without it a card would resize when its result did. -->
+    <div class="flex min-h-32 border-b border-mrc-line">
+      <TeamNames :players="leftPlayers" align="left" :border-class="leftBorder" :fill="fillFor(left?.team_id)" />
+      <div class="flex w-1/5 items-center justify-center px-1 text-center">
         <MatchDetails :match="match" :text-class="strongTextClass" />
       </div>
-      <TeamNames :players="rightPlayers" align="right" :border-class="rightBorder" />
+      <TeamNames :players="rightPlayers" align="right" :border-class="rightBorder" :fill="fillFor(right?.team_id)" />
     </div>
     <div class="flex justify-center p-4">
       <div
