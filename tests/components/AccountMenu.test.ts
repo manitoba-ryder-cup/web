@@ -35,8 +35,8 @@ describe('AccountMenu', () => {
     setActivePinia(createPinia())
   })
 
-  // Sized in px, not rems: the root font-size is 14px below md, so min-h-11 renders 38.5 there
-  // — a class reading as 44 that misses it on exactly the screens the minimum is for.
+  // Sized in px, not rems: the root is under 16px on a phone, so min-h-11 renders short of 44
+  // there — a class reading as 44 that misses it on exactly the screens the minimum is for.
   it('gives the login link a full tap target', async () => {
     expect((await mountMenu()).get('a').classes()).toContain('min-h-[44px]')
   })

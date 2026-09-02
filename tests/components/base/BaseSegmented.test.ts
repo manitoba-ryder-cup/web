@@ -46,7 +46,7 @@ describe('BaseSegmented', () => {
   })
 
   it('gives every option a 44px tap target', () => {
-    // In px, not rems: the root font-size is 14px below md, where min-h-11 renders 38.5.
+    // In px, not rems: the root is under 16px on a phone, where min-h-11 renders short of 44.
     expect(buttons(mount(BaseSegmented, { props: base })).every((b) => b.classes('min-h-[44px]'))).toBe(true)
   })
 })

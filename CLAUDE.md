@@ -131,14 +131,24 @@ instead. A responsive bump (`md:text-5xl`) is allowed, and a genuine one-off can
 `eslint-disable` with a reason, which is what keeps the exception reviewable.
 
 Colours come from the `mrc-*` tokens in the `@theme` block of `main.css`, not raw Tailwind
-palette classes. The base font-size lives on `html` (14px mobile, 16px from `md`) so the
-rem unit itself scales — don't move it to a wrapper.
+palette classes. The base font-size lives on `html` and scales with the viewport — 12px up
+to 400px wide, 16px from 560px — so the rem unit itself tracks the screen. Don't move it to
+a wrapper, and don't flatten it back to one value: the phones this is read on differ by 23%
+in width, and a size that suits one reads wrong on the other.
 
 **A UI change starts with the `frontend-design` skill** and is measured in a browser before
 it's called done — `getBoundingClientRect`, computed colour, focus an element and look.
-None of what goes wrong here shows up in a screenshot or a class list: **tap targets reach
-44px**, **state never rests on colour alone**, keyboard focus stays visible, and motion
-respects `prefers-reduced-motion`.
+None of what goes wrong here shows up in a screenshot or a class list: **tap targets are
+sized for a finger**, **state never rests on colour alone**, keyboard focus stays visible,
+and motion respects `prefers-reduced-motion`.
+
+**A tap target is a physical size, not a type size.** A fingertip is 7-9mm however the page
+is scaled, so a target must not shrink when the root does: **write it in px** (`min-h-[44px]`),
+never in Tailwind's rem scale, where `min-h-11` reads as 44 and renders 33 on a phone.
+**Anything that records a score holds the full 44px** — that tap is outdoors, one-handed,
+sometimes gloved, and a miss writes a wrong score. **Nothing sits under 24px**, the WCAG 2.2
+AA floor. 44 is the AAA figure and is worth its cost where a mistake writes a score, not on
+chrome: the header's home link sits between the two, as low as 36px on the narrowest phone.
 
 The app installs to home screens, and `md` is the line between the tab bar and the header's
 inline nav — so a narrow browser window is a faithful preview of the installed app.

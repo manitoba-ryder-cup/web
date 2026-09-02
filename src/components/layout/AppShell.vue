@@ -13,8 +13,8 @@ const showNav = computed(() => !route.meta.hidesNav)
        fits still scrolls, and the sticky headers take a bite out of the first row on the way. -->
   <div class="min-h-dvh bg-mrc-surface text-mrc-ink">
     <AppHeader />
-    <!-- Has to exceed the bar's height: pb-16 is 4rem, and this app puts 14px on html below md,
-         so it came out at 56px against a 71px bar and buried the last 15px of every page. -->
+    <!-- pb-16 did not clear the tab bar and buried the end of every page. Both it and the bar
+         scale with the root, so no screen size rescues the smaller value. -->
     <main :class="showNav ? 'pb-24 md:pb-0' : ''"><slot /></main>
     <AppTabBar v-if="showNav" />
     <AppToasts />

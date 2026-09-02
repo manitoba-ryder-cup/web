@@ -12,7 +12,7 @@ const revealed = ref(false)
 <template>
   <div class="relative">
     <!-- pr-11 is the button's own width (px-3 + w-5), both in rem, so the text stops exactly
-         where the button starts at either root font-size. Change one and change the other. -->
+         where the button starts at any root font-size. Change one and change the other. -->
     <BaseInput
       :model-value="modelValue"
       :type="revealed ? 'text' : 'password'"
