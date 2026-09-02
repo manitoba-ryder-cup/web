@@ -31,8 +31,7 @@ describe('AppShell', () => {
     expect((await mountShell('/hole')).find('nav[aria-label="Primary"]').exists()).toBe(false)
   })
 
-  // Has to clear the bar's real height: pb-16 did not, because the rem is 14px below md so 4rem
-  // came out at 56px against a 71px bar.
+  // pb-16 did not clear the tab bar. Both scale with the root, so no screen size rescues it.
   it('keeps the end of a page clear of the bar', async () => {
     const main = (await mountShell('/')).get('main')
     expect(main.classes()).toContain('pb-24')

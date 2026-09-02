@@ -119,21 +119,16 @@
 }
 
 @layer base {
-  /* Base font-size lives on the ROOT element (like the old app's
-     `<html class="text-sm md:text-base">`) so the rem unit itself scales: 14px on
-     mobile, 16px from md up. This keeps every rem-based size (icons, spacing, text)
-     identical to the old app — putting it on a wrapper div instead leaves the rem
-     root at 16px and renders everything ~12.5% larger. Media-query rem is always
-     relative to 16px, so 48rem = the 768px md breakpoint regardless. */
+  /* Base font-size lives on the ROOT element so every rem-based size (icons, spacing,
+     text) scales with it. The ramp is the design: 12px up to 400px wide, reaching 16px at
+     560px. No size is pinned to a particular phone — a 485px screen lands near 14px, which
+     follows from those two ends and wants re-checking if either moves. One flat scale cannot
+     serve both, the phones this runs on being more than 90px of width apart. The rem term
+     keeps a reader's own font setting in play, damped rather than ignored as pure vw would. */
   html {
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
-    font-size: 0.875rem;
-  }
-  @media (min-width: 48rem) {
-    html {
-      font-size: 1rem;
-    }
+    font-size: clamp(0.75rem, 0.125rem + 2.5vw, 1rem);
   }
   body {
     color: var(--color-mrc-ink);
