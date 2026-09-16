@@ -1,12 +1,39 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
+import { marked } from 'marked'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
+const ARTICLE_FIELDS = ['title', 'summary', 'published_at', 'cup'] as const
+
+// Articles are markdown in the repo until a service owns them. Rendering here rather than in the
+// app keeps the parser out of the bundle, and a malformed one fails the build instead of the page.
+function newsArticles(): Plugin {
+  return {
+    name: 'mrc:news-articles',
+    transform(src, id) {
+      if (!id.endsWith('.md')) return null
+      const parts = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(src)
+      if (!parts) throw new Error(`${id}: an article needs --- frontmatter ---`)
+      const meta: Record<string, string> = {}
+      for (const line of parts[1].split(/\r?\n/)) {
+        const kv = /^([a-z_]+):\s*(.+)$/.exec(line.trim())
+        if (kv) meta[kv[1]] = kv[2].replace(/^["']|["']$/g, '')
+      }
+      const missing = ARTICLE_FIELDS.filter((f) => !meta[f])
+      if (missing.length) throw new Error(`${id}: frontmatter is missing ${missing.join(', ')}`)
+      const slug = id.split('/').pop()!.replace(/\.md$/, '')
+      const article = { ...meta, cup: Number(meta.cup), slug, html: marked.parse(parts[2]) as string }
+      return { code: `export default ${JSON.stringify(article)}`, map: null }
+    },
+  }
+}
+
 export default defineConfig({
   plugins: [
+    newsArticles(),
     vue(),
     tailwindcss(),
     VitePWA({

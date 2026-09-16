@@ -3,6 +3,15 @@ import { ApiError } from '@/api/types'
 import { mount, flushPromises } from '@vue/test-utils'
 import PointsTotal from '@/components/base/PointsTotal.vue'
 
+import type { Article } from '@/lib/news'
+
+const articles: Article[] = []
+vi.mock('@/content', () => ({
+  get allArticles() {
+    return articles
+  },
+}))
+
 vi.mock('@/api/scorecard', () => ({
   scorecardApi: {
     listTournaments: vi.fn(),
@@ -386,5 +395,61 @@ describe('DashboardView', () => {
 
     const hero = w.get('section')
     expect(hero.findAll('a').map((a) => a.attributes('href'))).not.toContain('/tournaments/t1')
+  })
+})
+
+describe('DashboardView news', () => {
+  const article = (slug: string, published_at: string): Article => ({
+    slug,
+    title: `Title ${slug}`,
+    summary: `Summary ${slug}`,
+    published_at,
+    cup: 2026,
+    html: '<p>x</p>',
+  })
+
+  const withArticles = async (list: Article[]) => {
+    articles.length = 0
+    articles.push(...list)
+    const w = mount(DashboardView, { global: { plugins: [router] } })
+    await flushPromises()
+    return w
+  }
+
+  afterEach(() => {
+    articles.length = 0
+  })
+
+  // Three, so a cup weekend cannot push the score off the page and January cannot empty it.
+  it('shows the newest three and no more', async () => {
+    const w = await withArticles([
+      article('a', '2026-09-19'),
+      article('b', '2026-09-18'),
+      article('c', '2025-09-13'),
+      article('d', '2025-09-12'),
+    ])
+    expect(w.text()).toContain('Title a')
+    expect(w.text()).toContain('Title c')
+    expect(w.text()).not.toContain('Title d')
+  })
+
+  it('offers the rest of them', async () => {
+    const w = await withArticles([article('a', '2026-09-19')])
+    expect(w.findAll('a').some((a) => a.attributes('href') === '/news')).toBe(true)
+  })
+
+  // A recap of last year's cup is not news on this year's homepage, and during a cup the front
+  // page would otherwise open on a session played twelve months ago.
+  it('leaves out articles written about another cup', async () => {
+    const w = await withArticles([article('now', '2026-09-18'), { ...article('then', '2025-09-12'), cup: 2025 }])
+    expect(w.text()).toContain('Title now')
+    expect(w.text()).not.toContain('Title then')
+  })
+
+  // An empty section would be a titled card with nothing under it.
+  it('leaves the section out when nothing has been written', async () => {
+    const w = await withArticles([])
+    expect(w.text()).not.toContain('Latest')
+    expect(w.text()).not.toContain('All news')
   })
 })

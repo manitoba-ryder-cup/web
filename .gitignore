@@ -11,5 +11,8 @@ docs/superpowers
 .env
 
 # Agent scratch: settings, and worktrees that live inside the repo. A worktree here is
-# a git repo of its own, so committing one is both easy and a mess to undo.
-.claude/
+# a git repo of its own, so committing one is both easy and a mess to undo. Skills are the
+# exception — they are the repo's own, so the contents are ignored rather than the directory,
+# which is what lets a path back in.
+.claude/*
+!.claude/skills/

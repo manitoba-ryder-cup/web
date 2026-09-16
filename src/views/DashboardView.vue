@@ -19,6 +19,9 @@ import ContentContainer from '@/components/layout/ContentContainer.vue'
 import CapsLabel from '@/components/typography/CapsLabel.vue'
 import SectionCard from '@/components/layout/SectionCard.vue'
 import OrderOfPlay from '@/components/tournament/OrderOfPlay.vue'
+import { RouterLink } from 'vue-router'
+import { allArticles } from '@/content'
+import { latest } from '@/lib/news'
 import CaptainMatchup from '@/components/tournament/CaptainMatchup.vue'
 
 const route = useRoute()
@@ -44,6 +47,18 @@ const teams = computed(() => teamsRes.data.value ?? [])
 const results = computed(() => resultsRes.data.value ?? [])
 poll.follow(() => results.value)
 const { left, right, leftColors, rightColors } = useTeamPair(teams)
+
+// This cup's only, and three of them: last year's recaps are not news, and a whole year of them
+// would swamp the score on the one weekend the score is the point.
+const news = computed(() => {
+  const year = Number(tournament.value?.start_date.slice(0, 4))
+  return year
+    ? latest(
+        allArticles.filter((a) => a.cup === year),
+        3,
+      )
+    : []
+})
 
 // The states the demo data cannot reach: it is all in the past, and the captains are set.
 // `import.meta.env.DEV` is a literal at build time, so none of this survives into the site.
@@ -175,6 +190,20 @@ const sessionTitle = computed(() => {
             <OrderOfPlay flat :matches="session.matches" :teams="teams" :tournament-id="tournament?.id ?? ''" />
           </SectionCard>
         </AsyncState>
+
+        <!-- The articles ship with the bundle, so this needs no loading or error state of its own.
+             It still waits on the cup, which is the only way to know whose articles to show. -->
+        <SectionCard v-if="news.length" title="Latest">
+          <ul class="divide-y divide-mrc-line">
+            <li v-for="article in news" :key="article.slug">
+              <RouterLink :to="`/news/${article.slug}`" class="block px-4 py-3 hover:bg-mrc-panel">
+                <p class="font-semibold">{{ article.title }}</p>
+                <p class="mt-0.5 text-sm text-mrc-muted">{{ article.summary }}</p>
+              </RouterLink>
+            </li>
+          </ul>
+          <RouterLink to="/news" class="block px-4 py-3 text-center text-sm font-semibold text-mrc-blue-team"> All news </RouterLink>
+        </SectionCard>
       </div>
     </ContentContainer>
   </div>

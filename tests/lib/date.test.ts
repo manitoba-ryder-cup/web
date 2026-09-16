@@ -42,4 +42,11 @@ describe('formatDayRange', () => {
   it('folds a single-day cup down to one date', () => {
     expect(formatDayRange('2026-09-18', '2026-09-18', 'en-US')).toBe('Sep 18')
   })
+
+  // An article's published_at carries a time, because two sessions go out most days and the date
+  // alone cannot order them. Concatenating a time onto one gave Invalid Date.
+  it('formats a date that already carries a time', () => {
+    expect(formatDate('2025-09-12T20:00', 'en-GB')).toBe(formatDate('2025-09-12', 'en-GB'))
+    expect(formatDate('2025-09-12T20:00', 'en-GB')).not.toMatch(/invalid/i)
+  })
 })

@@ -14,6 +14,8 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'dashboard', component: { template: '<div/>' } },
     { path: '/teams', name: 'teams', component: { template: '<div/>' } },
+    { path: '/news', name: 'news', component: { template: '<div/>' } },
+    { path: '/news/:slug', name: 'article', component: { template: '<div/>' } },
     { path: '/players/:id', name: 'player', component: { template: '<div/>' } },
     { path: '/tournaments', name: 'tournaments', component: { template: '<div/>' } },
     { path: '/tournaments/:id', name: 'tournament', component: { template: '<div/>' } },
@@ -135,5 +137,32 @@ describe('AppTabBar', () => {
   it('is hidden from the desktop breakpoint up', async () => {
     const w = await mountBar()
     expect(w.get('nav').classes()).toContain('md:hidden')
+  })
+})
+
+describe('AppTabBar news', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.mocked(scorecardApi.listTournaments).mockResolvedValue([])
+  })
+
+  // The homepage only carries the current cup's articles, so without this tab there is no way
+  // to reach an earlier cup's without typing the URL.
+  it('offers News', async () => {
+    await router.push('/')
+    const w = mount(AppTabBar, { global: { plugins: [router] } })
+    await flushPromises()
+    const news = w.findAll('a').find((a) => a.attributes('href') === '/news')
+    expect(news).toBeDefined()
+    expect(news!.text()).toContain('News')
+  })
+
+  it('lights News while an article is open', async () => {
+    await router.push('/news/2026-09-18-friday-fourball')
+    const w = mount(AppTabBar, { global: { plugins: [router] } })
+    await flushPromises()
+    const news = w.findAll('a').find((a) => a.attributes('href') === '/news')
+    expect(news!.classes().join(' ')).not.toBe('')
+    expect(w.findAll('a')).toHaveLength(5)
   })
 })

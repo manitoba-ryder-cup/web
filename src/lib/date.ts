@@ -1,6 +1,6 @@
-// Parsed at a fixed local time, or UTC midnight rolls back a day in negative-offset zones.
-// The optional `locale` is a test seam; production callers omit it.
-const day = (d: string) => new Date(`${d}T00:00:00`)
+// A bare date is parsed at a fixed local time, or UTC midnight rolls back a day in negative-offset
+// zones. One that already carries a time keeps it. The optional `locale` is a test seam.
+const day = (d: string) => new Date(d.includes('T') ? d : `${d}T00:00:00`)
 
 const DAY_MONTH = { month: 'short', day: 'numeric' } as const
 const FULL = { year: 'numeric', ...DAY_MONTH } as const

@@ -22,6 +22,7 @@ const links = computed((): { to: string; label: string; section: NavSection }[] 
   { to: '/', label: 'Home', section: 'home' },
   { to: scoresTo.value, label: 'Scores', section: 'scores' },
   { to: '/teams', label: 'Teams', section: 'teams' },
+  { to: '/news', label: 'News', section: 'news' },
   { to: '/tournaments', label: 'History', section: 'history' },
 ])
 </script>
