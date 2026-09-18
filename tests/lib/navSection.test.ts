@@ -4,11 +4,17 @@ import { navSection } from '@/lib/navSection'
 const at = (path: string, query: Record<string, unknown> = {}) => navSection({ path, query })
 
 describe('navSection', () => {
-  it('names the section for each of the four destinations', () => {
+  it('names the section for each of the five destinations', () => {
     expect(at('/')).toBe('home')
     expect(at('/tournaments/t2')).toBe('scores')
+    expect(at('/news')).toBe('news')
     expect(at('/teams')).toBe('teams')
     expect(at('/tournaments')).toBe('history')
+  })
+
+  // Reading one keeps the tab lit, the same way a match keeps Scores lit.
+  it('keeps News lit while an article is open', () => {
+    expect(at('/news/2026-09-18-friday-fourball')).toBe('news')
   })
 
   // Home is `/` and History is `/tournaments`, which the screens below them all sit under.

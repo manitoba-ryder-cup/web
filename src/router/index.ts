@@ -42,6 +42,14 @@ const router = createRouter({
         }),
       },
     },
+    { path: '/news', name: 'news', component: () => import('@/views/NewsView.vue') },
+    {
+      path: '/news/:slug',
+      name: 'article',
+      component: () => import('@/views/ArticleView.vue'),
+      props: true,
+      meta: { back: () => ({ to: { name: 'news' }, label: 'News' }) },
+    },
     { path: '/teams', name: 'teams', component: () => import('@/views/TeamsView.vue') },
     // /players was this page's address until the archive moved to the history page and it
     // became this year's teams. Installed home screens and shared links still point here.

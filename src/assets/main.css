@@ -118,6 +118,60 @@
   --font-body: 'OpenSans', ui-sans-serif, system-ui, sans-serif;
 }
 
+@layer components {
+  /* Rendered markdown, whatever produced it. The heading scale is already global, so this covers
+     what the reset strips and every other element CommonMark can emit. */
+  .article :is(p, ul, ol, blockquote, pre, table, hr, img) {
+    @apply my-4;
+  }
+  .article :is(ul, ol) {
+    @apply list-outside pl-5;
+  }
+  .article ul {
+    @apply list-disc;
+  }
+  .article ol {
+    @apply list-decimal;
+  }
+  .article li {
+    @apply my-1;
+  }
+  .article a {
+    @apply text-mrc-blue-team underline;
+  }
+  .article strong {
+    @apply font-semibold;
+  }
+  .article blockquote {
+    @apply border-l-4 border-mrc-line-strong pl-4 text-mrc-muted;
+  }
+  .article code {
+    @apply rounded-sm bg-mrc-panel px-1 py-0.5 text-sm;
+  }
+  /* A wide block scrolls inside itself; the page must never scroll sideways. */
+  .article pre {
+    @apply overflow-x-auto rounded-md bg-mrc-panel p-3 text-sm;
+  }
+  .article pre code {
+    @apply bg-transparent p-0 text-inherit;
+  }
+  .article table {
+    @apply block max-w-full overflow-x-auto border-collapse text-sm;
+  }
+  .article :is(th, td) {
+    @apply border border-mrc-line px-3 py-2 text-left align-top;
+  }
+  .article th {
+    @apply bg-mrc-panel font-semibold;
+  }
+  .article hr {
+    @apply border-mrc-line;
+  }
+  .article img {
+    @apply rounded-md;
+  }
+}
+
 @layer base {
   /* Base font-size lives on the ROOT element so every rem-based size (icons, spacing,
      text) scales with it. The ramp is the design: 12px up to 400px wide, reaching 16px at

@@ -7,6 +7,7 @@ import HomeIcon from '@/components/icons/HomeIcon.vue'
 import ScoresIcon from '@/components/icons/ScoresIcon.vue'
 import GroupsIcon from '@/components/icons/GroupsIcon.vue'
 import TrophyIcon from '@/components/icons/TrophyIcon.vue'
+import NewspaperIcon from '@/components/icons/NewspaperIcon.vue'
 
 const route = useRoute()
 const { scoresTo } = useCurrentCup()
@@ -19,6 +20,7 @@ const tabs = computed((): { to: string; label: string; icon: Component; section:
   { to: '/', label: 'Home', icon: HomeIcon, section: 'home' },
   { to: scoresTo.value, label: 'Scores', icon: ScoresIcon, section: 'scores' },
   { to: '/teams', label: 'Teams', icon: GroupsIcon, section: 'teams' },
+  { to: '/news', label: 'News', icon: NewspaperIcon, section: 'news' },
   { to: '/tournaments', label: 'History', icon: TrophyIcon, section: 'history' },
 ])
 
